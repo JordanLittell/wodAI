@@ -1,0 +1,5 @@
+mutation Mutation($input: CreateWodInput!) {
+  generateWod(input: $input) {
+    definition
+  }
+}
