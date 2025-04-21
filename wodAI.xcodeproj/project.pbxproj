@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		C16299442DB612C7003355D3 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C16299432DB612C7003355D3 /* WodAiAPI */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		C19950642DB0B9FA00786544 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -29,7 +33,25 @@
 		C199506D2DB0B9FA00786544 /* wodAIUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = wodAIUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C162992B2DB61169003355D3 /* Exceptions for "wodAiAPI" folder in "wodAI" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Schema/SchemaConfiguration.swift,
+			);
+			target = C19950502DB0B9F800786544 /* wodAI */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		C162992A2DB61169003355D3 /* wodAiAPI */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C162992B2DB61169003355D3 /* Exceptions for "wodAiAPI" folder in "wodAI" target */,
+			);
+			path = wodAiAPI;
+			sourceTree = "<group>";
+		};
 		C19950532DB0B9F800786544 /* wodAI */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = wodAI;
@@ -52,6 +74,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C16299442DB612C7003355D3 /* WodAiAPI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -79,6 +102,7 @@
 				C19950662DB0B9FA00786544 /* wodAITests */,
 				C19950702DB0B9FA00786544 /* wodAIUITests */,
 				C19950522DB0B9F800786544 /* Products */,
+				C162992A2DB61169003355D3 /* wodAiAPI */,
 			);
 			sourceTree = "<group>";
 		};
@@ -99,6 +123,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = C19950772DB0B9FA00786544 /* Build configuration list for PBXNativeTarget "wodAI" */;
 			buildPhases = (
+				C16298DF2DB5B1B5003355D3 /* ShellScript */,
 				C199504D2DB0B9F800786544 /* Sources */,
 				C199504E2DB0B9F800786544 /* Frameworks */,
 				C199504F2DB0B9F800786544 /* Resources */,
@@ -108,10 +133,12 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				C162992A2DB61169003355D3 /* wodAiAPI */,
 				C19950532DB0B9F800786544 /* wodAI */,
 			);
 			name = wodAI;
 			packageProductDependencies = (
+				C16299432DB612C7003355D3 /* WodAiAPI */,
 			);
 			productName = wodAI;
 			productReference = C19950512DB0B9F800786544 /* wodAI.app */;
@@ -197,6 +224,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				C16298DC2DB5AD4D003355D3 /* XCRemoteSwiftPackageReference "apollo-ios" */,
+				C16299422DB612C7003355D3 /* XCLocalSwiftPackageReference "wodAiAPI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C19950522DB0B9F800786544 /* Products */;
@@ -233,6 +261,26 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		C16298DF2DB5B1B5003355D3 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\necho \"true\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		C199504D2DB0B9F800786544 /* Sources */ = {
@@ -562,6 +610,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		C16299422DB612C7003355D3 /* XCLocalSwiftPackageReference "wodAiAPI" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = wodAiAPI;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		C16298DC2DB5AD4D003355D3 /* XCRemoteSwiftPackageReference "apollo-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -572,6 +627,13 @@
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C16299432DB612C7003355D3 /* WodAiAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = WodAiAPI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = C19950492DB0B9F800786544 /* Project object */;
 }

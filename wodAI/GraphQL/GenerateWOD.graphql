@@ -1,4 +1,4 @@
-mutation Mutation($input: CreateWodInput!) {
+mutation GenereateWODMutation($input: CreateWodInput!) {
   generateWod(input: $input) {
     definition
   }

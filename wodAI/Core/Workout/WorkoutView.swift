@@ -31,7 +31,10 @@ struct WorkoutView: View {
                 Text("\(workout.definition)")
                     .font(.subheadline)
             }
-            .frame(height: UIScreen.main.bounds.height * (0.60) )
+            .frame(height: UIScreen.main.bounds.height * (0.60))
+            .onAppear() {
+                
+            }
             
             Text("Start")
                 .foregroundStyle(.green)
