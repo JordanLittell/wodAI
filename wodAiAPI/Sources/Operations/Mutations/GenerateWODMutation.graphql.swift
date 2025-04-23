@@ -3,11 +3,11 @@
 
 @_exported import ApolloAPI
 
-public class GenereateWODMutation: GraphQLMutation {
-  public static let operationName: String = "GenereateWODMutation"
+public class GenerateWODMutation: GraphQLMutation {
+  public static let operationName: String = "GenerateWODMutation"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
     definition: .init(
-      #"mutation GenereateWODMutation($input: CreateWodInput!) { generateWod(input: $input) { __typename definition } }"#
+      #"mutation GenerateWODMutation($input: CreateWodInput!) { generateWod(input: $input) { __typename name definition id } }"#
     ))
 
   public var input: CreateWodInput
@@ -39,10 +39,14 @@ public class GenereateWODMutation: GraphQLMutation {
       public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.Wod }
       public static var __selections: [ApolloAPI.Selection] { [
         .field("__typename", String.self),
+        .field("name", String.self),
         .field("definition", String.self),
+        .field("id", String.self),
       ] }
 
+      public var name: String { __data["name"] }
       public var definition: String { __data["definition"] }
+      public var id: String { __data["id"] }
     }
   }
 }

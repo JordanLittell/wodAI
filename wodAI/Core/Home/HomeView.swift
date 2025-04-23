@@ -67,7 +67,7 @@ struct HomeView: View {
                 }
                 .sheet(isPresented: $showWorkoutForm, content: {
                     VStack(alignment: .leading, spacing: 20) {
-                        WorkoutGenerationForm(loadParams: WorkoutFixture.loadParams)
+//                        WorkoutGenerationForm(loadParams: WorkoutFixture.loadParams)
                     }
                 })
             }

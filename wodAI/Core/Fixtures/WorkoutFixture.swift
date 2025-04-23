@@ -11,9 +11,8 @@ class WorkoutFixture {
         stimulus: "This workout is designed to create a complete full-body challenge across multiple energy systems. It begins with a high-volume metabolic conditioning piece, transitions to a strength-endurance triplet, and finishes with complex gymnastics movements. Athletes should experience both cardiovascular and muscular fatigue, with the final gymnastics section testing technical proficiency under significant systemic fatigue.",
         muscles: "Primary: Quadriceps, Hamstrings, Glutes, Shoulders, Upper Back, Core\nSecondary: Chest, Triceps, Biceps, Forearms, Lower Back, Calves\nAuxiliary: Hip Flexors, Grip, Scapular Stabilizers, Spinal Erectors",
         title: "Full Spectrum",
-        id: 1)
-    
-    static var loadParams: LoadParams = LoadParams(intensity: 1.0, strength: 2.0, skill: 3.0, volume: 5.0)
+        id: "239048-23094-234")
+
 }
 
 

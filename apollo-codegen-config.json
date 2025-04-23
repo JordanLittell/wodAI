@@ -2,10 +2,10 @@
   "schemaNamespace" : "wodAiAPI",
   "input" : {
     "operationSearchPaths" : [
-      "**/*.graphql"
+      "wodAI/GraphQL/**/*.graphql"
     ],
     "schemaSearchPaths" : [
-      "**/*.graphqls"
+      "wodAI/GraphQL/**/*.graphqls"
     ]
   },
   "output" : {

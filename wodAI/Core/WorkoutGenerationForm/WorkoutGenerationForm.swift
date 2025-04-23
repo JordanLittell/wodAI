@@ -6,13 +6,7 @@
 //
 
 import SwiftUI
-
-struct LoadParams {
-    var intensity: Float;
-    var strength: Float;
-    var skill: Float;
-    var volume: Float;
-}
+import WodAiAPI
 
 struct WorkoutGenerationForm: View {
     
@@ -27,72 +21,72 @@ struct WorkoutGenerationForm: View {
                 .padding(.bottom, 10)
             
             
-            VStack {
-                Text("Strength")
-                HStack {
-                    Slider(
-                        value: $loadParams.strength,
-                        in: 0...10,
-                        step: 1
-                    ) { editing in
-                        
-                    }
-                }
-                Text("\(Int(loadParams.strength))")
-            }
-            .padding(.horizontal, 10)
-            .padding(.bottom, 40)
-            
-            
-            VStack {
-                Text("Intensity")
-                HStack {
-                    
-                    Slider(
-                        value: $loadParams.intensity,
-                        in: 0...10,
-                        step: 1
-                    ) { editing in
-                        
-                    }
-                }
-                Text("\(Int(loadParams.intensity))")
-            }
-            .padding(.horizontal, 10)
-            .padding(.bottom, 40)
-            
-            
-            VStack {
-                Text("Skill")
-                HStack {
-                    Slider(
-                        value: $loadParams.skill,
-                        in: 0...10,
-                        step: 1
-                    ) { editing in
-                        
-                    }
-                }
-                Text("\(Int(loadParams.skill))")
-            }
-            .padding(.horizontal, 10)
-            .padding(.bottom, 40)
-            
-            VStack {
-                Text("Volume")
-                HStack {
-                    Slider(
-                        value: $loadParams.volume,
-                        in: 0...10,
-                        step: 1
-                    ) { editing in
-                        
-                    }
-                }
-                Text("\(Int(loadParams.volume))")
-            }
-            .padding(.horizontal, 10)
-            .padding(.bottom, 40)
+//            VStack {
+//                Text("Strength")
+//                HStack {
+//                    Slider(
+//                        value: Float($loadParams.weight?),
+//                        in: 0...10,
+//                        step: 1
+//                    ) { editing in
+//                        
+//                    }
+//                }
+//                Text("\(Int(loadParams.strength))")
+//            }
+//            .padding(.horizontal, 10)
+//            .padding(.bottom, 40)
+//            
+//            
+//            VStack {
+//                Text("Intensity")
+//                HStack {
+//                    
+//                    Slider(
+//                        value: $loadParams.intensity,
+//                        in: 0...10,
+//                        step: 1
+//                    ) { editing in
+//                        
+//                    }
+//                }
+//                Text("\(Int(loadParams.intensity))")
+//            }
+//            .padding(.horizontal, 10)
+//            .padding(.bottom, 40)
+//            
+//            
+//            VStack {
+//                Text("Skill")
+//                HStack {
+//                    Slider(
+//                        value: $loadParams.skill,
+//                        in: 0...10,
+//                        step: 1
+//                    ) { editing in
+//                        
+//                    }
+//                }
+//                Text("\(Int(loadParams.skill))")
+//            }
+//            .padding(.horizontal, 10)
+//            .padding(.bottom, 40)
+//            
+//            VStack {
+//                Text("Volume")
+//                HStack {
+//                    Slider(
+//                        value: $loadParams.volume,
+//                        in: 0...10,
+//                        step: 1
+//                    ) { editing in
+//                        
+//                    }
+//                }
+//                Text("\(Int(loadParams.volume))")
+//            }
+//            .padding(.horizontal, 10)
+//            .padding(.bottom, 40)
             
             Button("Generate") {
                 print("submit")
@@ -111,6 +105,6 @@ struct WorkoutGenerationForm: View {
     }
 }
 
-#Preview {
-    WorkoutGenerationForm(loadParams: LoadParams(intensity: 1.0, strength: 2.0, skill: 3.0, volume: 5.0))
-}
+//#Preview {
+//    WorkoutGenerationForm(loadParams:/* LoadParams(intensity: 1.0, strength: 2.0, skill: 3.0, volume: 5.0))*/
+//}

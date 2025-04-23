@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import WodAiAPI
 
 struct WorkoutView: View {
     
@@ -33,6 +34,21 @@ struct WorkoutView: View {
             }
             .frame(height: UIScreen.main.bounds.height * (0.60))
             .onAppear() {
+                let input = CreateWodInput(
+                    description: "Generate a chipper workout that uses dummbells, gymnastics, and lunges");
+                Network.shared.client.perform(mutation: GenerateWODMutation(input: input))  { result in
+                    switch result {
+                    case .success(let graphqlResult):
+                        guard
+                            let definition = graphqlResult.data?.generateWod.definition,
+                            let name = graphqlResult.data?.generateWod.name,
+                            let id = graphqlResult.data?.generateWod.id else { return }
+                        workout = Workout(definition: definition, stimulus: "", muscles: "", title: name, id: id)
+                    case .failure(let error):
+                        print(error.localizedDescription)
+                    }
+                    
+                }
                 
             }
             
@@ -41,7 +57,6 @@ struct WorkoutView: View {
                 
             Text("Mark Completed")
                 .foregroundStyle(.blue)
-
         }
     }
     

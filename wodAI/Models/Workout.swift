@@ -9,7 +9,7 @@ import Foundation
 
 struct Workout: Codable, Identifiable {
     let definition, stimulus, muscles, title: String
-    let id: Int;
+    let id: String;
     
     enum CodingKeys: String, CodingKey {
         case id = "id"

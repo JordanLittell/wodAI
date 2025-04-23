@@ -7,7 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		C16299442DB612C7003355D3 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C16299432DB612C7003355D3 /* WodAiAPI */; };
+		C1C1F7832DB8A3E6006A7BA4 /* Apollo in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F7822DB8A3E6006A7BA4 /* Apollo */; };
+		C1C1F78A2DB8A517006A7BA4 /* ApolloAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F7892DB8A517006A7BA4 /* ApolloAPI */; };
+		C1C1F78F2DB8A71A006A7BA4 /* ApolloSQLite in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F78E2DB8A71A006A7BA4 /* ApolloSQLite */; };
+		C1C1F7912DB8A71A006A7BA4 /* ApolloTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F7902DB8A71A006A7BA4 /* ApolloTestSupport */; };
+		C1C1F7B52DB8AA95006A7BA4 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F7B42DB8AA95006A7BA4 /* WodAiAPI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -33,25 +37,7 @@
 		C199506D2DB0B9FA00786544 /* wodAIUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = wodAIUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		C162992B2DB61169003355D3 /* Exceptions for "wodAiAPI" folder in "wodAI" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Schema/SchemaConfiguration.swift,
-			);
-			target = C19950502DB0B9F800786544 /* wodAI */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		C162992A2DB61169003355D3 /* wodAiAPI */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				C162992B2DB61169003355D3 /* Exceptions for "wodAiAPI" folder in "wodAI" target */,
-			);
-			path = wodAiAPI;
-			sourceTree = "<group>";
-		};
 		C19950532DB0B9F800786544 /* wodAI */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = wodAI;
@@ -74,7 +60,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C16299442DB612C7003355D3 /* WodAiAPI in Frameworks */,
+				C1C1F7832DB8A3E6006A7BA4 /* Apollo in Frameworks */,
+				C1C1F78F2DB8A71A006A7BA4 /* ApolloSQLite in Frameworks */,
+				C1C1F7912DB8A71A006A7BA4 /* ApolloTestSupport in Frameworks */,
+				C1C1F78A2DB8A517006A7BA4 /* ApolloAPI in Frameworks */,
+				C1C1F7B52DB8AA95006A7BA4 /* WodAiAPI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -102,7 +92,7 @@
 				C19950662DB0B9FA00786544 /* wodAITests */,
 				C19950702DB0B9FA00786544 /* wodAIUITests */,
 				C19950522DB0B9F800786544 /* Products */,
-				C162992A2DB61169003355D3 /* wodAiAPI */,
+				C1C1F7AD2DB8A926006A7BA4 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -116,6 +106,13 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		C1C1F7AD2DB8A926006A7BA4 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -124,8 +121,8 @@
 			buildConfigurationList = C19950772DB0B9FA00786544 /* Build configuration list for PBXNativeTarget "wodAI" */;
 			buildPhases = (
 				C16298DF2DB5B1B5003355D3 /* ShellScript */,
-				C199504D2DB0B9F800786544 /* Sources */,
 				C199504E2DB0B9F800786544 /* Frameworks */,
+				C199504D2DB0B9F800786544 /* Sources */,
 				C199504F2DB0B9F800786544 /* Resources */,
 			);
 			buildRules = (
@@ -133,12 +130,16 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				C162992A2DB61169003355D3 /* wodAiAPI */,
 				C19950532DB0B9F800786544 /* wodAI */,
 			);
 			name = wodAI;
 			packageProductDependencies = (
 				C16299432DB612C7003355D3 /* WodAiAPI */,
+				C1C1F7822DB8A3E6006A7BA4 /* Apollo */,
+				C1C1F7892DB8A517006A7BA4 /* ApolloAPI */,
+				C1C1F78E2DB8A71A006A7BA4 /* ApolloSQLite */,
+				C1C1F7902DB8A71A006A7BA4 /* ApolloTestSupport */,
+				C1C1F7B42DB8AA95006A7BA4 /* WodAiAPI */,
 			);
 			productName = wodAI;
 			productReference = C19950512DB0B9F800786544 /* wodAI.app */;
@@ -224,7 +225,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				C16298DC2DB5AD4D003355D3 /* XCRemoteSwiftPackageReference "apollo-ios" */,
-				C16299422DB612C7003355D3 /* XCLocalSwiftPackageReference "wodAiAPI" */,
+				C1C1F7B32DB8AA95006A7BA4 /* XCLocalSwiftPackageReference "wodAiAPI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C19950522DB0B9F800786544 /* Products */;
@@ -611,7 +612,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		C16299422DB612C7003355D3 /* XCLocalSwiftPackageReference "wodAiAPI" */ = {
+		C1C1F7B32DB8AA95006A7BA4 /* XCLocalSwiftPackageReference "wodAiAPI" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = wodAiAPI;
 		};
@@ -630,6 +631,30 @@
 
 /* Begin XCSwiftPackageProductDependency section */
 		C16299432DB612C7003355D3 /* WodAiAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = WodAiAPI;
+		};
+		C1C1F7822DB8A3E6006A7BA4 /* Apollo */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C16298DC2DB5AD4D003355D3 /* XCRemoteSwiftPackageReference "apollo-ios" */;
+			productName = Apollo;
+		};
+		C1C1F7892DB8A517006A7BA4 /* ApolloAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C16298DC2DB5AD4D003355D3 /* XCRemoteSwiftPackageReference "apollo-ios" */;
+			productName = ApolloAPI;
+		};
+		C1C1F78E2DB8A71A006A7BA4 /* ApolloSQLite */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C16298DC2DB5AD4D003355D3 /* XCRemoteSwiftPackageReference "apollo-ios" */;
+			productName = ApolloSQLite;
+		};
+		C1C1F7902DB8A71A006A7BA4 /* ApolloTestSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C16298DC2DB5AD4D003355D3 /* XCRemoteSwiftPackageReference "apollo-ios" */;
+			productName = ApolloTestSupport;
+		};
+		C1C1F7B42DB8AA95006A7BA4 /* WodAiAPI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = WodAiAPI;
 		};

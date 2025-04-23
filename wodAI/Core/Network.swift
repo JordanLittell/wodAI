@@ -14,9 +14,4 @@ class Network {
     
     
     private(set) lazy var client = ApolloClient(url: URL(string: graphql)!)
-    
-    func get () {
-        client.perform(mutation: GenereateWODMutation(input: CreateWodInput(description: "generate a workout")))
-    }
-    
 }

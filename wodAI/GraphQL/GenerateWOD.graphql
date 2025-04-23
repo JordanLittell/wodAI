@@ -1,5 +1,7 @@
-mutation GenereateWODMutation($input: CreateWodInput!) {
+mutation GenerateWODMutation($input: CreateWodInput!) {
   generateWod(input: $input) {
+    name
     definition
+    id
   }
 }
