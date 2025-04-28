@@ -1,0 +1,7 @@
+mutation UpdateWod($updateWodId: String!, $input: UpdateWodInput!) {
+  updateWod(id: $updateWodId, input: $input) {
+    definition
+    format
+    id
+  }
+}

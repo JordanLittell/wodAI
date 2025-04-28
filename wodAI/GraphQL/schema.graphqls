@@ -1,3 +1,35 @@
+"""
+A directive used by the Apollo iOS client to annotate operations or fragments that should be used exclusively for generating local cache mutations instead of as standard operations.
+"""
+directive @apollo_client_ios_localCacheMutation on QUERY | MUTATION | SUBSCRIPTION | FRAGMENT_DEFINITION
+
+"""
+A directive used by the Apollo iOS code generation engine to generate custom import statements in operation or fragment definition files. An import statement to import a module with the name provided in the `module` argument will be added to the generated definition file.
+"""
+directive @import(
+  """The name of the module to import."""
+  module: String!
+) repeatable on QUERY | MUTATION | SUBSCRIPTION | FRAGMENT_DEFINITION
+
+"""Attach extra information to a given type."""
+directive @typePolicy(
+  """
+  A selection set containing fields used to compute the cache key of an object. Referenced fields must have non-nullable scalar types. Order is important.
+  """
+  keyFields: String!
+) on OBJECT | INTERFACE
+
+"""
+Directs the executor to defer this fragment when the `if` argument is true or undefined.
+"""
+directive @defer(
+  """Deferred when true or undefined."""
+  if: Boolean
+
+  """Unique name"""
+  label: String
+) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+
 type User {
   id: Int!
   sub: String!
@@ -93,8 +125,9 @@ type Workout {
 
 type Wod {
   id: String!
-  name: String!
+  format: String!
   definition: String!
+  loadParams: JSON!
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -532,6 +565,7 @@ enum TimeUnit {
 }
 
 scalar DateTime
+
 scalar JSON
 
 type Query {
@@ -551,7 +585,6 @@ type Query {
   exerciseSets: [ExerciseSet!]!
   trainingPlan(id: String!): TrainingPlan
   trainingPlans: [TrainingPlan!]!
-
   wod(id: String!): Wod
   wods: [Wod!]!
 }
@@ -560,38 +593,33 @@ type Mutation {
   createUser(input: CreateUserInput!): User!
   updateUser(id: Int!, input: UpdateUserInput!): User!
   deleteUser(id: Int!): User!
-
   createBenchmark(input: CreateBenchmarkInput!): Benchmark!
   updateBenchmark(id: Int!, input: UpdateBenchmarkInput!): Benchmark!
   deleteBenchmark(id: Int!): Benchmark!
-
   createMesoCycle(input: CreateMesoCycleInput!): MesoCycle!
   updateMesoCycle(id: Int!, input: UpdateMesoCycleInput!): MesoCycle!
   deleteMesoCycle(id: Int!): MesoCycle!
-
   createWorkout(input: CreateWorkoutInput!): Workout!
   updateWorkout(id: Int!, input: UpdateWorkoutInput!): Workout!
   deleteWorkout(id: Int!): Workout!
-
   createExercise(input: CreateExerciseInput!): Exercise!
   updateExercise(id: String!, input: UpdateExerciseInput!): Exercise!
   deleteExercise(id: String!): Exercise!
-
   createInterval(input: CreateIntervalInput!): Interval!
   updateInterval(id: Int!, input: UpdateIntervalInput!): Interval!
   deleteInterval(id: Int!): Interval!
-
   createExerciseSet(input: CreateExerciseSetInput!): ExerciseSet!
   updateExerciseSet(id: String!, input: UpdateExerciseSetInput!): ExerciseSet!
   deleteExerciseSet(id: String!): ExerciseSet!
-
   createTrainingPlan(input: CreateTrainingPlanInput!): TrainingPlan!
   updateTrainingPlan(id: String!, input: UpdateTrainingPlanInput!): TrainingPlan!
   deleteTrainingPlan(id: String!): TrainingPlan!
-
   generateWod(input: CreateWodInput!): Wod!
-  updateWod(id: Int!, input: UpdateWodInput!): Wod!
+  updateWod(id: String!, input: UpdateWodInput!): Wod!
   deleteWod(id: Int!): Wod!
+  register(email: String!, password: String!, firstName: String, lastName: String): AuthPayload!
+  loginWithCredentials(email: String!, password: String!): AuthPayload!
+  loginWithGoogle(idToken: String!): AuthPayload!
 }
 
 input LoadParams {
@@ -606,8 +634,8 @@ input CreateWodInput {
 }
 
 input UpdateWodInput {
-  name: String
-  description: String
+  id: String
+  instructions: String
 }
 
 input CreateUserInput {
@@ -788,4 +816,9 @@ input UpdateTrainingPlanInput {
   startDate: DateTime
   endDate: DateTime
   isActive: Boolean
-} 
+}
+
+type AuthPayload {
+  token: String!
+  user: User!
+}

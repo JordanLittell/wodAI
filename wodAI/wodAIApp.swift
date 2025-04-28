@@ -12,11 +12,12 @@ import SwiftData
 struct wodAIApp: App {
     var body: some Scene {
         WindowGroup {
-            HomeView(workout: WorkoutFixture.workout)
+            ContentView()
+                .environmentObject(AuthManager())
         }
     }
 }
 
 #Preview {
-    HomeView(workout: WorkoutFixture.workout)
+    ContentView()
 }

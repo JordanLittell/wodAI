@@ -1,0 +1,18 @@
+mutation GoogleLogin($idToken: String!) {
+  loginWithGoogle(idToken: $idToken) {
+    user {
+      height {
+        value
+      }
+      gender
+      fitnessLevel
+      email
+      age
+      weight {
+        unit
+        value
+      }
+    }
+    token
+  }
+}

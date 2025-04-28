@@ -1,28 +1,43 @@
 {
-  "schemaNamespace" : "wodAiAPI",
-  "input" : {
-    "operationSearchPaths" : [
-      "wodAI/GraphQL/**/*.graphql"
-    ],
-    "schemaSearchPaths" : [
-      "wodAI/GraphQL/**/*.graphqls"
-    ]
-  },
-  "output" : {
-    "testMocks" : {
-      "none" : {
-      }
+    "schemaNamespace" : "wodAiAPI",
+    "input" : {
+        "operationSearchPaths" : [
+            "wodAI/GraphQL/**/*.graphql"
+        ],
+        "schemaSearchPaths" : [
+            "wodAI/GraphQL/**/*.graphqls"
+        ]
     },
-    "schemaTypes" : {
-      "path" : "./wodAiAPI",
-      "moduleType" : {
-        "swiftPackageManager" : {
+    "schemaDownload": {
+        "downloadMethod": {
+            "introspection": {
+                "endpointURL": "http://localhost:3000/graphql",
+                "httpMethod": {
+                    "POST": {}
+                },
+                "includeDeprecatedInputValues": false,
+                "outputFormat": "SDL"
+            }
+        },
+        "downloadTimeout": 60,
+        "headers": [],
+        "outputPath": "./wodAI/GraphQL/schema.graphqls"
+    },
+    "output" : {
+        "testMocks" : {
+            "none" : {
+            }
+        },
+        "schemaTypes" : {
+            "path" : "./wodAiAPI",
+            "moduleType" : {
+                "swiftPackageManager" : {
+                }
+            }
+        },
+        "operations" : {
+            "inSchemaModule" : {
+            }
         }
-      }
-    },
-    "operations" : {
-      "inSchemaModule" : {
-      }
     }
-  }
 }

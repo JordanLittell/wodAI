@@ -20,7 +20,11 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
 
   public static func objectType(forTypename typename: String) -> ApolloAPI.Object? {
     switch typename {
+    case "AuthPayload": return WodAiAPI.Objects.AuthPayload
+    case "HeightMeasurement": return WodAiAPI.Objects.HeightMeasurement
     case "Mutation": return WodAiAPI.Objects.Mutation
+    case "User": return WodAiAPI.Objects.User
+    case "WeightMeasurement": return WodAiAPI.Objects.WeightMeasurement
     case "Wod": return WodAiAPI.Objects.Wod
     default: return nil
     }

@@ -11,100 +11,88 @@ import WodAiAPI
 struct WorkoutGenerationForm: View {
     
     @Environment(\.presentationMode) var presentationMode
-    @State var loadParams: LoadParams;
-   
+    @State var wgvm: WorkoutGeneratorViewModel
+    
+    // Create bindings for the sliders
+    @State private var generationPrompt: String = ""
+    @FocusState private var isTextFieldFocused: Bool
     
     var body: some View {
-        VStack {
+        VStack(spacing: 24) {
             Text("Generate a new workout")
                 .font(.title)
-                .padding(.bottom, 10)
+                .fontWeight(.bold)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
             
+            improvedTextArea()
+                .padding(.horizontal)
             
-//            VStack {
-//                Text("Strength")
-//                HStack {
-//                    Slider(
-//                        value: Float($loadParams.weight?),
-//                        in: 0...10,
-//                        step: 1
-//                    ) { editing in
-//                        
-//                    }
-//                }
-//                Text("\(Int(loadParams.strength))")
-//            }
-//            .padding(.horizontal, 10)
-//            .padding(.bottom, 40)
-//            
-//            
-//            VStack {
-//                Text("Intensity")
-//                HStack {
-//                    
-//                    Slider(
-//                        value: $loadParams.intensity,
-//                        in: 0...10,
-//                        step: 1
-//                    ) { editing in
-//                        
-//                    }
-//                }
-//                Text("\(Int(loadParams.intensity))")
-//            }
-//            .padding(.horizontal, 10)
-//            .padding(.bottom, 40)
-//            
-//            
-//            VStack {
-//                Text("Skill")
-//                HStack {
-//                    Slider(
-//                        value: $loadParams.skill,
-//                        in: 0...10,
-//                        step: 1
-//                    ) { editing in
-//                        
-//                    }
-//                }
-//                Text("\(Int(loadParams.skill))")
-//            }
-//            .padding(.horizontal, 10)
-//            .padding(.bottom, 40)
-//            
-//            VStack {
-//                Text("Volume")
-//                HStack {
-//                    Slider(
-//                        value: $loadParams.volume,
-//                        in: 0...10,
-//                        step: 1
-//                    ) { editing in
-//                        
-//                    }
-//                }
-//                Text("\(Int(loadParams.volume))")
-//            }
-//            .padding(.horizontal, 10)
-//            .padding(.bottom, 40)
-            
-            Button("Generate") {
-                print("submit")
+            Button(action: {
+                wgvm.generate(workoutDescription: generationPrompt)
                 presentationMode.wrappedValue.dismiss()
+            }) {
+                Text("Generate")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
             }
-            .frame(maxWidth: 350)
-            .padding(.vertical, 20)
-            .background(.black, in: .rect(cornerSize: CGSize(width: 10, height: 10)), fillStyle: .init())
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.black)
+            )
+            .padding(.horizontal)
             
+            Spacer()
         }
-        
+        .padding(.top, 20)
     }
     
-    func getPercentValue(value: Int) -> Float {
-        return Float(value)/10
+    private func improvedTextArea() -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Workout Description")
+                .font(.headline)
+                .foregroundColor(.primary)
+            
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isTextFieldFocused ? Color.blue : Color.gray.opacity(0.3), lineWidth: isTextFieldFocused ? 2 : 1)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.systemBackground))
+                    )
+                
+                if generationPrompt.isEmpty {
+                    Text("Generate a heavy chipper with dumbbells and power snatches.")
+                        .font(.body)
+                        .foregroundColor(.gray)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                        .allowsHitTesting(false) // Make sure this doesn't interfere with taps
+                }
+                
+                TextField("", text: $generationPrompt, axis: .vertical)
+                    .focused($isTextFieldFocused)
+                    .font(.body)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 16)
+                    .frame(minHeight: 120, alignment: .topLeading)
+                    .background(Color.clear)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(5...10)
+            }
+            .frame(minHeight: 120)
+            
+            Text("Be specific about the type of workout you want")
+                .font(.caption)
+                .foregroundColor(.gray)
+                .padding(.leading, 2)
+        }
     }
 }
 
-//#Preview {
-//    WorkoutGenerationForm(loadParams:/* LoadParams(intensity: 1.0, strength: 2.0, skill: 3.0, volume: 5.0))*/
-//}
+#Preview {
+    WorkoutGenerationForm(wgvm: WorkoutGeneratorViewModel(generating: false, workout: WorkoutFixture.workout))
+}

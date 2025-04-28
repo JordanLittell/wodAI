@@ -1,6 +1,6 @@
 mutation GenerateWODMutation($input: CreateWodInput!) {
   generateWod(input: $input) {
-    name
+    format
     definition
     id
   }

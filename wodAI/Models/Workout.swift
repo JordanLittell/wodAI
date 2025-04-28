@@ -8,12 +8,12 @@
 import Foundation
 
 struct Workout: Codable, Identifiable {
-    let definition, stimulus, muscles, title: String
+    let definition, stimulus, muscles, format: String
     let id: String;
     
     enum CodingKeys: String, CodingKey {
         case id = "id"
-        case title = "title"
+        case format = "format"
         case definition = "definition"
         case stimulus = "stimulus"
         case muscles = "muscles"
