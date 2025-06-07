@@ -1,5 +1,16 @@
 mutation UpdateUser($updateUserId: Int!, $input: UpdateUserInput!) {
   updateUser(id: $updateUserId, input: $input) {
-    id
+    age
+    fitnessLevel
+    gender
+    goal
+    weight {
+      value
+      unit
+    }
+    height {
+      value
+      unit
+    }
   }
 }

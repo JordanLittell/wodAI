@@ -25,7 +25,7 @@ struct WorkoutGenerationForm: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal)
             
-            improvedTextArea()
+            generationPropmt()
                 .padding(.horizontal)
             
             Button(action: {
@@ -50,7 +50,7 @@ struct WorkoutGenerationForm: View {
         .padding(.top, 20)
     }
     
-    private func improvedTextArea() -> some View {
+    private func generationPropmt() -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Workout Description")
                 .font(.headline)

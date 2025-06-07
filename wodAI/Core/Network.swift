@@ -28,7 +28,7 @@ class Network {
 }
 
 // Create a custom interceptor to add the authorization token
-class AuthorizationInterceptor: ApolloInterceptor {
+class a: ApolloInterceptor {
     var id: String = ""
     
     let authManager: AuthManager = AuthManager()

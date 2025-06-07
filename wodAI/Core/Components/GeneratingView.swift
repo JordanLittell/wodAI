@@ -12,6 +12,8 @@ struct WorkoutLaunchAnimation: View {
     @State private var pulseEffect = false
     @State private var shimmerOffset: CGFloat = -0.25
     
+    @State var text = "Creating something epic!"
+    
     var body: some View {
         ZStack {
             // Add a background color so text is visible
@@ -21,7 +23,7 @@ struct WorkoutLaunchAnimation: View {
                 Spacer()
                 
                 // Text centered horizontally with shimmer effect
-                ShimmeringText(text: "Creating something epic!", isShimmering: showFirstText)
+                ShimmeringText(text: text, isShimmering: showFirstText)
                     .font(.title)
                     .opacity(showFirstText ? 1 : 0)
                     .multilineTextAlignment(.center)

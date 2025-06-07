@@ -17,6 +17,7 @@ class AuthManager : ObservableObject {
     }
     
     var isLoggedIn: Bool {
+        print(token)
         return token != nil
     }
     

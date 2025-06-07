@@ -8,14 +8,19 @@
 import Foundation
 import WodAiAPI
 
-
 class WorkoutGeneratorViewModel : ObservableObject {
     @Published var generating: Bool;
+    @Published var updating: Bool;
     @Published var workout: Workout;
 
     init(generating: Bool, workout: Workout) {
+        self.updating = false
         self.generating = generating
         self.workout = workout
+    }
+    
+    func markCompleted() {
+        
     }
     
     func generate(workoutDescription: String) {
@@ -43,6 +48,7 @@ class WorkoutGeneratorViewModel : ObservableObject {
     }
     
     func update(description: String) {
+        updating = true
         Network.shared.client.perform(mutation: UpdateWodMutation(
             updateWodId: workout.id,
             input: UpdateWodInput(id: GraphQLNullable(stringLiteral: workout.id),
@@ -58,9 +64,10 @@ class WorkoutGeneratorViewModel : ObservableObject {
                                   muscles: "",
                                   format: format,
                                   id: id)
-                self.generating = false
+                self.updating = false
             case .failure(let error):
                 print("error \(error.localizedDescription)")
+                self.updating = false
             }
         }
     }
