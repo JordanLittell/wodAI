@@ -4,6 +4,9 @@ import GoogleSignIn
 import GoogleSignInSwift
 
 struct LoginView: View {
+    
+    @EnvironmentObject var authManager: AuthManager;
+    
     @State private var email = ""
     @State private var password = ""
     @State private var isLoading = false
@@ -108,7 +111,18 @@ struct LoginView: View {
     
     private func signIn() {
         isLoading = true
-        // TODO: Implement email/password sign in
+        let mutation = LoginWithCredentialsMutation(email: email, password: password)
+        Network.shared.client.perform(mutation: mutation) { gqlResult in
+            switch gqlResult {
+            case .success(let graphqlResult):
+                guard
+                    let token = graphqlResult.data?.loginWithCredentials.token else {return}
+                authManager.token = token
+                
+            case .failure(let error):
+                print(error.localizedDescription)
+            }
+        }
         isLoading = false
     }
     

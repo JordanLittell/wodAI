@@ -19,7 +19,7 @@ struct ContentView: View {
             HomeView()
                 .environmentObject(WorkoutGeneratorViewModel(generating: false, workout: WorkoutFixture.workout))
         } else {
-            SignUpView()
+            AuthenticationView()
         }
     }
 }

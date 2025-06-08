@@ -2,12 +2,13 @@
 //  Network.swift
 //  wodAI
 //
-//  Created by Jordan Littell on 4/20/25.
+//  Enhanced Network layer with automatic logout on unauthorized responses
 //
 
 import Foundation
 import Apollo
 import WodAiAPI
+import SwiftUI
 
 class Network {
     static let shared = Network()
@@ -27,9 +28,9 @@ class Network {
     }()
 }
 
-// Create a custom interceptor to add the authorization token
-class a: ApolloInterceptor {
-    var id: String = ""
+// Simplified authorization interceptor - GraphQL errors only
+class AuthorizationInterceptor: ApolloInterceptor {
+    var id: String = "AuthorizationInterceptor"
     
     let authManager: AuthManager = AuthManager()
     
@@ -39,23 +40,64 @@ class a: ApolloInterceptor {
         response: HTTPResponse<Operation>?,
         completion: @escaping (Result<GraphQLResult<Operation.Data>, Error>) -> Void
     ) where Operation: GraphQLOperation {
+        
+        // Add authorization header if token exists
         if let token = authManager.token {
             request.addHeader(name: "Authorization", value: "Bearer \(token)")
         }
         
-        chain.proceedAsync(request: request, response: response, completion: completion)
+        // Continue with the request
+        chain.proceedAsync(request: request, response: response) { [weak self] result in
+            switch result {
+            case .success(let graphqlResult):
+                // ONLY check for GraphQL authentication errors
+                if let errors = graphqlResult.errors {
+                    for error in errors {
+                        if self?.isUnauthorizedGraphQLError(error) == true {
+                            print("🔒 GraphQL Unauthorized Error: \(error.message ?? "")")
+                            self?.handleUnauthorizedAccess()
+                            break
+                        }
+                    }
+                }
+                completion(result)
+                
+            case .failure(let error):
+                // Pass through all network errors without auth handling
+                completion(result)
+            }
+        }
+    }
+    
+    private func isUnauthorizedGraphQLError(_ error: GraphQLError) -> Bool {
+        // Simple check: just look for "Unauthorized" in message
+        return error.message?.contains("Unauthorized") == true
+    }
+    
+    private func handleUnauthorizedAccess() {
+        print("⚠️ Session expired. Logging user out...")
+        
+        DispatchQueue.main.async { [weak self] in
+            self?.authManager.clearToken()
+            NotificationCenter.default.post(name: .userDidLogout, object: nil)
+        }
     }
 }
 
-// Create a custom interceptor provider
+// Simplified interceptor provider - no HTTP status code handling
 class NetworkInterceptorProvider: InterceptorProvider {
     func interceptors<Operation>(for operation: Operation) -> [ApolloInterceptor] where Operation: GraphQLOperation {
         return [
             AuthorizationInterceptor(),
             NetworkFetchInterceptor(client: URLSessionClient()),
-            ResponseCodeInterceptor(),
+            ResponseCodeInterceptor(),  // Standard Apollo interceptor
             JSONResponseParsingInterceptor(),
             AutomaticPersistedQueryInterceptor()
         ]
     }
+}
+
+// MARK: - Notification Names
+extension Notification.Name {
+    static let userDidLogout = Notification.Name("userDidLogout")
 }

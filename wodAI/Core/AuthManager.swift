@@ -17,11 +17,13 @@ class AuthManager : ObservableObject {
     }
     
     var isLoggedIn: Bool {
-        print(token)
-        return token != nil
+        print("evaluating login")
+        return UserDefaults.standard.string(forKey: tokenKey) != nil
     }
     
     func clearToken() {
         UserDefaults.standard.removeObject(forKey: tokenKey)
+        print("setting token to null")
+        token = nil
     }
 }

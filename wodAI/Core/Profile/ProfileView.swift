@@ -258,7 +258,11 @@ struct ProfileView: View {
                 switch result {
                 case .success(let graphqlResult):
                     if let errors = graphqlResult.errors, !errors.isEmpty {
-                        self.alertMessage = "Failed to save profile: \(errors.first?.message ?? "Unknown error")"
+                        let errorMessage = errors.first?.message ?? "Unknown error"
+                        if errorMessage.contains("authorized") {
+                            authManager.clearToken()
+                        }
+                        self.alertMessage = "Failed to save profile: \(errorMessage)"
                         self.showAlert = true
                     } else {
                         // Update local state with saved values
