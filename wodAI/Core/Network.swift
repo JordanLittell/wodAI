@@ -47,7 +47,7 @@ class AuthorizationInterceptor: ApolloInterceptor {
         }
         
         // Continue with the request
-        chain.proceedAsync(request: request, response: response) { [weak self] result in
+        chain.proceedAsync(request: request, response: response, interceptor: self, completion: { [weak self] result in
             switch result {
             case .success(let graphqlResult):
                 // ONLY check for GraphQL authentication errors
@@ -62,23 +62,28 @@ class AuthorizationInterceptor: ApolloInterceptor {
                 }
                 completion(result)
                 
-            case .failure(let error):
+            case .failure(_):
                 // Pass through all network errors without auth handling
                 completion(result)
             }
-        }
+        })
     }
     
     private func isUnauthorizedGraphQLError(_ error: GraphQLError) -> Bool {
-        // Simple check: just look for "Unauthorized" in message
-        return error.message?.contains("Unauthorized") == true
+        // Check for various unauthorized patterns
+        let message = error.message?.lowercased() ?? ""
+        return message.contains("unauthorized") || 
+               message.contains("auth") || 
+               message.contains("token") ||
+               message == "unauthorized" ||
+               error.message == "Unauthorized"
     }
     
     private func handleUnauthorizedAccess() {
-        print("⚠️ Session expired. Logging user out...")
+        print("⚠️ Session expired. Redirecting to login...")
         
         DispatchQueue.main.async { [weak self] in
-            self?.authManager.clearToken()
+            self?.authManager.handleSessionExpired()
             NotificationCenter.default.post(name: .userDidLogout, object: nil)
         }
     }

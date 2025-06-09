@@ -12,7 +12,7 @@ public struct WeightInput: InputObject {
 
   public init(
     value: Double,
-    unit: GraphQLEnum<Weight>
+    unit: GraphQLEnum<WeightUnit>
   ) {
     __data = InputDict([
       "value": value,
@@ -25,7 +25,7 @@ public struct WeightInput: InputObject {
     set { __data["value"] = newValue }
   }
 
-  public var unit: GraphQLEnum<Weight> {
+  public var unit: GraphQLEnum<WeightUnit> {
     get { __data["unit"] }
     set { __data["unit"] = newValue }
   }

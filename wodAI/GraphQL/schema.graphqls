@@ -1,3 +1,5 @@
+directive @auth on FIELD_DEFINITION
+
 """
 A directive used by the Apollo iOS client to annotate operations or fragments that should be used exclusively for generating local cache mutations instead of as standard operations.
 """
@@ -45,42 +47,35 @@ type User {
   height: HeightMeasurement
 }
 
+enum WeightUnit {
+  lbs
+  kg
+}
+
+enum HeightUnit {
+  feet
+  inches
+  meters
+}
+
 type WeightMeasurement {
   value: Float!
-  unit: Weight!
+  unit: WeightUnit!
 }
 
 type HeightMeasurement {
   value: Float!
-  unit: Height!
+  unit: HeightUnit!
 }
 
 input WeightInput {
   value: Float!
-  unit: Weight!
+  unit: WeightUnit!
 }
 
 input HeightInput {
   value: Float!
-  unit: Height!
-}
-
-type Benchmark {
-  id: Int!
-  userId: Int!
-  user: User!
-  movement: BenchmarkMovement!
-  type: BenchmarkType!
-  typeValue: BenchmarkTypeValue!
-  weight: Float
-  reps: Int
-  time: Int
-  timeUnit: String
-  distance: Float
-  distanceUnit: String
-  weightUnit: WeightUnit
-  createdAt: DateTime!
-  updatedAt: DateTime!
+  unit: HeightUnit!
 }
 
 type MesoCycle {
@@ -125,11 +120,26 @@ type Workout {
 
 type Wod {
   id: String!
+  name: String!
   format: String!
   definition: String!
+  equipment: [String!]!
+  muscles: [String!]!
+  movements: [String!]!
   loadParams: JSON!
+  userId: Int
+  user: User
+  completed: Boolean!
   createdAt: DateTime
   updatedAt: DateTime
+}
+
+type CompletedWodsResponse {
+  wods: [Wod!]!
+  total: Int!
+  hasMore: Boolean!
+  currentPage: Int!
+  totalPages: Int!
 }
 
 type Exercise {
@@ -269,251 +279,6 @@ enum FitnessEquipment {
   SeatedLegPressMachines
 }
 
-enum BenchmarkMovement {
-  BACK_SQUAT
-  FRONT_SQUAT
-  OVERHEAD_SQUAT
-  SAFETY_BAR_SQUAT
-  ZERCHER_SQUAT
-  BULGARIAN_SPLIT_SQUAT
-  PAUSE_SQUAT
-  BOX_SQUAT
-  HACK_SQUAT
-  BELT_SQUAT
-  ANDERSON_SQUAT
-  HATFIELD_SQUAT
-  GOBLET_SQUAT
-  PISTOL_SQUAT
-  HINDU_SQUAT
-  COSSACK_SQUAT
-  MACHINE_HACK_SQUAT
-  SMITH_MACHINE_SQUAT
-  HIGH_BAR_SQUAT
-  LOW_BAR_SQUAT
-  SPLIT_SQUAT
-  CYCLIST_SQUAT
-  LATERAL_SQUAT
-  DOUBLE_KB_FRONT_SQUAT
-  BELT_SQUAT_MACHINE
-  PRISONER_SQUAT
-  OVERHEAD_KB_SQUAT
-  ZOMBIE_SQUAT
-  LANDMINE_SQUAT
-  RESISTANCE_BAND_SQUAT
-  DUCK_SQUAT
-  CAMBERED_BAR_SQUAT
-  MACHINE_SQUAT
-  CHAIN_SQUAT
-  BAND_RESISTED_SQUAT
-  SINGLE_LEG_BOX_SQUAT
-  SISSY_SQUAT
-  JUMPING_SQUAT
-  PULSE_SQUAT
-  SUMO_SQUAT
-  DEADLIFT
-  SUMO_DEADLIFT
-  ROMANIAN_DEADLIFT
-  DEFICIT_DEADLIFT
-  TRAP_BAR_DEADLIFT
-  SNATCH_GRIP_DEADLIFT
-  BLOCK_PULL
-  RACK_PULL
-  GOOD_MORNING
-  JEFFERSON_DEADLIFT
-  SINGLE_LEG_DEADLIFT
-  STIFF_LEG_DEADLIFT
-  CLEAN_DEADLIFT
-  SNATCH_DEADLIFT
-  REEVES_DEADLIFT
-  AXLE_DEADLIFT
-  DEFICIT_SUMO_DEADLIFT
-  PAUSED_DEADLIFT
-  BANDED_DEADLIFT
-  CHAIN_DEADLIFT
-  CLEAN_GRIP_DEADLIFT
-  SNATCH_GRIP_BLOCK_PULL
-  DOUBLE_PAUSE_DEADLIFT
-  HALTING_DEADLIFT
-  DEADLIFT_FROM_PINS
-  FLOATING_DEADLIFT
-  JEFFERSON_DEADLIFT_FROM_BLOCKS
-  SINGLE_ARM_DEADLIFT
-  SUITCASE_DEADLIFT
-  DEFICIT_STIFF_LEG_DEADLIFT
-  HACK_DEADLIFT
-  SMITH_MACHINE_DEADLIFT
-  KETTLEBELL_DEADLIFT
-  DEFICIT_SNATCH_GRIP_DEADLIFT
-  BAND_RESISTED_DEADLIFT
-  ZERCHER_DEADLIFT
-  DUMBBELL_DEADLIFT
-  CLEAN_PULL_FROM_BLOCKS
-  SNATCH_PULL_FROM_BLOCKS
-  WIDE_GRIP_DEADLIFT
-  BENCH_PRESS
-  INCLINE_BENCH_PRESS
-  DECLINE_BENCH_PRESS
-  OVERHEAD_PRESS
-  PUSH_PRESS
-  BEHIND_NECK_PRESS
-  PIN_PRESS
-  FLOOR_PRESS
-  CLOSE_GRIP_BENCH
-  LOG_PRESS
-  DUMBBELL_BENCH_PRESS
-  DUMBBELL_INCLINE_PRESS
-  DUMBBELL_DECLINE_PRESS
-  SEATED_DUMBBELL_PRESS
-  STANDING_DUMBBELL_PRESS
-  ARNOLD_PRESS
-  LANDMINE_PRESS
-  Z_PRESS
-  VIKING_PRESS
-  FOOTBALL_BAR_BENCH_PRESS
-  SMITH_MACHINE_BENCH_PRESS
-  SMITH_MACHINE_OVERHEAD_PRESS
-  KETTLEBELL_PRESS
-  DOUBLE_KETTLEBELL_PRESS
-  SINGLE_ARM_DUMBBELL_PRESS
-  NEUTRAL_GRIP_DUMBBELL_PRESS
-  SWISS_BAR_BENCH_PRESS
-  REVERSE_GRIP_BENCH_PRESS
-  GUILLOTINE_PRESS
-  JM_PRESS
-  BOARD_PRESS
-  SPOTO_PRESS
-  BAMBOO_BAR_BENCH_PRESS
-  MACHINE_CHEST_PRESS
-  HAMMER_STRENGTH_CHEST_PRESS
-  BRADFORD_PRESS
-  MACHINE_SHOULDER_PRESS
-  KNEELING_LANDMINE_PRESS
-  SEATED_BEHIND_NECK_PRESS
-  WIDE_GRIP_BENCH_PRESS
-  CLEAN_AND_JERK
-  SNATCH
-  POWER_CLEAN
-  POWER_SNATCH
-  CLEAN_PULL
-  SNATCH_PULL
-  HANG_CLEAN
-  HANG_SNATCH
-  SPLIT_JERK
-  PUSH_JERK
-  POWER_JERK
-  SQUAT_JERK
-  MUSCLE_CLEAN
-  MUSCLE_SNATCH
-  CLEAN_HIGH_PULL
-  SNATCH_HIGH_PULL
-  CLEAN_FROM_BLOCKS
-  SNATCH_FROM_BLOCKS
-  HANG_POWER_CLEAN
-  HANG_POWER_SNATCH
-  CLEAN_PULL_FROM_KNEE
-  SNATCH_PULL_FROM_KNEE
-  TALL_CLEAN
-  TALL_SNATCH
-  NO_FEET_CLEAN
-  NO_FEET_SNATCH
-  DROP_SNATCH
-  BEHIND_NECK_JERK
-  BLOCK_POWER_CLEAN
-  BLOCK_POWER_SNATCH
-  HIGH_HANG_CLEAN
-  HIGH_HANG_SNATCH
-  COMPLEX_CLEAN_AND_JERK
-  COMPLEX_SNATCH
-  PAUSE_CLEAN
-  PAUSE_SNATCH
-  SNATCH_BALANCE
-  SOTTS_PRESS
-  BTN_SNATCH_PUSH_PRESS
-  SNATCH_GRIP_PUSH_PRESS
-  WEIGHTED_PULL_UP
-  WEIGHTED_CHIN_UP
-  PENDLAY_ROW
-  BARBELL_ROW
-  MEADOWS_ROW
-  SEAL_ROW
-  ONE_ARM_ROW
-  T_BAR_ROW
-  CHEST_SUPPORTED_ROW
-  LAT_PULLDOWN
-  WEIGHTED_NEUTRAL_PULL_UP
-  AUSTRALIAN_PULL_UP
-  KROC_ROW
-  HELMS_ROW
-  YATES_ROW
-  MACHINE_ROW
-  HAMMER_STRENGTH_ROW
-  WIDE_GRIP_PULL_UP
-  CLOSE_GRIP_PULL_UP
-  BEHIND_NECK_PULL_UP
-  REVERSE_GRIP_PULL_DOWN
-  NEUTRAL_GRIP_PULL_DOWN
-  SINGLE_ARM_PULL_DOWN
-  STRAIGHT_ARM_PULL_DOWN
-  CABLE_ROW
-  WIDE_GRIP_CABLE_ROW
-  CLOSE_GRIP_CABLE_ROW
-  FACE_PULL
-  INVERTED_ROW
-  WEIGHTED_INVERTED_ROW
-  DUMBBELL_ROW
-  INCLINE_DUMBBELL_ROW
-  RENEGADE_ROW
-  MACHINE_HIGH_ROW
-  MACHINE_LOW_ROW
-  BAND_PULL_APART
-  SEATED_CABLE_ROW
-  STANDING_CABLE_ROW
-  MEADOWS_ROW_WITH_BANDS
-  SNATCH_GRIP_BARBELL_ROW
-  FARMERS_WALK
-  YOKE_WALK
-  OVERHEAD_CARRY
-  SANDBAG_CARRY
-  ATLAS_STONE_LOAD
-  KEG_LOAD
-  HUSSAFELL_STONE_CARRY
-  FRAME_CARRY
-  SUPER_YOKE
-  ZERCHER_CARRY
-  WAITER_WALK
-  SUITCASE_CARRY
-  DUCK_WALK
-  SHIELD_CARRY
-  LOG_CARRY
-  STONE_SHOULDER
-  CONAN_WHEEL
-  FINGAL_FINGERS
-  TIRE_FLIP
-}
-
-enum BenchmarkType {
-  ONE_RM
-  THREE_RM
-  FIVE_RM
-  AMRAP
-  FOR_TIME
-  MAX_TIME
-  MAX_DISTANCE
-  MAX_WEIGHT
-}
-
-enum BenchmarkTypeValue {
-  WEIGHT
-  REPS
-  TIME
-  DISTANCE
-}
-
-enum WeightUnit {
-  POUND
-  KILOGRAM
-}
-
 enum Focus {
   STRENGTH
   HYPERTROPHY
@@ -571,8 +336,6 @@ scalar JSON
 type Query {
   user(id: Int!): User
   users: [User!]!
-  benchmark(id: Int!): Benchmark
-  benchmarks: [Benchmark!]!
   mesoCycle(id: Int!): MesoCycle
   mesoCycles: [MesoCycle!]!
   workout(id: Int!): Workout
@@ -587,15 +350,13 @@ type Query {
   trainingPlans: [TrainingPlan!]!
   wod(id: String!): Wod
   wods: [Wod!]!
+  completedWods(page: Int): CompletedWodsResponse!
 }
 
 type Mutation {
   createUser(input: CreateUserInput!): User!
   updateUser(id: Int!, input: UpdateUserInput!): User!
   deleteUser(id: Int!): User!
-  createBenchmark(input: CreateBenchmarkInput!): Benchmark!
-  updateBenchmark(id: Int!, input: UpdateBenchmarkInput!): Benchmark!
-  deleteBenchmark(id: Int!): Benchmark!
   createMesoCycle(input: CreateMesoCycleInput!): MesoCycle!
   updateMesoCycle(id: Int!, input: UpdateMesoCycleInput!): MesoCycle!
   deleteMesoCycle(id: Int!): MesoCycle!
@@ -616,7 +377,7 @@ type Mutation {
   deleteTrainingPlan(id: String!): TrainingPlan!
   generateWod(input: CreateWodInput!): Wod!
   updateWod(id: String!, input: UpdateWodInput!): Wod!
-  deleteWod(id: Int!): Wod!
+  completeWod(id: String!): Wod!
   register(email: String!, password: String!, firstName: String, lastName: String): AuthPayload!
   loginWithCredentials(email: String!, password: String!): AuthPayload!
   loginWithGoogle(idToken: String!): AuthPayload!
@@ -662,33 +423,6 @@ input UpdateUserInput {
   goal: String
   weight: WeightInput
   height: HeightInput
-}
-
-input CreateBenchmarkInput {
-  userId: Int!
-  movement: BenchmarkMovement!
-  type: BenchmarkType!
-  typeValue: BenchmarkTypeValue!
-  weight: Float
-  reps: Int
-  time: Int
-  timeUnit: String
-  distance: Float
-  distanceUnit: String
-  weightUnit: WeightUnit
-}
-
-input UpdateBenchmarkInput {
-  movement: BenchmarkMovement
-  type: BenchmarkType
-  typeValue: BenchmarkTypeValue
-  weight: Float
-  reps: Int
-  time: Int
-  timeUnit: String
-  distance: Float
-  distanceUnit: String
-  weightUnit: WeightUnit
 }
 
 input CreateMesoCycleInput {

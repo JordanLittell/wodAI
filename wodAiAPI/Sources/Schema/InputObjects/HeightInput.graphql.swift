@@ -12,7 +12,7 @@ public struct HeightInput: InputObject {
 
   public init(
     value: Double,
-    unit: GraphQLEnum<Height>
+    unit: GraphQLEnum<HeightUnit>
   ) {
     __data = InputDict([
       "value": value,
@@ -25,7 +25,7 @@ public struct HeightInput: InputObject {
     set { __data["value"] = newValue }
   }
 
-  public var unit: GraphQLEnum<Height> {
+  public var unit: GraphQLEnum<HeightUnit> {
     get { __data["unit"] }
     set { __data["unit"] = newValue }
   }

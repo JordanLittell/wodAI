@@ -97,11 +97,11 @@ public class GoogleLoginMutation: GraphQLMutation {
           public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.WeightMeasurement }
           public static var __selections: [ApolloAPI.Selection] { [
             .field("__typename", String.self),
-            .field("unit", GraphQLEnum<WodAiAPI.Weight>.self),
+            .field("unit", GraphQLEnum<WodAiAPI.WeightUnit>.self),
             .field("value", Double.self),
           ] }
 
-          public var unit: GraphQLEnum<WodAiAPI.Weight> { __data["unit"] }
+          public var unit: GraphQLEnum<WodAiAPI.WeightUnit> { __data["unit"] }
           public var value: Double { __data["value"] }
         }
       }

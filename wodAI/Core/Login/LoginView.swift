@@ -14,8 +14,32 @@ struct LoginView: View {
     @State private var errorMessage = ""
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
+        VStack(spacing: 20) {
+                // Session Expired Message
+                if let sessionMessage = authManager.sessionExpiredMessage {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.white)
+                        Text(sessionMessage)
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.orange)
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .onAppear {
+                        // Clear the message after 5 seconds
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                            withAnimation {
+                                authManager.clearSessionExpiredMessage()
+                            }
+                        }
+                    }
+                }
+                
                 // Logo and Title
                 Image(systemName: "dumbbell.fill")
                     .resizable()
@@ -78,11 +102,9 @@ struct LoginView: View {
                 Spacer()
                 
                 // Sign Up Link
-                NavigationLink(destination: SignUpView()) {
-                    Text("Don't have an account? Sign Up")
-                        .foregroundColor(.blue)
-                }
-                .padding(.bottom)
+                Text("Don't have an account? Sign Up")
+                    .foregroundColor(.blue)
+                    .padding(.bottom)
             }
             .padding()
             .alert("Error", isPresented: $showError) {
@@ -90,7 +112,6 @@ struct LoginView: View {
             } message: {
                 Text(errorMessage)
             }
-        }
     }
     
     private func noOp() {
@@ -113,27 +134,44 @@ struct LoginView: View {
         isLoading = true
         let mutation = LoginWithCredentialsMutation(email: email, password: password)
         Network.shared.client.perform(mutation: mutation) { gqlResult in
-            switch gqlResult {
-            case .success(let graphqlResult):
-                guard
-                    let token = graphqlResult.data?.loginWithCredentials.token else {return}
-                authManager.token = token
+            DispatchQueue.main.async { [self] in
+                self.isLoading = false
                 
-            case .failure(let error):
-                print(error.localizedDescription)
+                switch gqlResult {
+                case .success(let graphqlResult):
+                    if let errors = graphqlResult.errors, !errors.isEmpty {
+                        self.errorMessage = errors.first?.message ?? "Login failed"
+                        self.showError = true
+                    } else if let token = graphqlResult.data?.loginWithCredentials.token {
+                        // Success - set token which will trigger navigation
+                        self.authManager.token = token
+                        print("✅ Login successful, token set")
+                    } else {
+                        self.errorMessage = "Invalid response from server"
+                        self.showError = true
+                    }
+                    
+                case .failure(let error):
+                    self.errorMessage = error.localizedDescription
+                    self.showError = true
+                    print("❌ Login error: \(error.localizedDescription)")
+                }
             }
         }
-        isLoading = false
     }
     
     func signInWithGoogle() async throws -> Bool {
-        guard let presentingViewController = await (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first?.rootViewController else {
+        guard let presentingViewController = await MainActor.run(body: {
+            (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first?.rootViewController
+        }) else {
             return false
         }
         
         let signInConfig = GIDConfiguration(clientID: "323431688528-e8s8oo9o1qtf6vrcu69uf0hnb9etvdg3.apps.googleusercontent.com")
         
-        await MainActor.run { isLoading = true }
+        await MainActor.run {
+            isLoading = true
+        }
         
         do {
             GIDSignIn.sharedInstance.configuration = signInConfig
@@ -148,14 +186,28 @@ struct LoginView: View {
             let mutation = GoogleLoginMutation(idToken: idToken)
             
             Network.shared.client.perform(mutation: mutation) { gqlResult in
-                switch gqlResult {
-                case .success(let graphqlResult):
-                    guard
-                        let token = graphqlResult.data?.loginWithGoogle.token,
-                        let user = graphqlResult.data?.loginWithGoogle.user else {return}
+                DispatchQueue.main.async { [self] in
+                    self.isLoading = false
                     
-                case .failure(let error):
-                    print(error.localizedDescription)
+                    switch gqlResult {
+                    case .success(let graphqlResult):
+                        if let errors = graphqlResult.errors, !errors.isEmpty {
+                            self.errorMessage = errors.first?.message ?? "Google login failed"
+                            self.showError = true
+                        } else if let token = graphqlResult.data?.loginWithGoogle.token {
+                            // Success - set token which will trigger navigation
+                            self.authManager.token = token
+                            print("✅ Google login successful, token set")
+                        } else {
+                            self.errorMessage = "Invalid response from server"
+                            self.showError = true
+                        }
+                        
+                    case .failure(let error):
+                        self.errorMessage = error.localizedDescription
+                        self.showError = true
+                        print("❌ Google login error: \(error.localizedDescription)")
+                    }
                 }
             }
             

@@ -21,6 +21,7 @@
 		C1D1BA442DBEDB6F00932818 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1D1BA432DBEDB6F00932818 /* WodAiAPI */; };
 		C1D1BA4B2DBF96B400932818 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1D1BA4A2DBF96B400932818 /* WodAiAPI */; };
 		C1D1BA522DBFAC0300932818 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1D1BA512DBFAC0300932818 /* WodAiAPI */; };
+		C1F44FA52DF5616900546957 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1F44FA42DF5616900546957 /* WodAiAPI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -103,6 +104,7 @@
 				C1D1BA522DBFAC0300932818 /* WodAiAPI in Frameworks */,
 				C1D1BA442DBEDB6F00932818 /* WodAiAPI in Frameworks */,
 				C1C1F78A2DB8A517006A7BA4 /* ApolloAPI in Frameworks */,
+				C1F44FA52DF5616900546957 /* WodAiAPI in Frameworks */,
 				C1D1B95C2DBECF0900932818 /* WodAiAPI in Frameworks */,
 				C1C1F7B52DB8AA95006A7BA4 /* WodAiAPI in Frameworks */,
 				C1D1BA4B2DBF96B400932818 /* WodAiAPI in Frameworks */,
@@ -190,6 +192,7 @@
 				C1D1BA4A2DBF96B400932818 /* WodAiAPI */,
 				C1D1BA512DBFAC0300932818 /* WodAiAPI */,
 				C1A12A592DBFD2CB00BB4776 /* WodAiAPI */,
+				C1F44FA42DF5616900546957 /* WodAiAPI */,
 			);
 			productName = wodAI;
 			productReference = C19950512DB0B9F800786544 /* wodAI.app */;
@@ -276,7 +279,7 @@
 			packageReferences = (
 				C16298DC2DB5AD4D003355D3 /* XCRemoteSwiftPackageReference "apollo-ios" */,
 				C1D1BA382DBED84200932818 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
-				C1A12A582DBFD2CB00BB4776 /* XCLocalSwiftPackageReference "wodAiAPI" */,
+				C1F44FA32DF5616900546957 /* XCLocalSwiftPackageReference "wodAiAPI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C19950522DB0B9F800786544 /* Products */;
@@ -663,7 +666,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		C1A12A582DBFD2CB00BB4776 /* XCLocalSwiftPackageReference "wodAiAPI" */ = {
+		C1F44FA32DF5616900546957 /* XCLocalSwiftPackageReference "wodAiAPI" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = wodAiAPI;
 		};
@@ -748,6 +751,10 @@
 			productName = WodAiAPI;
 		};
 		C1D1BA512DBFAC0300932818 /* WodAiAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = WodAiAPI;
+		};
+		C1F44FA42DF5616900546957 /* WodAiAPI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = WodAiAPI;
 		};

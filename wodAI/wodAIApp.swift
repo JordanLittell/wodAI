@@ -6,18 +6,20 @@
 //
 
 import SwiftUI
-import SwiftData
 
 @main
 struct wodAIApp: App {
+    @StateObject private var authManager = AuthManager()
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(AuthManager())
+                .environmentObject(authManager)
         }
     }
 }
 
 #Preview {
     ContentView()
+        .environmentObject(AuthManager())
 }

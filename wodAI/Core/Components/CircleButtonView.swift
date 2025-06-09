@@ -24,8 +24,9 @@ struct CircleButtonView: View {
 }
 
 #Preview {
-    CircleButtonView(iconName: "dumbbell.fill")
-        .previewLayout(.sizeThatFits)
-    
-    CircleButtonView(iconName:"bolt.heart.fill").colorScheme(.dark)
+    VStack {
+        CircleButtonView(iconName: "dumbbell.fill")
+        CircleButtonView(iconName: "bolt.heart.fill")
+            .colorScheme(.dark)
+    }
 }

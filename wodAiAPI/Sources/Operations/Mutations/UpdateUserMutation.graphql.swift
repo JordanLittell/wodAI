@@ -76,11 +76,11 @@ public class UpdateUserMutation: GraphQLMutation {
         public static var __selections: [ApolloAPI.Selection] { [
           .field("__typename", String.self),
           .field("value", Double.self),
-          .field("unit", GraphQLEnum<WodAiAPI.Weight>.self),
+          .field("unit", GraphQLEnum<WodAiAPI.WeightUnit>.self),
         ] }
 
         public var value: Double { __data["value"] }
-        public var unit: GraphQLEnum<WodAiAPI.Weight> { __data["unit"] }
+        public var unit: GraphQLEnum<WodAiAPI.WeightUnit> { __data["unit"] }
       }
 
       /// UpdateUser.Height
@@ -94,11 +94,11 @@ public class UpdateUserMutation: GraphQLMutation {
         public static var __selections: [ApolloAPI.Selection] { [
           .field("__typename", String.self),
           .field("value", Double.self),
-          .field("unit", GraphQLEnum<WodAiAPI.Height>.self),
+          .field("unit", GraphQLEnum<WodAiAPI.HeightUnit>.self),
         ] }
 
         public var value: Double { __data["value"] }
-        public var unit: GraphQLEnum<WodAiAPI.Height> { __data["unit"] }
+        public var unit: GraphQLEnum<WodAiAPI.HeightUnit> { __data["unit"] }
       }
     }
   }

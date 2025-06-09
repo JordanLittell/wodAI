@@ -6,26 +6,44 @@
 //
 
 import SwiftUI
-import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @EnvironmentObject var authManager: AuthManager;
-    
-    @Query private var items: [Item]
+    @EnvironmentObject var authManager: AuthManager
 
     var body: some View {
-        if authManager.isLoggedIn {
-            HomeView()
-                .environmentObject(WorkoutGeneratorViewModel(generating: false, workout: WorkoutFixture.workout))
-        } else {
-            AuthenticationView()
+        Group {
+            if authManager.isAuthenticated {
+                RootAppView()
+                    .environmentObject(EnhancedWorkoutGeneratorViewModel())
+                    .environmentObject(WODSessionManager.shared)
+            } else {
+                AuthenticationView()
+            }
         }
+    }
+}
+
+// MARK: - Root App View with WOD Session Overlay
+struct RootAppView: View {
+    @ObservedObject private var sessionManager = WODSessionManager.shared
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Main content
+            MainTabView()
+            
+            // Mini-player above tab bar when active
+            if sessionManager.isActive {
+                WODMiniPlayer()
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .zIndex(1)
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: sessionManager.isActive)
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
         .environmentObject(AuthManager())
 }
