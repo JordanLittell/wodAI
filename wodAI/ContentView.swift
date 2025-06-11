@@ -20,6 +20,13 @@ struct ContentView: View {
                 AuthenticationView()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .userDidLogout)) { _ in
+            print("🔓 Received logout notification, forcing authentication state update")
+            // Force UI update by triggering the published property
+            DispatchQueue.main.async {
+                authManager.isAuthenticated = false
+            }
+        }
     }
 }
 

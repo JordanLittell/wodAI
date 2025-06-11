@@ -479,16 +479,24 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
     }
     
     private func handleGenerationError(_ message: String) {
+        print("🔴 Generation error: \(message)")
+        
         // Check if it's an auth error
-        if message.lowercased().contains("unauthorized") || message.lowercased().contains("authentication") {
+        if message.lowercased().contains("unauthorized") || 
+           message.lowercased().contains("authentication") ||
+           message.lowercased().contains("token") {
+            print("🔓 Unauthorized error detected in view model - auth handled by Network layer")
             // Auth error is handled by the Network layer's interceptor
             // which will redirect to login automatically
-            print("🔐 Unauthorized error detected in view model")
+            let authManager = AuthManager()
+            authManager.handleSessionExpired()
+            
         } else {
             // Show regular error for non-auth issues
             errorMessage = message
             showError = true
         }
+        
         generating = false
         updating = false
         generationStep = .idle

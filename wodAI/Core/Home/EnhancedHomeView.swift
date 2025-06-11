@@ -14,6 +14,7 @@ struct EnhancedHomeView: View {
     @State private var showingCustomFlow = false
     @State private var showingQuickWorkout = false
     @State private var showingWorkoutExecution = false
+    @State private var showingWorkout = false
     
     var body: some View {
         NavigationStack {
@@ -40,6 +41,7 @@ struct EnhancedHomeView: View {
                                 .font(.headline)
                                 .foregroundColor(Color("PrimaryText"))
                             Spacer()
+                            
                         }
                         .padding(.horizontal)
                         
@@ -141,6 +143,21 @@ struct EnhancedHomeView: View {
             QuickWorkoutGenerationView()
                 .environmentObject(workoutGenerator)
         }
+        .sheet(isPresented: $showingWorkout) {
+            NavigationView {
+                WorkoutView()
+                    .environmentObject(workoutGenerator)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Button("Done") {
+                                
+                            }
+                        }
+                    }
+            }
+            .transition(.move(edge: .trailing).combined(with: .opacity))
+        }
         .fullScreenCover(isPresented: $showingWorkoutExecution) {
             WorkoutExecutionView()
                 .environmentObject(workoutGenerator)
@@ -154,8 +171,10 @@ struct EnhancedHomeView: View {
         }
         .onChange(of: workoutGenerator.workout) { oldValue, newValue in
             // Dismiss the generation view when a workout is generated
+            print("determining if we show the workout")
             if newValue != nil && !workoutGenerator.generating {
                 showingQuickWorkout = false
+                showingWorkout = true
             }
         }
     }
@@ -224,7 +243,6 @@ struct QuickWorkoutGenerationView: View {
                         }
                     }
             } else if showingWorkoutPreview {
-                // Show workout preview if user wants to see it
                 NavigationView {
                     WorkoutView()
                         .environmentObject(workoutGenerator)

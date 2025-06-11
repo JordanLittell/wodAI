@@ -13,6 +13,7 @@ extension Notification.Name {
     static let authenticationRequired = Notification.Name("authenticationRequired")
     static let tokenExpired = Notification.Name("tokenExpired")
     static let gymProfileChanged = Notification.Name("gymProfileChanged")
+    static let workoutStarted = Notification.Name("workoutStarted")
 }
 
 struct MainTabView: View {

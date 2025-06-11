@@ -100,6 +100,7 @@ struct WODMiniPlayer: View {
 // MARK: - Full Active WOD View
 struct ActiveWODView: View {
     @ObservedObject var sessionManager = WODSessionManager.shared
+    @EnvironmentObject var workoutGenerator: EnhancedWorkoutGeneratorViewModel
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -109,7 +110,7 @@ struct ActiveWODView: View {
                 Color(.background)
                     .ignoresSafeArea()
                 
-                if let wod = sessionManager.currentWOD {
+                if let wod = workoutGenerator.workout {
                     VStack(spacing: 24) {
                         // Timer Section - Primary Focus
                         TimerDisplay()
@@ -321,11 +322,7 @@ struct StartWODButton: View {
                 timer.invalidate()
                 countdownTimer = nil
                 showingCountdown = false
-                
-                // Start the WOD
-                sessionManager.startWOD(workout)
-                
-                // Call the completion handler if provided
+
                 onStart?()
             }
         }

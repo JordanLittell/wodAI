@@ -55,7 +55,16 @@ class AuthManager : ObservableObject {
     }
     
     func handleSessionExpired() {
+        print("🔓 Handling session expiration...")
         sessionExpiredMessage = "Your session has expired. Please log in again."
-        clearToken()
+        
+        // Clear token and force UI update
+        UserDefaults.standard.removeObject(forKey: tokenKey)
+        
+        DispatchQueue.main.async { [weak self] in
+            print("🔓 Setting isAuthenticated to false")
+            self?.isAuthenticated = false
+            NotificationCenter.default.post(name: .userDidLogout, object: nil)
+        }
     }
 }

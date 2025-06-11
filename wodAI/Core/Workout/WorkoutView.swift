@@ -16,6 +16,7 @@ struct WorkoutView: View {
     @State private var showingTweakOptions: Bool = false
     @State private var isRegenerating: Bool = false
     @State private var showingActiveWOD: Bool = false
+    @State private var isUpdatingWOD: Bool = false
     
     var body: some View {
         if wgvm.generating {
@@ -28,7 +29,7 @@ struct WorkoutView: View {
                     
                     // Main Workout Display - Full Width
                     if let workout = wgvm.workout {
-                        EnhancedWorkoutDefinitionView(workout: workout, onShare: shareWorkout)
+                        EnhancedWorkoutDefinitionView(workout: workout, onShare: shareWorkout, isUpdating: isUpdatingWOD)
                         
                         // WOD Session Status Banner (if active)
                         if sessionManager.isActive {
@@ -41,8 +42,6 @@ struct WorkoutView: View {
                         
                         
                         startWODButton
-                        
-                        
                     }
                 }
                 .padding(.horizontal, 8) // Reduced horizontal padding for more width
@@ -203,8 +202,8 @@ struct WorkoutView: View {
             if sessionManager.sessionPhase == .notStarted, let workout = wgvm.workout {
                 // Use the StartWODButton component with countdown
                 StartWODButton(workout: workout) {
-                    // Navigate to active WOD view after countdown
-                    showingActiveWOD = true
+                    sessionManager.startWOD(workout)
+                    showingActiveWOD = true   
                 }
                 .padding(.horizontal, 8)
             } else {
@@ -355,7 +354,7 @@ struct WorkoutView: View {
                     subtitle: "Less time",
                     icon: "minus.circle.fill",
                     color: .orange,
-                    isLoading: wgvm.updating
+                    isLoading: isUpdatingWOD
                 ) {
                     adjustDuration(shorter: true)
                 }
@@ -365,7 +364,7 @@ struct WorkoutView: View {
                     subtitle: "More time",
                     icon: "plus.circle.fill",
                     color: .blue,
-                    isLoading: wgvm.updating
+                    isLoading: isUpdatingWOD
                 ) {
                     adjustDuration(shorter: false)
                 }
@@ -378,7 +377,7 @@ struct WorkoutView: View {
                     subtitle: "Easier",
                     icon: "arrow.down.circle.fill",
                     color: .green,
-                    isLoading: wgvm.updating
+                    isLoading: isUpdatingWOD
                 ) {
                     adjustIntensity(increase: false)
                 }
@@ -388,7 +387,7 @@ struct WorkoutView: View {
                     subtitle: "Harder",
                     icon: "arrow.up.circle.fill",
                     color: .red,
-                    isLoading: wgvm.updating
+                    isLoading: isUpdatingWOD
                 ) {
                     adjustIntensity(increase: true)
                 }
@@ -400,7 +399,7 @@ struct WorkoutView: View {
                 subtitle: "Brand new workout",
                 icon: "arrow.clockwise.circle.fill",
                 color: .purple,
-                isLoading: isRegenerating,
+                isLoading: isUpdatingWOD,
                 isFullWidth: true
             ) {
                 regenerateWorkout()
@@ -430,12 +429,8 @@ struct WorkoutView: View {
     }
     
     private func updateWorkout(with instruction: String) {
-        // Check if the view model has the update method and use it directly
-        performWorkoutUpdate(instruction: instruction)
-    }
-    
-    private func performWorkoutUpdate(instruction: String) {
         guard let workout = wgvm.workout else { return }
+        isUpdatingWOD = true
         
         // Set updating state
         // Note: We'll need to access the updating property if available
@@ -466,6 +461,7 @@ struct WorkoutView: View {
                             id: updatedWod.id
                         )
                         wgvm.workout = updatedWorkout
+                        isUpdatingWOD = false
                     }
                     
                 case .failure(let error):
@@ -474,14 +470,15 @@ struct WorkoutView: View {
             }
         }
     }
+
     
     private func regenerateWorkout() {
-        isRegenerating = true
+        isUpdatingWOD = true
         
         // Use the last generation preferences to create a new workout
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             wgvm.generateQuickWorkout(type: .intelligent)
-            isRegenerating = false
+            isUpdatingWOD = false
         }
     }
     
@@ -608,6 +605,7 @@ struct TweakOptionButton: View {
 struct EnhancedWorkoutDefinitionView: View {
     let workout: Workout
     let onShare: () -> Void
+    let isUpdating: Bool
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -623,80 +621,45 @@ struct EnhancedWorkoutDefinitionView: View {
                 
                 Spacer()
                 
-                // Sharing button
-                Button(action: onShare) {
-                    Image(systemName: "square.and.arrow.up")
-                        .foregroundColor(.blue)
-                        .font(.title2)
-                        .padding(8)
-                        .background(
-                            Circle()
-                                .fill(Color.blue.opacity(0.1))
-                        )
+                // Show updating indicator or share button
+                if isUpdating {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                            .scaleEffect(0.8)
+                        
+                        Text("Updating...")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                    }
+                } else {
+                    // Sharing button
+                    Button(action: onShare) {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundColor(.blue)
+                            .font(.title2)
+                            .padding(8)
+                            .background(
+                                Circle()
+                                    .fill(Color.blue.opacity(0.1))
+                            )
+                    }
                 }
             }
             
-            // Workout Definition Display - Full Width
-            VStack(alignment: .leading, spacing: 16) {
-                // Format Title with enhanced styling
-                HStack {
-                    Text(workout.format.uppercased())
-                        .font(.title2)
-                        .fontWeight(.heavy)
-                        .foregroundColor(.brandPrimary)
-                    
-                    Spacer()
-                    
-                    // Workout type badge
-                    Text("AI Generated")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule()
-                                .fill(Color.purple)
-                        )
-                }
-                
-                // Definition Text with enhanced formatting and full width
-                Text(workout.definition)
-                    .font(.body)
-                    .lineSpacing(10)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .foregroundColor(.primaryText)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                
-                // Optional stimulus and muscles info
-                if !workout.stimulus.isEmpty || !workout.muscles.isEmpty {
-                    EnhancedWorkoutMetadata(workout: workout)
+            // Main Content Area
+            ZStack {
+                // Normal workout content
+                if !isUpdating {
+                    workoutContent
+                        .transition(.opacity)
+                } else {
+                    // Updating state overlay
+                    updatingStateView
+                        .transition(.opacity)
                 }
             }
-            .padding(20)
-            .frame(maxWidth: .infinity) // Ensure full width usage
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color(.systemGray6), Color(.systemGray5)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(
-                                LinearGradient(
-                                    colors: [Color.blue.opacity(0.3), Color.purple.opacity(0.2)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 2
-                            )
-                    )
-            )
+            .animation(.easeInOut(duration: 0.3), value: isUpdating)
         }
         .padding(.horizontal, 4) // Minimal horizontal padding
         .padding(.vertical, 16)
@@ -705,6 +668,135 @@ struct EnhancedWorkoutDefinitionView: View {
             RoundedRectangle(cornerRadius: 20)
                 .fill(Color(.systemBackground))
                 .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
+        )
+    }
+    
+    // MARK: - Normal Workout Content
+    private var workoutContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Format Title with enhanced styling
+            HStack {
+                Text(workout.format.uppercased())
+                    .font(.title2)
+                    .fontWeight(.heavy)
+                    .foregroundColor(.brandPrimary)
+                
+                Spacer()
+                
+                // Workout type badge
+                Text("AI Generated")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule()
+                            .fill(Color.purple)
+                    )
+            }
+            
+            // Definition Text with enhanced formatting and full width
+            Text(workout.definition)
+                .font(.body)
+                .lineSpacing(10)
+                .fixedSize(horizontal: false, vertical: true)
+                .foregroundColor(.primaryText)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
+            // Optional stimulus and muscles info
+            if !workout.stimulus.isEmpty || !workout.muscles.isEmpty {
+                EnhancedWorkoutMetadata(workout: workout)
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity) // Ensure full width usage
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(.systemGray6), Color(.systemGray5)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color.blue.opacity(0.3), Color.purple.opacity(0.2)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 2
+                        )
+                )
+        )
+    }
+    
+    // MARK: - Updating State View
+    private var updatingStateView: some View {
+        VStack(spacing: 24) {
+            // Large updating indicator
+            VStack(spacing: 16) {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                    .scaleEffect(1.5)
+                
+                Text("Updating Workout")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primaryText)
+            }
+            
+            // Dimmed workout preview
+            VStack(alignment: .leading, spacing: 12) {
+                // Format title (dimmed)
+                HStack {
+                    Text(workout.format.uppercased())
+                        .font(.title2)
+                        .fontWeight(.heavy)
+                        .foregroundColor(.brandPrimary)
+                        .opacity(0.4)
+                    
+                    Spacer()
+                }
+                
+                // Definition text (dimmed and blurred)
+                Text(workout.definition)
+                    .font(.body)
+                    .lineSpacing(10)
+                    .foregroundColor(.primaryText)
+                    .opacity(0.3)
+                    .blur(radius: 1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: 200) // Ensure adequate height for the updating state
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.blue.opacity(0.1), Color.purple.opacity(0.05)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color.blue.opacity(0.4), Color.purple.opacity(0.3)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 2
+                        )
+                )
         )
     }
 }
