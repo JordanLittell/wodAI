@@ -35,10 +35,8 @@ struct WorkoutGenerationFlowView: View {
                                 case 1:
                                     DurationIntensityStep(flowState: flowState)
                                 case 2:
-                                    EquipmentSelectionStep(flowState: flowState)
-                                case 3:
                                     MuscleGroupStep(flowState: flowState)
-                                case 4:
+                                case 3:
                                     ReviewAndGenerateStep(flowState: flowState)
                                 default:
                                     EmptyView()
@@ -197,78 +195,6 @@ struct DurationIntensityStep: View {
     }
 }
 
-// MARK: - Step 2: Equipment Selection
-struct EquipmentSelectionStep: View {
-    @ObservedObject var flowState: WorkoutFlowState
-    
-    let equipmentOptions: [(EquipmentOption, String)] = [
-        (.bodyweight, "figure.strengthtraining.traditional"),
-        (.dumbbells, "dumbbell"),
-        (.barbell, "figure.strengthtraining.traditional"),
-        (.kettlebells, "figure.boxing"),
-        (.resistance_bands, "oval.portrait"),
-        (.pull_up_bar, "arrow.up.and.down")
-    ]
-    
-    var body: some View {
-        VStack(spacing: 32) {
-            // Header
-            VStack(spacing: 8) {
-                Text("What equipment do you have?")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primaryText)
-                
-                Text("Select all that apply")
-                    .font(.subheadline)
-                    .foregroundColor(.secondaryText)
-            }
-            
-            // Equipment Grid
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                ForEach(equipmentOptions, id: \.0) { equipment, icon in
-                    EquipmentSelectionCard(
-                        equipment: equipment,
-                        icon: icon,
-                        isSelected: flowState.selectedEquipment.contains(equipment)
-                    ) {
-                        flowState.toggleEquipment(equipment)
-                    }
-                }
-            }
-            
-            // Quick Options
-            HStack(spacing: 12) {
-                Button(action: {
-                    flowState.selectedEquipment = [.bodyweight]
-                }) {
-                    Text("Bodyweight Only")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.brandPrimary)
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 20)
-                        .background(Color(.surface))
-                        .cornerRadius(8)
-                }
-                
-                Button(action: {
-                    flowState.selectedEquipment = Set(equipmentOptions.map { $0.0 })
-                }) {
-                    Text("Full Gym")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.brandPrimary)
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 20)
-                        .background(Color(.surface))
-                        .cornerRadius(8)
-                }
-            }
-        }
-    }
-}
-
 // MARK: - Step 3: Muscle Groups
 struct MuscleGroupStep: View {
     @ObservedObject var flowState: WorkoutFlowState
@@ -376,15 +302,6 @@ struct ReviewAndGenerateStep: View {
                     title: "Duration & Intensity",
                     value: "\(Int(flowState.duration)) minutes • \(flowState.intensityLevel.displayName)"
                 )
-                
-                // Equipment
-                if !flowState.selectedEquipment.isEmpty {
-                    SummaryCard(
-                        icon: "dumbbell",
-                        title: "Equipment",
-                        value: flowState.selectedEquipment.map { $0.displayName }.joined(separator: ", ")
-                    )
-                }
                 
                 // Muscle Groups
                 if !flowState.selectedMuscleGroups.isEmpty {
@@ -528,49 +445,6 @@ struct IntensityButton: View {
     }
 }
 
-struct EquipmentSelectionCard: View {
-    let equipment: EquipmentOption
-    let icon: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundColor(isSelected ? .white : .brandPrimary)
-                
-                Text(equipment.displayName)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(isSelected ? .white : .primaryText)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                isSelected ?
-                LinearGradient(
-                    colors: [.brandPrimary, .brandSecondary],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ) :
-                LinearGradient(
-                    colors: [Color(.surface), Color(.surface)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.clear : Color(.border), lineWidth: 1)
-            )
-        }
-    }
-}
-
 struct MuscleGroupRow: View {
     let muscle: MuscleGroup
     let icon: String
@@ -665,28 +539,6 @@ extension IntensityLevel {
         case .moderate: return "figure.walk"
         case .intense: return "figure.run"
         case .brutal: return "flame.fill"
-        }
-    }
-}
-
-extension EquipmentOption {
-    var displayName: String {
-        switch self {
-        case .bodyweight: return "Bodyweight"
-        case .dumbbells: return "Dumbbells"
-        case .barbell: return "Barbell"
-        case .kettlebells: return "Kettlebells"
-        case .resistance_bands: return "Resistance Bands"
-        case .pull_up_bar: return "Pull-up Bar"
-        case .cable_machine: return "Cable Machine"
-        case .rowing_machine: return "Rowing Machine"
-        case .treadmill: return "Treadmill"
-        case .stationary_bike: return "Stationary Bike"
-        case .medicine_ball: return "Medicine Ball"
-        case .foam_roller: return "Foam Roller"
-        case .yoga_mat: return "Yoga Mat"
-        case .bench: return "Bench"
-        case .smith_machine: return "Smith Machine"
         }
     }
 }

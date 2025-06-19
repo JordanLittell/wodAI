@@ -1,0 +1,11 @@
+mutation UpdateGymProfile($updateGymProfileId: Int!, $input: UpdateGymProfileInput!) {
+  updateGymProfile(id: $updateGymProfileId, input: $input) {
+    id
+    name
+    updatedAt
+    equipment {
+      id
+      name
+    }
+  }
+}

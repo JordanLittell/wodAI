@@ -54,7 +54,7 @@ struct EnhancedHomeView: View {
                         WorkoutStatusWidget()
                             .padding(.horizontal)
                             .onTapGesture {
-                                showingWorkoutExecution = true
+                                showingWorkout = true
                             }
                             .transition(.move(edge: .top).combined(with: .opacity))
                     }
@@ -143,25 +143,13 @@ struct EnhancedHomeView: View {
             QuickWorkoutGenerationView()
                 .environmentObject(workoutGenerator)
         }
-        .sheet(isPresented: $showingWorkout) {
+        .fullScreenCover(isPresented: $showingWorkout) {
             NavigationView {
                 WorkoutView()
                     .environmentObject(workoutGenerator)
                     .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            Button("Done") {
-                                
-                            }
-                        }
-                    }
             }
             .transition(.move(edge: .trailing).combined(with: .opacity))
-        }
-        .fullScreenCover(isPresented: $showingWorkoutExecution) {
-            WorkoutExecutionView()
-                .environmentObject(workoutGenerator)
-                .environmentObject(wodSessionManager)
         }
         .onChange(of: workoutGenerator.generating) { oldValue, newValue in
             // Show the generation view when generation starts

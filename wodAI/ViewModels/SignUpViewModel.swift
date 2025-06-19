@@ -39,9 +39,6 @@ class SignUpViewModel: ObservableObject {
                     return
                 }
                 
-                // Store token in UserDefaults via AuthManager
-                self?.authManager.token = token
-                
                 // Update UI state
                 DispatchQueue.main.async {
                     self?.isSignedUp = true

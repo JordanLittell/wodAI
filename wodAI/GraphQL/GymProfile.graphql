@@ -1,0 +1,11 @@
+query GymProfiles {
+  gymProfiles {
+    id
+    name
+    isDefault
+    equipment {
+      id
+      name
+    }
+  }
+}

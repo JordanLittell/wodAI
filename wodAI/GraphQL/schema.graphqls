@@ -351,10 +351,13 @@ type Query {
   wod(id: String!): Wod
   wods: [Wod!]!
   completedWods(page: Int): CompletedWodsResponse!
+  gymProfiles: [GymProfile!]!
+  activeGymProfile: GymProfile
+  equipment: [Equipment!]!
+  equipmentById(id: Int!): Equipment
 }
 
 type Mutation {
-  createUser(input: CreateUserInput!): User!
   updateUser(id: Int!, input: UpdateUserInput!): User!
   deleteUser(id: Int!): User!
   createMesoCycle(input: CreateMesoCycleInput!): MesoCycle!
@@ -381,6 +384,10 @@ type Mutation {
   register(email: String!, password: String!, firstName: String, lastName: String): AuthPayload!
   loginWithCredentials(email: String!, password: String!): AuthPayload!
   loginWithGoogle(idToken: String!): AuthPayload!
+  createGymProfile(input: CreateGymProfileInput!): GymProfile!
+  updateGymProfile(id: Int!, input: UpdateGymProfileInput!): GymProfile!
+  deleteGymProfile(id: Int!): Boolean!
+  setActiveGymProfile(id: Int!): GymProfile!
 }
 
 input LoadParams {
@@ -397,19 +404,6 @@ input CreateWodInput {
 input UpdateWodInput {
   id: String
   instructions: String
-}
-
-input CreateUserInput {
-  firstName: String
-  lastName: String
-  email: String!
-  age: Int
-  gender: Gender
-  fitnessLevel: FitnessLevel
-  equipment: [FitnessEquipment!]
-  goal: String
-  weight: WeightInput
-  height: HeightInput
 }
 
 input UpdateUserInput {
@@ -555,4 +549,33 @@ input UpdateTrainingPlanInput {
 type AuthPayload {
   token: String!
   user: User!
+}
+
+type Equipment {
+  id: Int!
+  name: String!
+  description: String
+  category: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type GymProfile {
+  id: Int!
+  name: String!
+  equipment: [Equipment!]!
+  isDefault: Boolean!
+  userId: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+input CreateGymProfileInput {
+  name: String!
+  equipmentIds: [Int!]!
+}
+
+input UpdateGymProfileInput {
+  name: String
+  equipmentIds: [Int!]
 }

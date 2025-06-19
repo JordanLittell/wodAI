@@ -1,0 +1,46 @@
+//
+//  Equipment.swift
+//  wodAI
+//
+//  Model for equipment fetched from the database
+//
+
+import Foundation
+
+struct Equipment: Identifiable, Codable, Equatable {
+    let id: Int
+    let name: String
+    
+    // Map database equipment to local EquipmentOption enum
+    var equipmentOption: EquipmentOption? {
+        // Create a mapping based on equipment names from the database
+        // This mapping should be adjusted based on actual database values
+        let nameMapping: [String: EquipmentOption] = [
+            "Bodyweight": .bodyweight,
+            "Dumbbells": .dumbbells,
+            "Barbell": .barbell,
+            "Kettlebells": .kettlebells,
+            "Resistance Bands": .resistance_bands,
+            "Pull-up Bar": .pull_up_bar,
+            "Cable Machine": .cable_machine,
+            "Rowing Machine": .rowing_machine,
+            "Treadmill": .treadmill,
+            "Stationary Bike": .stationary_bike,
+            "Medicine Ball": .medicine_ball,
+            "Foam Roller": .foam_roller,
+            "Yoga Mat": .yoga_mat,
+            "Bench": .bench,
+            "Smith Machine": .smith_machine
+        ]
+        
+        return nameMapping[name]
+    }
+}
+
+// Extension to convert from GraphQL Equipment type
+extension Equipment {
+    init(from graphQLEquipment: EquipmentQuery.Data.Equipment) {
+        self.id = graphQLEquipment.id
+        self.name = graphQLEquipment.name
+    }
+}

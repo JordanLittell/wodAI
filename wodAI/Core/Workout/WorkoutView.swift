@@ -11,6 +11,7 @@ import WodAiAPI
 struct WorkoutView: View {
     @EnvironmentObject var wgvm: EnhancedWorkoutGeneratorViewModel
     @ObservedObject private var sessionManager = WODSessionManager.shared
+    @Environment(\.dismiss) private var dismiss
     
     @State private var showTimer: Bool = false
     @State private var showingTweakOptions: Bool = false
@@ -22,33 +23,43 @@ struct WorkoutView: View {
         if wgvm.generating {
             WorkoutLaunchAnimation()
         } else {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Header Section
-                    workoutHeader
-                    
-                    // Main Workout Display - Full Width
-                    if let workout = wgvm.workout {
-                        EnhancedWorkoutDefinitionView(workout: workout, onShare: shareWorkout, isUpdating: isUpdatingWOD)
+            
+            if showingActiveWOD {
+                ActiveWODView()
+            } else {
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Header Section
+                        workoutHeader
                         
-                        // WOD Session Status Banner (if active)
-                        if sessionManager.isActive {
-                            wodSessionStatusBanner
+                        // Main Workout Display - Full Width
+                        if let workout = wgvm.workout {
+                            EnhancedWorkoutDefinitionView(workout: workout, onShare: shareWorkout, isUpdating: isUpdatingWOD)
+                            
+                            // WOD Session Status Banner (if active)
+                            if sessionManager.isActive {
+                                wodSessionStatusBanner
+                            }
+                            
+                            workoutTweakingSection
+                                .opacity(sessionManager.sessionPhase == .active ? 0.6 : 1.0)
+                                .disabled(sessionManager.sessionPhase == .active)
+                            
+                            
+                            startWODButton
                         }
-                        
-                        workoutTweakingSection
-                            .opacity(sessionManager.sessionPhase == .active ? 0.6 : 1.0)
-                            .disabled(sessionManager.sessionPhase == .active)
-                        
-                        
-                        startWODButton
+                    }
+                    .padding(.horizontal, 8) // Reduced horizontal padding for more width
+                    .padding(.bottom, sessionManager.isActive ? 120 : 20) // Account for mini-player
+                }
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Dismiss") {
+                            dismiss()
+                        }
+                        .foregroundColor(.brandPrimary)
                     }
                 }
-                .padding(.horizontal, 8) // Reduced horizontal padding for more width
-                .padding(.bottom, sessionManager.isActive ? 120 : 20) // Account for mini-player
-            }
-            .fullScreenCover(isPresented: $showingActiveWOD) {
-                ActiveWODView()
             }
         }
     }
@@ -203,7 +214,7 @@ struct WorkoutView: View {
                 // Use the StartWODButton component with countdown
                 StartWODButton(workout: workout) {
                     sessionManager.startWOD(workout)
-                    showingActiveWOD = true   
+                    showingActiveWOD = true
                 }
                 .padding(.horizontal, 8)
             } else {

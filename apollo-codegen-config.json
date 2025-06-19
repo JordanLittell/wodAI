@@ -1,5 +1,5 @@
 {
-    "schemaNamespace" : "wodAiAPI",
+    "schemaNamespace" : "WodAiAPI",
     "input" : {
         "operationSearchPaths" : [
             "wodAI/GraphQL/**/*.graphql"
@@ -36,8 +36,23 @@
             }
         },
         "operations" : {
-            "inSchemaModule" : {
+            "relative" : {
+                "subpath": "Operations"
             }
         }
+    },
+    "options": {
+        "queryStringLiteralFormat": "multiline",
+        "deprecatedEnumCases": "include",
+        "schemaDocumentation": "include",
+        "operationDocumentFormat": ["definition", "operationId"],
+        "cocoapodsCompatibleImportStatements": false,
+        "warningsOnDeprecatedUsage": "include",
+        "conversionStrategies": {
+            "enumCases": "camelCase",
+            "fieldAccessors": "camelCase",
+            "inputObjects": "camelCase"
+        },
+        "pruneGeneratedFiles": true
     }
 }

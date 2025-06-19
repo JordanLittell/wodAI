@@ -7,6 +7,7 @@
 
 import SwiftUI
 import WodAiAPI
+import Apollo
 
 struct WorkoutsView: View {
     @EnvironmentObject var workoutGenerator: EnhancedWorkoutGeneratorViewModel
@@ -14,11 +15,16 @@ struct WorkoutsView: View {
     @State private var isLoading = false
     @State private var completedWorkouts: [CompletedWorkout] = []
     @State private var showingWorkoutDetail: CompletedWorkout?
+    @State private var currentPage = 1
+    @State private var hasMore = true
+    @State private var error: Error?
+    
+    private let network = Network.shared
     
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(.background)
+                Color("Background")
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
@@ -28,16 +34,20 @@ struct WorkoutsView: View {
                         .padding(.vertical, 12)
                     
                     // Content
-                    if isLoading {
+                    if isLoading && completedWorkouts.isEmpty {
                         LoadingView()
+                    } else if let error = error, completedWorkouts.isEmpty {
+                        ErrorStateView(error: error) {
+                            loadWorkouts()
+                        }
                     } else {
                         ScrollView {
                             LazyVStack(spacing: 16) {
                                 if filteredCompletedWorkouts.isEmpty {
                                     EmptyStateView(
                                         icon: "dumbbell",
-                                        title: "No Completed Workouts",
-                                        message: "Complete your first workout to see it here!"
+                                        title: searchText.isEmpty ? "No Completed Workouts" : "No Results",
+                                        message: searchText.isEmpty ? "Complete your first workout to see it here!" : "Try a different search term"
                                     )
                                     .padding(.top, 60)
                                 } else {
@@ -45,6 +55,24 @@ struct WorkoutsView: View {
                                         WorkoutCard(workout: workout) {
                                             showingWorkoutDetail = workout
                                         }
+                                    }
+                                    
+                                    // Load more button
+                                    if hasMore && searchText.isEmpty {
+                                        Button(action: loadMoreWorkouts) {
+                                            if isLoading {
+                                                ProgressView()
+                                                    .progressViewStyle(CircularProgressViewStyle())
+                                                    .frame(height: 50)
+                                            } else {
+                                                Text("Load More")
+                                                    .font(.subheadline)
+                                                    .fontWeight(.medium)
+                                                    .foregroundColor(Color("BrandPrimary"))
+                                                    .frame(height: 50)
+                                            }
+                                        }
+                                        .disabled(isLoading)
                                     }
                                 }
                             }
@@ -72,47 +100,117 @@ struct WorkoutsView: View {
             return completedWorkouts
         }
         return completedWorkouts.filter { workout in
-            workout.format.localizedCaseInsensitiveContains(searchText) ||
-            workout.definition.localizedCaseInsensitiveContains(searchText)
+            workout.name.localizedCaseInsensitiveContains(searchText) ||
+            workout.definition.localizedCaseInsensitiveContains(searchText) ||
+            (workout.muscles?.localizedCaseInsensitiveContains(searchText) ?? false)
         }
     }
     
     // MARK: - Data Loading
     private func loadWorkouts() {
-        isLoading = true
+        guard !isLoading else { return }
         
-        // Simulate loading with mock data for now
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            // Mock completed workouts
-            completedWorkouts = [
-                CompletedWorkout(
-                    id: "1",
-                    format: "AMRAP 20",
-                    definition: "20 min AMRAP:\n10 Push-ups\n15 Air Squats\n20 Sit-ups",
-                    completedAt: Date().addingTimeInterval(-86400), // Yesterday
-                    duration: 1200
-                ),
-                CompletedWorkout(
-                    id: "2",
-                    format: "For Time",
-                    definition: "21-15-9:\nThrusters (95/65)\nPull-ups",
-                    completedAt: Date().addingTimeInterval(-172800), // 2 days ago
-                    duration: 480
-                ),
-                CompletedWorkout(
-                    id: "3",
-                    format: "EMOM 15",
-                    definition: "Every minute for 15 minutes:\n5 Burpees\n10 Kettlebell Swings\nMax Double Unders",
-                    completedAt: Date().addingTimeInterval(-259200), // 3 days ago
-                    duration: 900
-                )
-            ]
+        isLoading = true
+        error = nil
+        currentPage = 1
+        
+        network.client.fetch(query: CompletedWodsQuery(page: GraphQLNullable(integerLiteral: currentPage))) { result in
+            DispatchQueue.main.async {
+                self.isLoading = false
+                
+                switch result {
+                case .success(let graphQLResult):
+                    if let data = graphQLResult.data?.completedWods {
+                        self.completedWorkouts = data.wods.enumerated().map { index, wod in
+                            CompletedWorkout(
+                                id: "\(self.currentPage)-\(index)", // Generate a unique ID
+                                name: wod.name,
+                                definition: wod.definition,
+                                muscles: wod.muscles.joined(separator: ", "),
+                                completedAt: self.parseDate(wod.updatedAt) ?? Date()
+                            )
+                        }
+                        self.hasMore = data.hasMore
+                        self.currentPage = data.currentPage
+                    }
+                    
+                    if let errors = graphQLResult.errors {
+                        print("GraphQL errors: \(errors)")
+                        self.error = NSError(
+                            domain: "WorkoutsView",
+                            code: 0,
+                            userInfo: [NSLocalizedDescriptionKey: "Failed to load workouts"]
+                        )
+                    }
+                    
+                case .failure(let error):
+                    print("Network error loading workouts: \(error)")
+                    self.error = error
+                }
+            }
+        }
+    }
+    
+    private func loadMoreWorkouts() {
+        guard !isLoading && hasMore else { return }
+        
+        isLoading = true
+        let nextPage = currentPage + 1
+        
+        network.client.fetch(query: CompletedWodsQuery(page: GraphQLNullable(integerLiteral: nextPage))) { result in
+            DispatchQueue.main.async {
+                self.isLoading = false
+                
+                switch result {
+                case .success(let graphQLResult):
+                    if let data = graphQLResult.data?.completedWods {
+                        let newWorkouts = data.wods.enumerated().map { index, wod in
+                            CompletedWorkout(
+                                id: "\(nextPage)-\(index)",
+                                name: wod.name,
+                                definition: wod.definition,
+                                muscles: wod.muscles.joined(separator: ", "),
+                                completedAt: self.parseDate(wod.updatedAt) ?? Date()
+                            )
+                        }
+                        self.completedWorkouts.append(contentsOf: newWorkouts)
+                        self.hasMore = data.hasMore
+                        self.currentPage = data.currentPage
+                    }
+                    
+                case .failure(let error):
+                    print("Error loading more workouts: \(error)")
+                }
+            }
+        }
+    }
+    
+    private func parseDate(_ dateTime: WodAiAPI.DateTime?) -> Date? {
+        guard let dateTime = dateTime else { return nil }
+        
+        // DateTime is likely a typealias for String in the generated code
+        let dateString = String(describing: dateTime)
+        
+        // Try multiple date formats
+        let formatters = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+            "yyyy-MM-dd'T'HH:mm:ssZ",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd"
+        ]
+        
+        for format in formatters {
+            let formatter = DateFormatter()
+            formatter.dateFormat = format
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone(secondsFromGMT: 0)
             
-            isLoading = false
+            if let date = formatter.date(from: dateString) {
+                return date
+            }
         }
         
-        // TODO: Replace with actual API call
-        // fetchCompletedWorkouts()
+        return nil
     }
 }
 
@@ -123,21 +221,21 @@ struct SearchBar: View {
     var body: some View {
         HStack {
             Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondaryText)
+                .foregroundColor(Color("SecondaryText"))
             
             TextField("Search workouts...", text: $text)
                 .textFieldStyle(PlainTextFieldStyle())
-                .foregroundColor(.primaryText)
+                .foregroundColor(Color("PrimaryText"))
             
             if !text.isEmpty {
                 Button(action: { text = "" }) {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondaryText)
+                        .foregroundColor(Color("SecondaryText"))
                 }
             }
         }
         .padding(12)
-        .background(Color(.surface))
+        .background(Color("Surface"))
         .cornerRadius(12)
     }
 }
@@ -153,51 +251,80 @@ struct WorkoutCard: View {
                 // Header
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(workout.format)
+                        Text(workout.name)
                             .font(.headline)
-                            .foregroundColor(.primaryText)
+                            .foregroundColor(Color("PrimaryText"))
+                            .lineLimit(1)
                         
                         Text(formatDate(workout.completedAt))
                             .font(.caption)
-                            .foregroundColor(.secondaryText)
+                            .foregroundColor(Color("SecondaryText"))
                     }
                     
                     Spacer()
+                    
+                    if let muscles = workout.muscles, !muscles.isEmpty {
+                        Text(muscles)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(Color("BrandPrimary"))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color("BrandPrimary").opacity(0.1))
+                            .cornerRadius(6)
+                            .lineLimit(1)
+                    }
                 }
                 
-                // Definition Preview
-                Text(workout.definition)
-                    .font(.subheadline)
-                    .foregroundColor(.primaryText)
-                    .lineLimit(3)
-                    .multilineTextAlignment(.leading)
+                // Definition Preview with gradient fade
+                ZStack(alignment: .bottomTrailing) {
+                    Text(workout.definition)
+                        .font(.subheadline)
+                        .foregroundColor(Color("PrimaryText"))
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    // Gradient fade effect
+                    if workout.definition.count > 100 {
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color("Surface").opacity(0),
+                                Color("Surface").opacity(0.8),
+                                Color("Surface")
+                            ]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                        .frame(width: 100)
+                        .allowsHitTesting(false)
+                        
+                        Text("...")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(Color("SecondaryText"))
+                            .padding(.trailing, 4)
+                    }
+                }
                 
                 // Footer
                 HStack {
-                    // Duration
-                    Label(formatDuration(workout.duration), systemImage: "timer")
+                    // Action hint
+                    Text("Tap to view full workout")
                         .font(.caption)
-                        .foregroundColor(.secondaryText)
+                        .foregroundColor(Color("BrandPrimary"))
                     
                     Spacer()
                     
-                    // Repeat indicator
-                    if workout.repeatCount > 1 {
-                        Label("\(workout.repeatCount)x", systemImage: "arrow.clockwise")
-                            .font(.caption)
-                            .foregroundColor(.brandPrimary)
-                    }
-                    
-                    // Action hint
-                    Text("Tap to view")
+                    Image(systemName: "chevron.right")
                         .font(.caption)
-                        .foregroundColor(.brandPrimary)
+                        .foregroundColor(Color("TertiaryText"))
                 }
             }
             .padding()
-            .background(Color(.surface))
+            .background(Color("Surface"))
             .cornerRadius(16)
-            .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -207,14 +334,43 @@ struct WorkoutCard: View {
         formatter.unitsStyle = .full
         return formatter.localizedString(for: date, relativeTo: Date())
     }
+}
+
+// MARK: - Error State View
+struct ErrorStateView: View {
+    let error: Error
+    let retry: () -> Void
     
-    private func formatDuration(_ seconds: Int) -> String {
-        let minutes = seconds / 60
-        let remainingSeconds = seconds % 60
-        if remainingSeconds == 0 {
-            return "\(minutes)m"
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 60))
+                .foregroundColor(Color("Warning"))
+            
+            VStack(spacing: 8) {
+                Text("Unable to Load Workouts")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                    .foregroundColor(Color("PrimaryText"))
+                
+                Text(error.localizedDescription)
+                    .font(.subheadline)
+                    .foregroundColor(Color("SecondaryText"))
+                    .multilineTextAlignment(.center)
+            }
+            
+            Button(action: retry) {
+                Text("Try Again")
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(Color("BrandPrimary"))
+                    .cornerRadius(10)
+            }
         }
-        return "\(minutes)m \(remainingSeconds)s"
+        .padding(40)
     }
 }
 
@@ -226,19 +382,19 @@ struct EmptyStateView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: icon)
+            Image(systemName: "dumbbell")
                 .font(.system(size: 60))
-                .foregroundColor(.secondaryText)
+                .foregroundColor(Color("SecondaryText"))
             
             VStack(spacing: 8) {
                 Text(title)
                     .font(.title3)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primaryText)
+                    .foregroundColor(Color("PrimaryText"))
                 
                 Text(message)
                     .font(.subheadline)
-                    .foregroundColor(.secondaryText)
+                    .foregroundColor(Color("SecondaryText"))
                     .multilineTextAlignment(.center)
             }
         }
@@ -254,6 +410,7 @@ struct LoadingView: View {
             ProgressView()
                 .progressViewStyle(CircularProgressViewStyle())
                 .scaleEffect(1.5)
+                .tint(Color("BrandPrimary"))
             Spacer()
         }
     }
@@ -272,21 +429,23 @@ struct WorkoutDetailView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     // Workout Info Card
                     VStack(alignment: .leading, spacing: 16) {
-                        // Format and Date
-                        Text(workout.format)
+                        // Name and Date
+                        Text(workout.name)
                             .font(.title2)
                             .fontWeight(.bold)
-                            .foregroundColor(.primaryText)
+                            .foregroundColor(Color("PrimaryText"))
                         
                         // Completion Info
                         HStack(spacing: 20) {
                             Label(formatDate(workout.completedAt), systemImage: "calendar")
                                 .font(.subheadline)
-                                .foregroundColor(.secondaryText)
+                                .foregroundColor(Color("SecondaryText"))
                             
-                            Label(formatDuration(workout.duration), systemImage: "timer")
-                                .font(.subheadline)
-                                .foregroundColor(.secondaryText)
+                            if let muscles = workout.muscles, !muscles.isEmpty {
+                                Label(muscles, systemImage: "figure.strengthtraining.traditional")
+                                    .font(.subheadline)
+                                    .foregroundColor(Color("SecondaryText"))
+                            }
                         }
                         
                         Divider()
@@ -294,21 +453,16 @@ struct WorkoutDetailView: View {
                         // Definition
                         Text("Workout")
                             .font(.headline)
-                            .foregroundColor(.primaryText)
+                            .foregroundColor(Color("PrimaryText"))
                         
                         Text(workout.definition)
                             .font(.body)
-                            .foregroundColor(.primaryText)
+                            .foregroundColor(Color("PrimaryText"))
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .padding()
-                    .background(Color(.surface))
+                    .background(Color("Surface"))
                     .cornerRadius(16)
-                    
-                    // Statistics Card (if available)
-                    if workout.repeatCount > 1 {
-                        StatisticsCard(workout: workout)
-                    }
                     
                     // Actions
                     VStack(spacing: 12) {
@@ -322,7 +476,7 @@ struct WorkoutDetailView: View {
                             .padding()
                             .background(
                                 LinearGradient(
-                                    colors: [.heroStart, .heroEnd],
+                                    colors: [Color("HeroStart"), Color("HeroEnd")],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
@@ -339,15 +493,19 @@ struct WorkoutDetailView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color(.surface))
-                            .foregroundColor(.brandPrimary)
+                            .background(Color("Surface"))
+                            .foregroundColor(Color("BrandPrimary"))
                             .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color("Border"), lineWidth: 1)
+                            )
                         }
                     }
                 }
                 .padding()
             }
-            .background(Color(.background))
+            .background(Color("Background"))
             .navigationTitle("Workout Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -355,6 +513,7 @@ struct WorkoutDetailView: View {
                     Button("Done") {
                         dismiss()
                     }
+                    .foregroundColor(Color("BrandPrimary"))
                 }
             }
         }
@@ -365,8 +524,8 @@ struct WorkoutDetailView: View {
         workoutGenerator.workout = Workout(
             definition: workout.definition,
             stimulus: "",
-            muscles: "",
-            format: workout.format,
+            muscles: workout.muscles ?? "",
+            format: workout.name,
             id: workout.id
         )
         
@@ -384,12 +543,12 @@ struct WorkoutDetailView: View {
         let shareText = """
         Check out this workout from wodAI!
         
-        \(workout.format)
+        \(workout.name)
         
         \(workout.definition)
         
         Completed: \(formatDate(workout.completedAt))
-        Duration: \(formatDuration(workout.duration))
+        \(workout.muscles.map { "Muscles: \($0)" } ?? "")
         
         #wodAI #fitness #workout
         """
@@ -411,92 +570,15 @@ struct WorkoutDetailView: View {
         formatter.timeStyle = .short
         return formatter.string(from: date)
     }
-    
-    private func formatDuration(_ seconds: Int) -> String {
-        let minutes = seconds / 60
-        let remainingSeconds = seconds % 60
-        return String(format: "%d:%02d", minutes, remainingSeconds)
-    }
-}
-
-// MARK: - Statistics Card
-struct StatisticsCard: View {
-    let workout: CompletedWorkout
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Statistics")
-                .font(.headline)
-                .foregroundColor(.primaryText)
-            
-            HStack(spacing: 20) {
-                StatItem(
-                    title: "Times Completed",
-                    value: "\(workout.repeatCount)",
-                    icon: "arrow.clockwise"
-                )
-                
-                StatItem(
-                    title: "Avg Duration",
-                    value: formatDuration(workout.averageDuration ?? workout.duration),
-                    icon: "timer"
-                )
-                
-                if let bestTime = workout.bestTime {
-                    StatItem(
-                        title: "Best Time",
-                        value: formatDuration(bestTime),
-                        icon: "trophy"
-                    )
-                }
-            }
-        }
-        .padding()
-        .background(Color(.surface))
-        .cornerRadius(16)
-    }
-    
-    private func formatDuration(_ seconds: Int) -> String {
-        let minutes = seconds / 60
-        let remainingSeconds = seconds % 60
-        return String(format: "%d:%02d", minutes, remainingSeconds)
-    }
-}
-
-struct StatItem: View {
-    let title: String
-    let value: String
-    let icon: String
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundColor(.brandPrimary)
-            
-            Text(value)
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundColor(.primaryText)
-            
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondaryText)
-        }
-        .frame(maxWidth: .infinity)
-    }
 }
 
 // MARK: - Data Model
 struct CompletedWorkout: Identifiable {
     let id: String
-    let format: String
+    let name: String
     let definition: String
+    let muscles: String?
     let completedAt: Date
-    let duration: Int // in seconds
-    var repeatCount: Int = 1
-    var averageDuration: Int?
-    var bestTime: Int?
 }
 
 // MARK: - Preview

@@ -24,7 +24,7 @@ class GymProfileManager: ObservableObject {
     
     // MARK: - Public Methods
     
-    var selectedEquipment: Set<EquipmentOption> {
+    var selectedEquipment: Set<Equipment> {
         selectedProfile?.equipment ?? []
     }
     
@@ -35,13 +35,6 @@ class GymProfileManager: ObservableObject {
             profiles = savedProfiles
         } else {
             // Load default profiles on first launch
-            profiles = [
-                GymProfile.home,
-                GymProfile.commercialGym,
-                GymProfile.crossfitBox,
-                GymProfile.hotel,
-                GymProfile.budget
-            ]
             saveProfiles()
         }
         

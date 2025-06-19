@@ -1,0 +1,10 @@
+
+mutation CreateGymProfileMutation($input: CreateGymProfileInput!) {
+  createGymProfile(input: $input) {
+    equipment {
+      id
+      name
+    }
+    name
+  }
+}

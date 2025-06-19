@@ -110,7 +110,7 @@ struct ActiveWODView: View {
                 Color(.background)
                     .ignoresSafeArea()
                 
-                if let wod = workoutGenerator.workout {
+                if let wod = sessionManager.currentWOD {
                     VStack(spacing: 24) {
                         // Timer Section - Primary Focus
                         TimerDisplay()
@@ -207,6 +207,7 @@ struct WODDefinitionCard: View {
 // MARK: - WOD Controls
 struct WODControls: View {
     @ObservedObject var sessionManager = WODSessionManager.shared
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         HStack(spacing: 16) {
@@ -230,6 +231,7 @@ struct WODControls: View {
             // Complete Button
             Button(action: {
                 sessionManager.completeWOD()
+                dismiss()
             }) {
                 HStack {
                     Image(systemName: "checkmark.circle.fill")

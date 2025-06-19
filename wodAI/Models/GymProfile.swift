@@ -11,7 +11,7 @@ struct GymProfile: Identifiable, Codable, Equatable {
     let id: UUID
     var name: String
     var icon: String
-    var equipment: Set<EquipmentOption>
+    var equipment: Set<Equipment>  // Changed from Set<EquipmentOption> to Set<Equipment>
     var isSelected: Bool
     let createdAt: Date
     var updatedAt: Date
@@ -20,7 +20,7 @@ struct GymProfile: Identifiable, Codable, Equatable {
         id: UUID = UUID(),
         name: String,
         icon: String = "building.2",
-        equipment: Set<EquipmentOption> = [],
+        equipment: Set<Equipment> = [],
         isSelected: Bool = false,
         createdAt: Date = Date(),
         updatedAt: Date = Date()
@@ -33,49 +33,6 @@ struct GymProfile: Identifiable, Codable, Equatable {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
-    
-    // Default profiles
-    static let home = GymProfile(
-        name: "Home",
-        icon: "house.fill",
-        equipment: [.bodyweight, .resistance_bands],
-        isSelected: true
-    )
-    
-    static let commercialGym = GymProfile(
-        name: "Commercial Gym",
-        icon: "building.2.fill",
-        equipment: [
-            .bodyweight, .dumbbells, .barbell, .pull_up_bar,
-            .kettlebells, .resistance_bands, .cable_machine,
-            .treadmill, .stationary_bike, .bench, .smith_machine
-        ]
-    )
-    
-    static let crossfitBox = GymProfile(
-        name: "CrossFit Box",
-        icon: "bolt.fill",
-        equipment: [
-            .bodyweight, .dumbbells, .barbell, .pull_up_bar,
-            .kettlebells, .resistance_bands, .rowing_machine,
-            .medicine_ball, .foam_roller, .yoga_mat, .bench
-        ]
-    )
-    
-    static let hotel = GymProfile(
-        name: "Hotel Gym",
-        icon: "bed.double.fill",
-        equipment: [.bodyweight, .dumbbells, .treadmill, .stationary_bike]
-    )
-    
-    static let budget = GymProfile(
-        name: "Budget Gym",
-        icon: "creditcard.fill",
-        equipment: [
-            .bodyweight, .dumbbells, .smith_machine,
-            .treadmill, .stationary_bike, .cable_machine
-        ]
-    )
 }
 
 // Icons for gym profiles

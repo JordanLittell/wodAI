@@ -14,8 +14,8 @@
             filePath = "wodAI/Core/Workout/WorkoutView.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "195"
-            endingLineNumber = "195"
+            startingLineNumber = "206"
+            endingLineNumber = "206"
             landmarkName = "workoutMetadata(workout:)"
             landmarkType = "7">
          </BreakpointContent>

@@ -376,7 +376,7 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
             DispatchQueue.main.async {
                 switch result {
                 case .success:
-                    print("Workout completed")
+                    self?.workout = nil
                 case .failure(let error):
                     self?.handleGenerationError(error.localizedDescription)
                 }
@@ -428,12 +428,12 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
         var prompt = "Generate a \(Int(state.duration))-minute \(state.intensityLevel.rawValue) workout"
         
         if !state.selectedMuscleGroups.isEmpty {
-            let muscles = state.selectedMuscleGroups.map { $0.rawValue }.joined(separator: ", ")
+            let muscles = state.selectedMuscleGroups.map { $0.displayName }.joined(separator: ", ")
             prompt += " focusing on \(muscles)"
         }
         
         if !state.selectedEquipment.isEmpty {
-            let equipment = state.selectedEquipment.map { $0.rawValue }.joined(separator: ", ")
+            let equipment = state.selectedEquipment.map { $0.name }.joined(separator: ", ")
             prompt += " using \(equipment)"
         }
         
@@ -548,7 +548,7 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
 struct WorkoutGenerationPreferences {
     let duration: Int
     let intensity: IntensityLevel
-    let equipment: Set<EquipmentOption>
+    let equipment: Set<Equipment>
     let muscleGroups: Set<MuscleGroup>
     let energyLevel: EnergyLevel
     let isQuick: Bool
@@ -558,7 +558,7 @@ struct WorkoutGenerationPreferences {
     init(
         duration: Int,
         intensity: IntensityLevel,
-        equipment: Set<EquipmentOption>,
+        equipment: Set<Equipment>,
         muscleGroups: Set<MuscleGroup>,
         energyLevel: EnergyLevel,
         isQuick: Bool,
@@ -588,7 +588,7 @@ struct WorkoutGenerationPreferences {
         }
         
         if !equipment.isEmpty {
-            let equipmentList = equipment.map { $0.rawValue }.joined(separator: ", ")
+            let equipmentList = equipment.map { $0.name }.joined(separator: ", ")
             description += " using \(equipmentList)"
         }
         
@@ -612,12 +612,6 @@ extension IntensityLevel: Codable {
     // String-based enums automatically get Codable conformance
 }
 
-// MARK: - Make EquipmentOption Codable
-extension EquipmentOption: Codable {
-    // EquipmentOption already conforms to String, CaseIterable
-    // String-based enums automatically get Codable conformance
-}
-
 // MARK: - Make MuscleGroup Codable
 extension MuscleGroup: Codable {
     // MuscleGroup already conforms to String, CaseIterable
@@ -633,7 +627,7 @@ extension EnergyLevel: Codable {
 struct UserWorkoutPreferences: Codable {
     var preferredDuration: Int = 30
     var preferredIntensity: IntensityLevel = .moderate
-    var availableEquipment: Set<EquipmentOption> = [.bodyweight]
+    var availableEquipment: Set<Equipment> = []
     var lastWorkoutDate: Date?
     var totalWorkoutsCompleted: Int = 0
     var preferredWorkoutTimes: [String] = []
@@ -657,7 +651,7 @@ struct UserWorkoutPreferences: Codable {
     init(
         preferredDuration: Int = 30,
         preferredIntensity: IntensityLevel = .moderate,
-        availableEquipment: Set<EquipmentOption> = [.bodyweight],
+        availableEquipment: Set<Equipment> = [],
         lastWorkoutDate: Date? = nil,
         totalWorkoutsCompleted: Int = 0,
         preferredWorkoutTimes: [String] = [],
@@ -679,8 +673,8 @@ struct UserWorkoutPreferences: Codable {
         preferredDuration = try container.decodeIfPresent(Int.self, forKey: .preferredDuration) ?? 30
         preferredIntensity = try container.decodeIfPresent(IntensityLevel.self, forKey: .preferredIntensity) ?? .moderate
         
-        // Decode Set<EquipmentOption> from Array
-        let equipmentArray = try container.decodeIfPresent([EquipmentOption].self, forKey: .availableEquipment) ?? [.bodyweight]
+        // Decode Set<Equipment> from Array
+        let equipmentArray = try container.decodeIfPresent([Equipment].self, forKey: .availableEquipment) ?? []
         availableEquipment = Set(equipmentArray)
         
         lastWorkoutDate = try container.decodeIfPresent(Date.self, forKey: .lastWorkoutDate)
@@ -696,7 +690,7 @@ struct UserWorkoutPreferences: Codable {
         try container.encode(preferredDuration, forKey: .preferredDuration)
         try container.encode(preferredIntensity, forKey: .preferredIntensity)
         
-        // Encode Set<EquipmentOption> as Array
+        // Encode Set<Equipment> as Array
         let equipmentArray = Array(availableEquipment)
         try container.encode(equipmentArray, forKey: .availableEquipment)
         
@@ -711,7 +705,7 @@ struct ExerciseAlternative {
     let id: String
     let name: String
     let difficulty: String
-    let equipment: [EquipmentOption]
+    let equipment: [Equipment]
     let muscleGroups: [MuscleGroup]
 }
 

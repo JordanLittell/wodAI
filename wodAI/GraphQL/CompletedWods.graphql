@@ -1,0 +1,12 @@
+query CompletedWodsQuery($page: Int) {
+  completedWods(page: $page) {
+    wods {
+      definition
+      muscles
+      name
+      updatedAt
+    }
+    hasMore
+    currentPage
+  }
+}

@@ -12,7 +12,7 @@ class WorkoutFlowState: ObservableObject {
     @Published var currentStep: Int = 1
     @Published var duration: Double = 30
     @Published var intensityLevel: IntensityLevel = .moderate
-    @Published var selectedEquipment: Set<EquipmentOption> = []
+    @Published var selectedEquipment: Set<Equipment> = []
     @Published var selectedMuscleGroups: Set<MuscleGroup> = []
     @Published var energyLevel: EnergyLevel = .good
     @Published var isGenerating: Bool = false
@@ -30,7 +30,7 @@ class WorkoutFlowState: ObservableObject {
         }
     }
     
-    func toggleEquipment(_ equipment: EquipmentOption) {
+    func toggleEquipment(_ equipment: Equipment) {
         if selectedEquipment.contains(equipment) {
             selectedEquipment.remove(equipment)
         } else {
@@ -86,7 +86,7 @@ class WorkoutFlowState: ObservableObject {
         }
         
         if !selectedEquipment.isEmpty {
-            let equipment = selectedEquipment.map { $0.rawValue }.joined(separator: ", ")
+            let equipment = selectedEquipment.map { $0.name }.joined(separator: ", ")
             description += " using \(equipment)"
         }
         

@@ -8,6 +8,8 @@
 
 import SwiftUI
 import Combine
+import WodAiAPI
+import Apollo
 
 // MARK: - WOD Session Manager
 @MainActor
@@ -80,7 +82,7 @@ class WODSessionManager: ObservableObject {
     }
     
     func completeWOD() {
-        guard isActive else { return }
+        guard isActive, let workout = currentWOD else { return }
         
         // Stop timer
         stopTimer()
@@ -88,13 +90,30 @@ class WODSessionManager: ObservableObject {
         // Mark as completed
         sessionPhase = .completed
         
-        // Call the existing markCompleted functionality if available
-        NotificationCenter.default.post(name: .wodSessionCompleted, object: currentWOD)
+        // Call the CompleteWod mutation
+        Network.shared.client.perform(mutation: CompleteWodMutation(completeWodId: workout.id)) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    if let completedWod = graphQLResult.data?.completeWod {
+                        print("✅ WOD marked as completed on server: \(completedWod.completed)")
+                        
+                        // Post notification with the completed workout
+                        NotificationCenter.default.post(name: .wodSessionCompleted, object: workout)
+                    }
+                    
+                    if let errors = graphQLResult.errors {
+                        print("❌ GraphQL errors completing WOD: \(errors)")
+                    }
+                    
+                case .failure(let error):
+                    print("❌ Network error completing WOD: \(error)")
+                }
+        }
         
         print("✅ WOD completed in \(formatTime(elapsedTime))!")
         
         // Clear session state after a brief delay to show completion
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+        DispatchQueue.main.async {
             self.endWOD()
         }
     }
@@ -112,7 +131,6 @@ class WODSessionManager: ObservableObject {
         
         // Clear persisted session
         clearActiveSession()
-        
         print("🛑 WOD session ended")
     }
     

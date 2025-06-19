@@ -1,0 +1,6 @@
+
+mutation SetActiveGymProfile($setActiveGymProfileId: Int!) {
+  setActiveGymProfile(id: $setActiveGymProfileId) {
+    name
+  }
+}

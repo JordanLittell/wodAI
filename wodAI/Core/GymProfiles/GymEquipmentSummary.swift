@@ -29,23 +29,17 @@ struct GymEquipmentSummary: View {
                         .foregroundColor(Color("SecondaryText"))
                 }
                 
-                // Equipment icons preview
+                // Equipment names preview
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(Array(selectedProfile.equipment).sorted(by: { $0.rawValue < $1.rawValue }), id: \.self) { equipment in
-                            HStack(spacing: 4) {
-                                Image(systemName: equipment.icon)
-                                    .font(.caption)
-                                    .foregroundColor(Color("BrandPrimary"))
-                                
-                                Text(equipment.rawValue)
-                                    .font(.caption)
-                                    .foregroundColor(Color("SecondaryText"))
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color("Surface2"))
-                            .cornerRadius(8)
+                        ForEach(Array(selectedProfile.equipment).sorted(by: { $0.name < $1.name })) { equipment in
+                            Text(equipment.name)
+                                .font(.caption)
+                                .foregroundColor(Color("SecondaryText"))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color("Surface2"))
+                                .cornerRadius(8)
                         }
                     }
                     .padding(.horizontal, 1)

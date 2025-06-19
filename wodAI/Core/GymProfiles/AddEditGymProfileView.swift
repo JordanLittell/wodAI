@@ -10,10 +10,11 @@ import SwiftUI
 struct AddEditGymProfileView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var profileManager = GymProfileManager.shared
+    @StateObject private var equipmentManager = EquipmentManager.shared
     
     @State private var name: String = ""
     @State private var selectedIcon: String = "building.2.fill"
-    @State private var selectedEquipment: Set<EquipmentOption> = []
+    @State private var selectedEquipment: Set<Equipment> = []
     @State private var showingDeleteAlert = false
     
     let profile: GymProfile?
@@ -28,117 +29,143 @@ struct AddEditGymProfileView: View {
                 Color("Background")
                     .ignoresSafeArea()
                 
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // Profile Info Section
-                        VStack(spacing: 20) {
-                            // Icon Selection
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("Icon")
-                                    .font(.headline)
-                                    .foregroundColor(Color("PrimaryText"))
+                if equipmentManager.isLoading && equipmentManager.equipment.isEmpty {
+                    // Loading state
+                    VStack(spacing: 20) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .tint(Color("BrandPrimary"))
+                        
+                        Text("Loading equipment...")
+                            .font(.headline)
+                            .foregroundColor(Color("SecondaryText"))
+                    }
+                } else {
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            // Profile Info Section
+                            VStack(spacing: 20) {
+                                // Name Input
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Profile Name")
+                                        .font(.headline)
+                                        .foregroundColor(Color("PrimaryText"))
+                                    
+                                    TextField("e.g., Home Gym", text: $name)
+                                        .textFieldStyle(CustomTextFieldStyle())
+                                }
+                            }
+                            .padding()
+                            .background(Color("Surface"))
+                            .cornerRadius(16)
+                            
+                            // Equipment Selection
+                            VStack(alignment: .leading, spacing: 16) {
+                                HStack {
+                                    Text("Available Equipment")
+                                        .font(.headline)
+                                        .foregroundColor(Color("PrimaryText"))
+                                    
+                                    Spacer()
+                                    
+                                    Text("\(selectedEquipment.count) selected")
+                                        .font(.subheadline)
+                                        .foregroundColor(Color("SecondaryText"))
+                                }
                                 
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 12) {
-                                        ForEach(GymProfileIcon.icons, id: \.self) { icon in
-                                            IconOption(
-                                                icon: icon,
-                                                isSelected: selectedIcon == icon,
-                                                action: { selectedIcon = icon }
+                                // Quick Actions
+                                HStack(spacing: 12) {
+                                    Button(action: selectAll) {
+                                        Text("Select All")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(Color("BrandPrimary"))
+                                    }
+                                    
+                                    Text("•")
+                                        .foregroundColor(Color("TertiaryText"))
+                                    
+                                    Button(action: deselectAll) {
+                                        Text("Clear All")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(Color("BrandPrimary"))
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    // Refresh button
+                                    Button(action: refreshEquipment) {
+                                        Image(systemName: "arrow.clockwise")
+                                            .font(.subheadline)
+                                            .foregroundColor(Color("BrandPrimary"))
+                                    }
+                                    .disabled(equipmentManager.isLoading)
+                                }
+                                
+                                if equipmentManager.error != nil && equipmentManager.equipment.isEmpty {
+                                    // Error state
+                                    VStack(spacing: 12) {
+                                        HStack {
+                                            Image(systemName: "exclamationmark.triangle")
+                                                .foregroundColor(Color("Warning"))
+                                            
+                                            Text("Unable to load equipment from server.")
+                                                .font(.caption)
+                                                .foregroundColor(Color("SecondaryText"))
+                                        }
+                                        .padding(.horizontal)
+                                        .padding(.vertical, 8)
+                                        .background(Color("Warning").opacity(0.1))
+                                        .cornerRadius(8)
+                                    }
+                                } else if equipmentManager.equipment.isEmpty {
+                                    // Empty state
+                                    Text("No equipment available")
+                                        .font(.subheadline)
+                                        .foregroundColor(Color("SecondaryText"))
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                } else {
+                                    // Equipment Grid
+                                    LazyVGrid(columns: [
+                                        GridItem(.flexible()),
+                                        GridItem(.flexible())
+                                    ], spacing: 12) {
+                                        ForEach(equipmentManager.equipment) { equipment in
+                                            EquipmentItemView(
+                                                equipment: equipment,
+                                                isSelected: selectedEquipment.contains(equipment),
+                                                action: { toggleEquipment(equipment) }
                                             )
                                         }
                                     }
-                                    .padding(.horizontal, 1)
                                 }
                             }
+                            .padding()
+                            .background(Color("Surface"))
+                            .cornerRadius(16)
                             
-                            // Name Input
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Profile Name")
-                                    .font(.headline)
-                                    .foregroundColor(Color("PrimaryText"))
-                                
-                                TextField("e.g., Home Gym", text: $name)
-                                    .textFieldStyle(CustomTextFieldStyle())
-                            }
-                        }
-                        .padding()
-                        .background(Color("Surface"))
-                        .cornerRadius(16)
-                        
-                        // Equipment Selection
-                        VStack(alignment: .leading, spacing: 16) {
-                            HStack {
-                                Text("Available Equipment")
-                                    .font(.headline)
-                                    .foregroundColor(Color("PrimaryText"))
-                                
-                                Spacer()
-                                
-                                Text("\(selectedEquipment.count) selected")
-                                    .font(.subheadline)
-                                    .foregroundColor(Color("SecondaryText"))
-                            }
-                            
-                            // Quick Actions
-                            HStack(spacing: 12) {
-                                Button(action: selectAll) {
-                                    Text("Select All")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(Color("BrandPrimary"))
-                                }
-                                
-                                Text("•")
-                                    .foregroundColor(Color("TertiaryText"))
-                                
-                                Button(action: deselectAll) {
-                                    Text("Clear All")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(Color("BrandPrimary"))
-                                }
-                                
-                                Spacer()
-                            }
-                            
-                            // Equipment Grid
-                            LazyVGrid(columns: [
-                                GridItem(.flexible()),
-                                GridItem(.flexible())
-                            ], spacing: 12) {
-                                ForEach(EquipmentOption.allCases, id: \.self) { equipment in
-                                    EquipmentOptionView(
-                                        equipment: equipment,
-                                        isSelected: selectedEquipment.contains(equipment),
-                                        action: { toggleEquipment(equipment) }
-                                    )
+                            // Delete Button (only for editing)
+                            if profile != nil {
+                                Button(action: { showingDeleteAlert = true }) {
+                                    HStack {
+                                        Image(systemName: "trash")
+                                        Text("Delete Profile")
+                                    }
+                                    .font(.body)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.red)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color("Surface"))
+                                    .cornerRadius(12)
                                 }
                             }
                         }
                         .padding()
-                        .background(Color("Surface"))
-                        .cornerRadius(16)
-                        
-                        // Delete Button (only for editing)
-                        if profile != nil {
-                            Button(action: { showingDeleteAlert = true }) {
-                                HStack {
-                                    Image(systemName: "trash")
-                                    Text("Delete Profile")
-                                }
-                                .font(.body)
-                                .fontWeight(.medium)
-                                .foregroundColor(.red)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color("Surface"))
-                                .cornerRadius(12)
-                            }
-                        }
+                        .padding(.bottom, 100)
                     }
-                    .padding()
-                    .padding(.bottom, 100)
                 }
             }
             .navigationTitle(profile == nil ? "New Profile" : "Edit Profile")
@@ -167,6 +194,9 @@ struct AddEditGymProfileView: View {
                 selectedIcon = profile.icon
                 selectedEquipment = profile.equipment
             }
+            
+            // Fetch equipment from database
+            equipmentManager.fetchEquipment()
         }
         .alert("Delete Profile", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
@@ -181,7 +211,7 @@ struct AddEditGymProfileView: View {
         }
     }
     
-    private func toggleEquipment(_ equipment: EquipmentOption) {
+    private func toggleEquipment(_ equipment: Equipment) {
         if selectedEquipment.contains(equipment) {
             selectedEquipment.remove(equipment)
         } else {
@@ -190,11 +220,15 @@ struct AddEditGymProfileView: View {
     }
     
     private func selectAll() {
-        selectedEquipment = Set(EquipmentOption.allCases)
+        selectedEquipment = Set(equipmentManager.equipment)
     }
     
     private func deselectAll() {
         selectedEquipment.removeAll()
+    }
+    
+    private func refreshEquipment() {
+        equipmentManager.fetchEquipment(forceRefresh: true)
     }
     
     private func saveProfile() {
@@ -240,23 +274,20 @@ struct IconOption: View {
     }
 }
 
-struct EquipmentOptionView: View {
-    let equipment: EquipmentOption
+struct EquipmentItemView: View {
+    let equipment: Equipment
     let isSelected: Bool
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Image(systemName: equipment.icon)
-                    .font(.title3)
-                    .foregroundColor(isSelected ? Color("BrandPrimary") : Color("SecondaryText"))
-                    .frame(width: 24)
-                
-                Text(equipment.rawValue)
+                Text(equipment.name)
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(isSelected ? Color("PrimaryText") : Color("SecondaryText"))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
                 
                 Spacer()
                 
@@ -265,6 +296,7 @@ struct EquipmentOptionView: View {
                     .foregroundColor(isSelected ? Color("Success") : Color("TertiaryText"))
             }
             .padding()
+            .frame(maxWidth: .infinity)
             .background(isSelected ? Color("BrandPrimary").opacity(0.08) : Color("Surface2"))
             .cornerRadius(12)
             .overlay(
