@@ -143,8 +143,8 @@ struct LoginView: View {
                         self.errorMessage = errors.first?.message ?? "Login failed"
                         self.showError = true
                     } else if let token = graphqlResult.data?.loginWithCredentials.token {
-                        // Success - set token which will trigger navigation
-                        self.authManager.token = token
+                        // Success - authenticate user which will trigger navigation
+                        self.authManager.authenticate(token: token)
                         print("✅ Login successful, token set")
                     } else {
                         self.errorMessage = "Invalid response from server"
@@ -195,8 +195,8 @@ struct LoginView: View {
                             self.errorMessage = errors.first?.message ?? "Google login failed"
                             self.showError = true
                         } else if let token = graphqlResult.data?.loginWithGoogle.token {
-                            // Success - set token which will trigger navigation
-                            self.authManager.token = token
+                            // Success - authenticate user which will trigger navigation
+                            self.authManager.authenticate(token: token)
                             print("✅ Google login successful, token set")
                         } else {
                             self.errorMessage = "Invalid response from server"

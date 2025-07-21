@@ -15,6 +15,8 @@ struct EnhancedHomeView: View {
     @State private var showingQuickWorkout = false
     @State private var showingWorkoutExecution = false
     @State private var showingWorkout = false
+    @State private var showingHeroWorkouts = false
+    @State private var showingGirlWorkouts = false
     
     var body: some View {
         NavigationStack {
@@ -122,6 +124,17 @@ struct EnhancedHomeView: View {
                     }
                     .padding(.horizontal)
                     
+                    // Special Workouts Section
+                    SpecialWorkoutsRow(
+                        onHeroSelected: {
+                            showingHeroWorkouts = true
+                        },
+                        onGirlSelected: {
+                            showingGirlWorkouts = true
+                        }
+                    )
+                    .padding(.horizontal)
+                    
                     // Recent Workouts Section
                     // RecentWorkoutsSection()
                     
@@ -165,10 +178,24 @@ struct EnhancedHomeView: View {
                 showingWorkout = true
             }
         }
+        .sheet(isPresented: $showingHeroWorkouts) {
+            SpecialWorkoutSelectionView(category: .hero) { specialWorkout in
+                generateSpecialWorkout(specialWorkout)
+            }
+        }
+        .sheet(isPresented: $showingGirlWorkouts) {
+            SpecialWorkoutSelectionView(category: .girls) { specialWorkout in
+                generateSpecialWorkout(specialWorkout)
+            }
+        }
     }
     
     private func generateQuickWorkout(type: QuickWorkoutType) {
         workoutGenerator.generateQuickWorkout(type: type)
+    }
+    
+    private func generateSpecialWorkout(_ specialWorkout: SpecialWorkout) {
+        workoutGenerator.generateQuickWorkout(type: .specialWorkout(specialWorkout))
     }
 }
 
@@ -260,4 +287,5 @@ struct QuickWorkoutGenerationView: View {
 
 enum QuickWorkoutType {
     case intelligent, quick20, fullSession
+    case specialWorkout(SpecialWorkout)
 }

@@ -16,6 +16,9 @@
 		C126721B2E03C73500256993 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C126721A2E03C73500256993 /* WodAiAPI */; };
 		C185A1C72DBD8991000E8F53 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C16299432DB612C7003355D3 /* WodAiAPI */; };
 		C1A12A5A2DBFD2CB00BB4776 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1A12A592DBFD2CB00BB4776 /* WodAiAPI */; };
+		C1A201CA2E16D9200094E759 /* Base.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C1A201C92E16D9200094E759 /* Base.xcconfig */; };
+		C1A201CC2E16D92E0094E759 /* Debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C1A201CB2E16D92E0094E759 /* Debug.xcconfig */; };
+		C1A201CE2E16D9370094E759 /* Release.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C1A201CD2E16D9370094E759 /* Release.xcconfig */; };
 		C1C1F7832DB8A3E6006A7BA4 /* Apollo in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F7822DB8A3E6006A7BA4 /* Apollo */; };
 		C1C1F78A2DB8A517006A7BA4 /* ApolloAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F7892DB8A517006A7BA4 /* ApolloAPI */; };
 		C1C1F78F2DB8A71A006A7BA4 /* ApolloSQLite in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F78E2DB8A71A006A7BA4 /* ApolloSQLite */; };
@@ -54,6 +57,9 @@
 		C19950512DB0B9F800786544 /* wodAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = wodAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C19950632DB0B9FA00786544 /* wodAITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = wodAITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C199506D2DB0B9FA00786544 /* wodAIUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = wodAIUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C1A201C92E16D9200094E759 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		C1A201CB2E16D92E0094E759 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		C1A201CD2E16D9370094E759 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -162,6 +168,9 @@
 		C19950482DB0B9F800786544 = {
 			isa = PBXGroup;
 			children = (
+				C1A201CD2E16D9370094E759 /* Release.xcconfig */,
+				C1A201CB2E16D92E0094E759 /* Debug.xcconfig */,
+				C1A201C92E16D9200094E759 /* Base.xcconfig */,
 				C19950532DB0B9F800786544 /* wodAI */,
 				C19950662DB0B9FA00786544 /* wodAITests */,
 				C19950702DB0B9FA00786544 /* wodAIUITests */,
@@ -337,6 +346,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C1A201CC2E16D92E0094E759 /* Debug.xcconfig in Resources */,
+				C1A201CE2E16D9370094E759 /* Release.xcconfig in Resources */,
+				C1A201CA2E16D9200094E759 /* Base.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,0 +1,25 @@
+//
+//  Base.xcconfig
+//  wodAI
+//
+//  Base configuration shared across all environments
+//
+
+// App Information
+PRODUCT_NAME = wodAI
+PRODUCT_BUNDLE_IDENTIFIER = com.adapt.wodAI
+
+// iOS Deployment
+IPHONEOS_DEPLOYMENT_TARGET = 18.0
+TARGETED_DEVICE_FAMILY = 1,2
+
+// Swift Settings
+SWIFT_VERSION = 5.0
+
+// Code Signing
+DEVELOPMENT_TEAM = 7SH9PCQBLP
+CODE_SIGN_STYLE = Automatic
+
+// Build Settings
+ENABLE_BITCODE = NO
+SKIP_INSTALL = NO

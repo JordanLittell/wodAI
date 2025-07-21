@@ -1,7 +1,14 @@
-mutation GenerateWODMutation($input: CreateWodInput!) {
-  generateWod(input: $input) {
-    format
-    definition
-    id
+mutation GenerateWODMutation {
+  generateWod {
+    components {
+      stimulus
+      order
+      name
+      muscles
+      movements
+      definition
+    }
+    description
+    stimulus
   }
 }

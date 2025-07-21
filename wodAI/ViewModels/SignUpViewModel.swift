@@ -10,7 +10,8 @@ class SignUpViewModel: ObservableObject {
     @Published var errorMessage = ""
     @Published var isLoading = false
     @Published var isSignedUp = false
-    @EnvironmentObject var authManager: AuthManager;
+    
+    weak var authManager: AuthManager?
     
     var isValid: Bool {
         !email.isEmpty && !password.isEmpty && !confirmPassword.isEmpty && password == confirmPassword
@@ -39,8 +40,9 @@ class SignUpViewModel: ObservableObject {
                     return
                 }
                 
-                // Update UI state
+                // Authenticate user and update UI state
                 DispatchQueue.main.async {
+                    self?.authManager?.authenticate(token: token)
                     self?.isSignedUp = true
                     self?.errorMessage = ""
                 }

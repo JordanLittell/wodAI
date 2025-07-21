@@ -1,0 +1,12 @@
+//
+//  Release.xcconfig
+//  wodAI
+//
+//  Configuration for Release builds
+//
+
+// GraphQL endpoint for production
+GRAPHQL_ENDPOINT = https://move-adapt.com/graphql
+
+// Pass to Info.plist
+INFOPLIST_KEY_GRAPHQL_ENDPOINT = $(GRAPHQL_ENDPOINT)

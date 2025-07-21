@@ -78,7 +78,7 @@ class SessionManager: ObservableObject {
     
     func handleReauthentication() {
         showSessionExpired = false
-        authManager.clearToken()
+        authManager.signOut()
         NotificationCenter.default.post(name: .userDidLogout, object: nil)
     }
     

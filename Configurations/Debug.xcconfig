@@ -1,0 +1,12 @@
+//
+//  Debug.xcconfig
+//  wodAI
+//
+//  Configuration for Debug builds
+//
+
+// GraphQL endpoint for development
+GRAPHQL_ENDPOINT = http://localhost:3000/graphql
+
+// Pass to Info.plist
+INFOPLIST_KEY_GRAPHQL_ENDPOINT = $(GRAPHQL_ENDPOINT)

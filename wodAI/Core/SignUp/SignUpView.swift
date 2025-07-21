@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct SignUpView: View {
-    @EnvironmentObject private var authManager: AuthManager;
-    @StateObject private var viewModel = SignUpViewModel();
+    @EnvironmentObject private var authManager: AuthManager
+    @StateObject private var viewModel = SignUpViewModel()
     @Environment(\.dismiss) private var dismiss
     @State private var showError = false
     
@@ -87,6 +87,9 @@ struct SignUpView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(viewModel.errorMessage)
+            }
+            .onAppear {
+                viewModel.authManager = authManager
             }
         }
     }

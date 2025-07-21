@@ -114,28 +114,31 @@ type Workout {
   dateCompleted: DateTime
   order: Int
   exercises: [Exercise!]!
+  stimulus: String
+  completed: Boolean!
+  completedAt: DateTime
+  components: [Component!]!
   createdAt: DateTime!
   updatedAt: DateTime!
 }
 
-type Wod {
+type Component {
   id: String!
   name: String!
-  format: String!
+  order: Int!
   definition: String!
+  stimulus: String!
   equipment: [String!]!
   muscles: [String!]!
   movements: [String!]!
-  loadParams: JSON!
-  userId: Int
-  user: User
-  completed: Boolean!
-  createdAt: DateTime
-  updatedAt: DateTime
+  workoutId: Int!
+  workout: Workout!
+  createdAt: DateTime!
+  updatedAt: DateTime!
 }
 
 type CompletedWodsResponse {
-  wods: [Wod!]!
+  wods: [Workout!]!
   total: Int!
   hasMore: Boolean!
   currentPage: Int!
@@ -348,8 +351,8 @@ type Query {
   exerciseSets: [ExerciseSet!]!
   trainingPlan(id: String!): TrainingPlan
   trainingPlans: [TrainingPlan!]!
-  wod(id: String!): Wod
-  wods: [Wod!]!
+  wod(id: Int!): Workout
+  wods(searchText: String): [Workout!]!
   completedWods(page: Int): CompletedWodsResponse!
   gymProfiles: [GymProfile!]!
   activeGymProfile: GymProfile
@@ -378,9 +381,8 @@ type Mutation {
   createTrainingPlan(input: CreateTrainingPlanInput!): TrainingPlan!
   updateTrainingPlan(id: String!, input: UpdateTrainingPlanInput!): TrainingPlan!
   deleteTrainingPlan(id: String!): TrainingPlan!
-  generateWod(input: CreateWodInput!): Wod!
-  updateWod(id: String!, input: UpdateWodInput!): Wod!
-  completeWod(id: String!): Wod!
+  generateWod(page: Int): Workout!
+  completeWod(id: Int!): Workout!
   register(email: String!, password: String!, firstName: String, lastName: String): AuthPayload!
   loginWithCredentials(email: String!, password: String!): AuthPayload!
   loginWithGoogle(idToken: String!): AuthPayload!
@@ -388,22 +390,6 @@ type Mutation {
   updateGymProfile(id: Int!, input: UpdateGymProfileInput!): GymProfile!
   deleteGymProfile(id: Int!): Boolean!
   setActiveGymProfile(id: Int!): GymProfile!
-}
-
-input LoadParams {
-  weight: Int
-  volume: Int
-  skill: Int
-}
-
-input CreateWodInput {
-  description: String
-  loadParams: LoadParams
-}
-
-input UpdateWodInput {
-  id: String
-  instructions: String
 }
 
 input UpdateUserInput {

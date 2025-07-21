@@ -22,10 +22,6 @@ class AuthManager : ObservableObject {
         }
     }
     
-    var isLoggedIn: Bool {
-        print("evaluating login")
-        return UserDefaults.standard.string(forKey: tokenKey) != nil
-    }
     
     init() {
         // Set initial authentication state without triggering property observers
@@ -41,7 +37,17 @@ class AuthManager : ObservableObject {
         }
     }
     
-    func clearToken() {
+    func authenticate(token: String) {
+        self.token = token
+        // This automatically triggers isAuthenticated = true via the setter
+    }
+    
+    func signOut() {
+        clearToken()
+        clearSessionExpiredMessage()
+    }
+    
+    private func clearToken() {
         UserDefaults.standard.removeObject(forKey: tokenKey)
         print("setting token to null")
         DispatchQueue.main.async { [weak self] in
@@ -57,13 +63,9 @@ class AuthManager : ObservableObject {
     func handleSessionExpired() {
         print("🔓 Handling session expiration...")
         sessionExpiredMessage = "Your session has expired. Please log in again."
+        signOut()
         
-        // Clear token and force UI update
-        UserDefaults.standard.removeObject(forKey: tokenKey)
-        
-        DispatchQueue.main.async { [weak self] in
-            print("🔓 Setting isAuthenticated to false")
-            self?.isAuthenticated = false
+        DispatchQueue.main.async {
             NotificationCenter.default.post(name: .userDidLogout, object: nil)
         }
     }

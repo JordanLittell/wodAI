@@ -1,10 +1,11 @@
-query CompletedWodsQuery($page: Int) {
-  completedWods(page: $page) {
+query CompletedWodsQuery {
+  completedWods {
     wods {
-      definition
-      muscles
-      name
-      updatedAt
+      components {
+        definition
+        muscles
+        name
+      }
     }
     hasMore
     currentPage

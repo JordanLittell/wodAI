@@ -3,6 +3,7 @@
 //  wodAI
 //
 //  Enhanced Network layer with automatic logout on unauthorized responses
+//  and environment-specific GraphQL endpoints
 //
 
 import Foundation
@@ -12,11 +13,20 @@ import SwiftUI
 
 class Network {
     static let shared = Network()
-    let graphql = "http://localhost:3000/graphql"
+    
+    // Use AppConfig for environment-specific endpoint
+    private var graphQLEndpoint: String {
+        return AppConfig.graphQLEndpoint
+    }
     
     // Use a custom initializer for Apollo client with authorization header
     private(set) lazy var client: ApolloClient = {
-        let url = URL(string: graphql)!
+        let url = URL(string: graphQLEndpoint)!
+        
+        // Print configuration in debug builds
+        if AppConfig.enableLogging {
+            print("🔧 WodAI GraphQL Endpoint: \(graphQLEndpoint)")
+        }
         
         // Create a custom transport with authorization header
         let transport = RequestChainNetworkTransport(
@@ -62,7 +72,12 @@ class AuthorizationInterceptor: ApolloInterceptor {
                 }
                 completion(result)
                 
-            case .failure(_):
+            case .failure(let error):
+                // Log network errors in debug mode
+                if AppConfig.enableLogging {
+                    print("🌐 Network Error: \(error.localizedDescription)")
+                    print("   Endpoint: \(AppConfig.graphQLEndpoint)")
+                }
                 // Pass through all network errors without auth handling
                 completion(result)
             }

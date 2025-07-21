@@ -1,0 +1,15 @@
+query User($userId: Int!) {
+  user(id: $userId) {
+    weight {
+      value
+      unit
+    }
+    age
+    fitnessLevel
+    gender
+    height {
+      unit
+      value
+    }
+  }
+}

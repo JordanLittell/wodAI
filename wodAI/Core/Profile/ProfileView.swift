@@ -410,7 +410,7 @@ struct ProfileView: View {
                     if let errors = graphqlResult.errors, !errors.isEmpty {
                         let errorMessage = errors.first?.message ?? "Unknown error"
                         if errorMessage.contains("authorized") {
-                            authManager.clearToken()
+                            authManager.signOut()
                         }
                         // Handle error silently or show inline error
                     } else {

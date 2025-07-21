@@ -1,7 +1,5 @@
-mutation CompleteWodMutation($completeWodId: String!) {
+mutation CompleteWodMutation($completeWodId: Int!) {
   completeWod(id: $completeWodId) {
-    definition
     completed
-    createdAt
   }
 }

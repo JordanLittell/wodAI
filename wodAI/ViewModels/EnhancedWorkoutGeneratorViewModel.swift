@@ -114,6 +114,18 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
                 isQuick: false,
                 useAIRecommendations: true
             )
+            
+        case .specialWorkout(let specialWorkout):
+            return WorkoutGenerationPreferences(
+                duration: specialWorkout.estimatedDuration,
+                intensity: specialWorkout.difficulty == .elite || specialWorkout.difficulty == .advanced ? .intense : .moderate,
+                equipment: availableEquipment,
+                muscleGroups: [],
+                energyLevel: .good,
+                isQuick: false,
+                useAIRecommendations: false,
+                contextualPrompt: buildSpecialWorkoutPrompt(for: specialWorkout)
+            )
         }
     }
     
@@ -143,7 +155,7 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
     private func performGeneration(with preferences: WorkoutGenerationPreferences) {
         // Debug: Check authentication
         let authManager = AuthManager()
-        print("🔐 Auth Status: isLoggedIn = \(authManager.isLoggedIn), token exists = \(authManager.token != nil)")
+        print("🔐 Auth Status: isAuthenticated = \(authManager.isAuthenticated), token exists = \(authManager.token != nil)")
         
         simulateGenerationSteps()
         
@@ -439,6 +451,32 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
         
         prompt += ". User energy level: \(state.energyLevel.rawValue)."
         prompt += " \(state.energyLevel.workoutHint)"
+        
+        return prompt
+    }
+    
+    private func buildSpecialWorkoutPrompt(for specialWorkout: SpecialWorkout) -> String {
+        var prompt = "Generate the exact \(specialWorkout.name) workout"
+        
+        if let story = specialWorkout.story {
+            prompt += ". Background: \(story)"
+        }
+        
+        prompt += ". This is a \(specialWorkout.category.rawValue) WOD with the following definition: \(specialWorkout.definition)"
+        prompt += ". Estimated duration: \(specialWorkout.estimatedDuration) minutes."
+        prompt += ". Difficulty level: \(specialWorkout.difficulty.rawValue)."
+        
+        if !specialWorkout.equipment.isEmpty {
+            let equipment = specialWorkout.equipment.joined(separator: ", ")
+            prompt += " Required equipment: \(equipment)."
+        }
+        
+        if !specialWorkout.movements.isEmpty {
+            let movements = specialWorkout.movements.joined(separator: ", ")
+            prompt += " Key movements: \(movements)."
+        }
+        
+        prompt += " Please generate this specific workout exactly as defined, maintaining its traditional format and structure."
         
         return prompt
     }
