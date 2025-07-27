@@ -7,18 +7,12 @@ import WodAiAPI
 public class UserQuery: GraphQLQuery {
   public static let operationName: String = "User"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "254325c56578f3104507e61d4ece7b58ae705dca6ce13ea640ead534e933cd38",
+    operationIdentifier: "106550d709cf80e696f9b03dde1b030aa8b5a316d45f0614814820baad860ab7",
     definition: .init(
-      #"query User($userId: Int!) { user(id: $userId) { __typename weight { __typename value unit } age fitnessLevel gender height { __typename unit value } } }"#
+      #"query User { user { __typename weight { __typename value unit } age fitnessLevel gender height { __typename unit value } } }"#
     ))
 
-  public var userId: Int
-
-  public init(userId: Int) {
-    self.userId = userId
-  }
-
-  public var __variables: Variables? { ["userId": userId] }
+  public init() {}
 
   public struct Data: WodAiAPI.SelectionSet {
     public let __data: DataDict
@@ -26,7 +20,7 @@ public class UserQuery: GraphQLQuery {
 
     public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.Query }
     public static var __selections: [ApolloAPI.Selection] { [
-      .field("user", User?.self, arguments: ["id": .variable("userId")]),
+      .field("user", User?.self),
     ] }
 
     public var user: User? { __data["user"] }

@@ -14,9 +14,13 @@ struct ContentView: View {
     var body: some View {
         Group {
             if authManager.isAuthenticated {
-                RootAppView()
-                    .environmentObject(EnhancedWorkoutGeneratorViewModel())
-                    .environmentObject(WODSessionManager.shared)
+                if authManager.needsProvisioning {
+                    ProvisioningView()
+                } else {
+                    RootAppView()
+                        .environmentObject(EnhancedWorkoutGeneratorViewModel())
+                        .environmentObject(WODSessionManager.shared)
+                }
             } else {
                 AuthenticationView()
             }

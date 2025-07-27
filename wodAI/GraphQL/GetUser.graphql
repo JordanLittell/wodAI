@@ -1,5 +1,5 @@
-query User($userId: Int!) {
-  user(id: $userId) {
+query User {
+  user {
     weight {
       value
       unit

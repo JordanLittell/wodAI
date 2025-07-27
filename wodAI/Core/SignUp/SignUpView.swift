@@ -30,27 +30,13 @@ struct SignUpView: View {
                 ScrollView {
                     VStack(spacing: 32) {
                         VStack(spacing: 16) {
-                            ZStack {
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [
-                                                Color("BrandPrimary"),
-                                                Color("BrandSecondary")
-                                            ]),
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .frame(width: 100, height: 100)
-                                    .shadow(color: Color("BrandPrimary").opacity(0.3), radius: 20, x: 0, y: 10)
-                                
-                                Image(systemName: "dumbbell.fill")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 50, height: 50)
-                                    .foregroundColor(.white)
-                            }
+                            // Logo Image
+                            Image("Logo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 100, height: 100)
+                                .cornerRadius(25) // Makes it rounded
+                                .shadow(color: Color("BrandPrimary").opacity(0.3), radius: 20, x: 0, y: 10)
                             
                             VStack(spacing: 8) {
                                 Text("Create Account")

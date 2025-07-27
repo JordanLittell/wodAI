@@ -1,8 +1,10 @@
 mutation GoogleLogin($idToken: String!) {
   loginWithGoogle(idToken: $idToken) {
     user {
+      id
       height {
         value
+        unit
       }
       gender
       fitnessLevel

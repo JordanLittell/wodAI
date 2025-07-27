@@ -16,75 +16,73 @@ struct WorkoutView: View {
     @State private var showingActiveWOD: Bool = false
     @State private var showingTweakOptions: Bool = false
     @State private var isUpdatingWOD: Bool = false
-    @State private var showingDescription: Bool = false
     @State private var isCompletingWorkout: Bool = false
     @State private var showCompletionAlert: Bool = false
+    @State private var showingStimulusInfo: Bool = false
     
     var body: some View {
         if wgvm.generating {
             WorkoutLaunchAnimation()
         } else {
-            if showingActiveWOD {
-                ActiveWODView()
-            } else {
-                ScrollView {
-                    VStack(spacing: 20) {
-                        workoutHeader
-                        
-                        if let workout = wgvm.workout {
-                            // Progress Overview
-                            WorkoutProgressView(workout: workout)
-                            
-                            ComponentsSection(
-                                workout: workout,
-                                isUpdating: isUpdatingWOD
-                            )
-                            
-                            if !workout.description.isEmpty {
-                                DescriptionSection(
-                                    description: workout.description,
-                                    isExpanded: $showingDescription
-                                )
-                            }
-                            
-                            if sessionManager.isActive {
-                                wodSessionStatusBanner
-                            }
-                            
-                            // Complete workout button
-                            completeWorkoutButton
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, sessionManager.isActive ? 120 : 20)
-                }
-                .background(Color("Background"))
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Dismiss") {
-                            dismiss()
-                        }
-                        .foregroundColor(Color("BrandPrimary"))
-                    }
+            ScrollView {
+                VStack(spacing: 20) {
+                    workoutHeader
                     
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        ShareButton {
-                            shareWorkout()
+                    if let workout = wgvm.workout {
+                        // Progress Overview
+                        WorkoutProgressView(workout: workout)
+                        
+                        ComponentsSection(
+                            workout: workout,
+                            isUpdating: isUpdatingWOD
+                        )
+                        
+                        if sessionManager.isActive {
+                            wodSessionStatusBanner
                         }
+                        
+                        completeWorkoutButton
                     }
                 }
-                .alert("Workout Completed! 🎉", isPresented: $showCompletionAlert) {
-                    Button("Great!", role: .cancel) {
+                .padding(.horizontal, 16)
+                .padding(.bottom, sessionManager.isActive ? 120 : 20)
+            }
+            .background(Color("Background"))
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Dismiss") {
                         dismiss()
                     }
-                } message: {
-                    Text("Congratulations on completing your workout! Keep up the great work.")
+                    .foregroundColor(Color("BrandPrimary"))
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if let workout = wgvm.workout, !workout.description.isEmpty {
+                        Button(action: {
+                            showingStimulusInfo = true
+                        }) {
+                            Image(systemName: "info.circle")
+                                .foregroundColor(Color("BrandPrimary"))
+                                .font(.title3)
+                        }
+                    }
+                }
+            }
+            .alert("Workout Completed! 🎉", isPresented: $showCompletionAlert) {
+                Button("Great!", role: .cancel) {
+                    dismiss()
+                }
+            } message: {
+                Text("Congratulations on completing your workout! Keep up the great work.")
+            }
+            .sheet(isPresented: $showingStimulusInfo) {
+                if let workout = wgvm.workout {
+                    WorkoutStimulusSheet(workout: workout)
                 }
             }
         }
     }
     
-    // MARK: - Header Section
     private var workoutHeader: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let workout = wgvm.workout {
@@ -99,7 +97,6 @@ struct WorkoutView: View {
         .padding(.top, 10)
     }
     
-    // MARK: - WOD Session Status Banner
     private var wodSessionStatusBanner: some View {
         Button(action: {
             showingActiveWOD = true
@@ -414,62 +411,63 @@ struct CoachingSection: View {
     }
 }
 
-struct DescriptionSection: View {
-    let description: String
-    @Binding var isExpanded: Bool
+struct WorkoutStimulusSheet: View {
+    let workout: Workout
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Button(action: {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    isExpanded.toggle()
-                }
-            }) {
-                HStack {
-                    Image(systemName: "info.circle.fill")
-                        .foregroundColor(Color("Neutral"))
-                        .font(.title3)
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    // Header Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "bolt.fill")
+                                .foregroundColor(Color("BrandPrimary"))
+                                .font(.title2)
+                            
+                            Text("Workout Stimulus")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(Color("PrimaryText"))
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.top)
                     
-                    Text("Workout Stimulus")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(Color("PrimaryText"))
+                    // Stimulus Content
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text(workout.description)
+                            .font(.body)
+                            .foregroundColor(Color("PrimaryText"))
+                            .lineSpacing(6)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color("Surface2"))
+                    )
+                    .padding(.horizontal)
                     
-                    Spacer()
                     
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .foregroundColor(Color("SecondaryText"))
-                        .font(.caption)
+                    Spacer(minLength: 20)
                 }
             }
-            .buttonStyle(PlainButtonStyle())
-            
-            if isExpanded {
-                Text(description)
-                    .font(.caption)
-                    .foregroundColor(Color("TertiaryText"))
-                    .lineSpacing(4)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+            .background(Color("Background"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .font(.body)
+                    .fontWeight(.semibold)
+                    .foregroundColor(Color("BrandPrimary"))
+                }
             }
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color("Surface").opacity(0.5))
-        )
-    }
-}
-
-struct ShareButton: View {
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: "square.and.arrow.up")
-                .foregroundColor(Color("BrandPrimary"))
-                .font(.title3)
         }
     }
 }

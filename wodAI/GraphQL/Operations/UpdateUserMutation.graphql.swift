@@ -7,26 +7,18 @@ import WodAiAPI
 public class UpdateUserMutation: GraphQLMutation {
   public static let operationName: String = "UpdateUser"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "f07a8775d685503a77485b62cfc25f8f1ed4453c6bb98b4665a169523ba01719",
+    operationIdentifier: "b56dfc698090b229f83e370801dbc8a72484ffb8af3ebbe4d9f1fadad8323ed5",
     definition: .init(
-      #"mutation UpdateUser($updateUserId: Int!, $input: UpdateUserInput!) { updateUser(id: $updateUserId, input: $input) { __typename age fitnessLevel gender goal weight { __typename value unit } height { __typename value unit } } }"#
+      #"mutation UpdateUser($input: UpdateUserInput!) { updateUser(input: $input) { __typename age fitnessLevel gender goal weight { __typename value unit } height { __typename value unit } } }"#
     ))
 
-  public var updateUserId: Int
   public var input: WodAiAPI.UpdateUserInput
 
-  public init(
-    updateUserId: Int,
-    input: WodAiAPI.UpdateUserInput
-  ) {
-    self.updateUserId = updateUserId
+  public init(input: WodAiAPI.UpdateUserInput) {
     self.input = input
   }
 
-  public var __variables: Variables? { [
-    "updateUserId": updateUserId,
-    "input": input
-  ] }
+  public var __variables: Variables? { ["input": input] }
 
   public struct Data: WodAiAPI.SelectionSet {
     public let __data: DataDict
@@ -34,10 +26,7 @@ public class UpdateUserMutation: GraphQLMutation {
 
     public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.Mutation }
     public static var __selections: [ApolloAPI.Selection] { [
-      .field("updateUser", UpdateUser.self, arguments: [
-        "id": .variable("updateUserId"),
-        "input": .variable("input")
-      ]),
+      .field("updateUser", UpdateUser.self, arguments: ["input": .variable("input")]),
     ] }
 
     public var updateUser: UpdateUser { __data["updateUser"] }

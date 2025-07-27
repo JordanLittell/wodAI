@@ -2,61 +2,41 @@
 //  ProfileView.swift
 //  wodAI
 //
-//  Redesigned Profile View with efficient inline editing and proper design system usage
+//  Redesigned Profile View with MVVM architecture and proper data loading
 //
 
 import SwiftUI
 import WodAiAPI
 
 // MARK: - Gender Extension for Display Names
-extension Gender {
-    var displayName: String {
+extension WodAiAPI.Gender {
+    var display: String {
         switch self {
         case .male:
             return "Male"
         case .female:
             return "Female"
+        default:
+            return "Other"
         }
     }
 }
 
 struct ProfileView: View {
-    @StateObject private var profileViewModel = ProfileViewModel(
-        weight: .lbs,
-        weightValue: 150,
-        height: .inches,
-        heightValue: 67,
-        level: .intermediate,
-        age: 25,
-        gender: .male
-    )
-    
+    @StateObject private var viewModel = ProfileViewModel()
     @EnvironmentObject var authManager: AuthManager
     
-    // State variables
-    @State private var fitnessLevel = FitnessLevel.intermediate
-    @State private var age = 30
-    @State private var heightFeet = 5
-    @State private var heightInches = 7
-    @State private var weight = 150.0
-    @State private var selectedGender: Gender = .male
-    @State private var fitnessGoal = "Build muscle"
-    @State private var notificationsEnabled = true
-    
-    @State private var saving = false
-    @State private var hasUnsavedChanges = false
-    @State private var showSuccessToast = false
+    // UI State
     @State private var editingHeight = false
     @State private var editingWeight = false
-    @State private var loading = true
-    @State private var currentUserId: Int = 1
+    @State private var heightFeet = 5
+    @State private var heightInches = 7
     
-    private let fitnessLevels: [(FitnessLevel, String, String)] = [
+    private let fitnessLevels: [(WodAiAPI.FitnessLevel, String, String)] = [
         (.beginner, "Beginner", "New to fitness"),
         (.intermediate, "Intermediate", "Workout 2-3x/week"),
         (.advanced, "Advanced", "Workout 4-5x/week"),
         (.elite, "Elite", "Workout 6+x/week"),
-        (.pro, "Pro", "Competitive athlete")
     ]
     
     private let goals = [
@@ -73,277 +53,265 @@ struct ProfileView: View {
                 Color(.background)
                     .ignoresSafeArea()
                 
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // Quick Setup Header
-                        VStack(spacing: 8) {
-                            Text("Let's personalize your experience")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(.primaryText)
-                            
-                            Text("This helps us create better workouts for you")
-                                .font(.subheadline)
-                                .foregroundColor(.secondaryText)
-                        }
-                        .padding(.top, 20)
+                if viewModel.isLoading {
+                    // Loading state
+                    VStack(spacing: 20) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: Color(.brandPrimary)))
+                            .scaleEffect(1.5)
                         
-                        // Fitness Level Selection
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Fitness Level")
-                                .font(.headline)
-                                .foregroundColor(.primaryText)
-                            
+                        Text("Loading your profile...")
+                            .font(.subheadline)
+                            .foregroundColor(.secondaryText)
+                    }
+                } else {
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            // Quick Setup Header
                             VStack(spacing: 8) {
-                                ForEach(fitnessLevels, id: \.0) { level, title, description in
-                                    FitnessLevelCard(
-                                        title: title,
-                                        description: description,
-                                        isSelected: fitnessLevel == level,
-                                        action: {
-                                            withAnimation(.easeInOut(duration: 0.2)) {
-                                                fitnessLevel = level
-                                                hasUnsavedChanges = true
+                                Text("Let's personalize your experience")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.primaryText)
+                                
+                                Text("This helps us create better workouts for you")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondaryText)
+                            }
+                            .padding(.top, 20)
+                            
+                            // Fitness Level Selection
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Fitness Level")
+                                    .font(.headline)
+                                    .foregroundColor(.primaryText)
+                                
+                                VStack(spacing: 8) {
+                                    ForEach(fitnessLevels, id: \.0) { level, title, description in
+                                        FitnessLevelCard(
+                                            title: title,
+                                            description: description,
+                                            isSelected: viewModel.level == level,
+                                            action: {
+                                                withAnimation(.easeInOut(duration: 0.2)) {
+                                                    viewModel.level = level
+                                                    viewModel.hasUnsavedChanges = true
+                                                }
                                             }
-                                        }
-                                    )
+                                        )
+                                    }
                                 }
                             }
-                        }
-                        
-                        // Body Metrics Section
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("Body Metrics")
-                                .font(.headline)
-                                .foregroundColor(.primaryText)
                             
-                            // Inline form fields
-                            VStack(spacing: 12) {
-                                // Age
-                                MetricRow(
-                                    title: "Age",
-                                    value: "\(age) years",
-                                    icon: "calendar"
-                                ) {
-                                    HStack {
-                                        Stepper("", value: $age, in: 16...100)
-                                            .labelsHidden()
-                                            .onChange(of: age) { _, _ in
-                                                hasUnsavedChanges = true
-                                            }
-                                        Text("\(age)")
-                                            .font(.body.monospacedDigit())
-                                            .foregroundColor(.primaryText)
-                                    }
-                                }
+                            // Body Metrics Section
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("Body Metrics")
+                                    .font(.headline)
+                                    .foregroundColor(.primaryText)
                                 
-                                // Height
-                                MetricRow(
-                                    title: "Height",
-                                    value: "\(heightFeet)' \(heightInches)\"",
-                                    icon: "ruler"
-                                ) {
-                                    if editingHeight {
-                                        HStack(spacing: 16) {
-                                            // Feet picker
-                                            HStack(spacing: 4) {
-                                                Picker("Feet", selection: $heightFeet) {
-                                                    ForEach(3...8, id: \.self) { ft in
-                                                        Text("\(ft)'").tag(ft)
-                                                    }
+                                // Inline form fields
+                                VStack(spacing: 12) {
+                                    // Age
+                                    MetricRow(
+                                        title: "Age",
+                                        value: "\(viewModel.age) years",
+                                        icon: "calendar"
+                                    ) {
+                                        HStack {
+                                            Stepper("", value: $viewModel.age, in: 16...100)
+                                                .labelsHidden()
+                                                .onChange(of: viewModel.age) { _, _ in
+                                                    viewModel.hasUnsavedChanges = true
                                                 }
-                                                .pickerStyle(.menu)
-                                                .onChange(of: heightFeet) { _, _ in
-                                                    hasUnsavedChanges = true
-                                                }
-                                            }
-                                            
-                                            // Inches picker
-                                            HStack(spacing: 4) {
-                                                Picker("Inches", selection: $heightInches) {
-                                                    ForEach(0...11, id: \.self) { inch in
-                                                        Text("\(inch)\"").tag(inch)
-                                                    }
-                                                }
-                                                .pickerStyle(.menu)
-                                                .onChange(of: heightInches) { _, _ in
-                                                    hasUnsavedChanges = true
-                                                }
-                                            }
-                                            
-                                            Button("Done") {
-                                                withAnimation {
-                                                    editingHeight = false
-                                                }
-                                            }
-                                            .font(.subheadline)
-                                            .foregroundColor(.brandPrimary)
-                                        }
-                                    } else {
-                                        Button(action: {
-                                            withAnimation {
-                                                editingHeight = true
-                                            }
-                                        }) {
-                                            HStack {
-                                                Text("\(heightFeet)' \(heightInches)\"")
-                                                    .foregroundColor(.primaryText)
-                                                Image(systemName: "pencil")
-                                                    .font(.caption)
-                                                    .foregroundColor(.brandPrimary)
-                                            }
+                                            Text("\(viewModel.age)")
+                                                .font(.body.monospacedDigit())
+                                                .foregroundColor(.primaryText)
                                         }
                                     }
-                                }
-                                
-                                // Weight
-                                MetricRow(
-                                    title: "Weight",
-                                    value: "\(Int(weight)) lbs",
-                                    icon: "scalemass"
-                                ) {
-                                    if editingWeight {
-                                        VStack(spacing: 8) {
-                                            HStack {
-                                                Text("\(Int(weight)) lbs")
-                                                    .font(.title3.monospacedDigit())
-                                                    .fontWeight(.semibold)
-                                                    .foregroundColor(.primaryText)
+                                    
+                                    // Height
+                                    MetricRow(
+                                        title: "Height",
+                                        value: "\(heightFeet)' \(heightInches)\"",
+                                        icon: "ruler"
+                                    ) {
+                                        if editingHeight {
+                                            HStack(spacing: 16) {
+                                                // Feet picker
+                                                HStack(spacing: 4) {
+                                                    Picker("Feet", selection: $heightFeet) {
+                                                        ForEach(3...8, id: \.self) { ft in
+                                                            Text("\(ft)'").tag(ft)
+                                                        }
+                                                    }
+                                                    .pickerStyle(.menu)
+                                                    .onChange(of: heightFeet) { _, _ in
+                                                        viewModel.setHeightFromFeetAndInches(feet: heightFeet, inches: heightInches)
+                                                    }
+                                                }
                                                 
-                                                Spacer()
+                                                // Inches picker
+                                                HStack(spacing: 4) {
+                                                    Picker("Inches", selection: $heightInches) {
+                                                        ForEach(0...11, id: \.self) { inch in
+                                                            Text("\(inch)\"").tag(inch)
+                                                        }
+                                                    }
+                                                    .pickerStyle(.menu)
+                                                    .onChange(of: heightInches) { _, _ in
+                                                        viewModel.setHeightFromFeetAndInches(feet: heightFeet, inches: heightInches)
+                                                    }
+                                                }
                                                 
                                                 Button("Done") {
                                                     withAnimation {
-                                                        editingWeight = false
+                                                        editingHeight = false
                                                     }
                                                 }
                                                 .font(.subheadline)
                                                 .foregroundColor(.brandPrimary)
                                             }
-                                            
-                                            Slider(value: $weight, in: 50...400, step: 1)
-                                                .tint(.brandPrimary)
-                                                .onChange(of: weight) { _, _ in
-                                                    hasUnsavedChanges = true
+                                        } else {
+                                            Button(action: {
+                                                withAnimation {
+                                                    editingHeight = true
                                                 }
-                                        }
-                                    } else {
-                                        Button(action: {
-                                            withAnimation {
-                                                editingWeight = true
-                                            }
-                                        }) {
-                                            HStack {
-                                                Text("\(Int(weight)) lbs")
-                                                    .foregroundColor(.primaryText)
-                                                Image(systemName: "pencil")
-                                                    .font(.caption)
-                                                    .foregroundColor(.brandPrimary)
+                                            }) {
+                                                HStack {
+                                                    Text("\(heightFeet)' \(heightInches)\"")
+                                                        .foregroundColor(.primaryText)
+                                                    Image(systemName: "pencil")
+                                                        .font(.caption)
+                                                        .foregroundColor(.brandPrimary)
+                                                }
                                             }
                                         }
                                     }
-                                }
-                                
-                                // Gender
-                                MetricRow(
-                                    title: "Gender",
-                                    value: selectedGender.displayName,
-                                    icon: "person"
-                                ) {
-                                    Picker("Gender", selection: $selectedGender) {
-                                        Text("Male").tag(Gender.male)
-                                        Text("Female").tag(Gender.female)
-                                    }
-                                    .pickerStyle(.segmented)
-                                    .onChange(of: selectedGender) { _, _ in
-                                        hasUnsavedChanges = true
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // Fitness Goals
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Primary Goal")
-                                .font(.headline)
-                                .foregroundColor(.primaryText)
-                            
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                                ForEach(goals, id: \.0) { goal, icon in
-                                    GoalCard(
-                                        title: goal,
-                                        icon: icon,
-                                        isSelected: fitnessGoal == goal,
-                                        action: {
-                                            withAnimation(.easeInOut(duration: 0.2)) {
-                                                fitnessGoal = goal
-                                                hasUnsavedChanges = true
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                        
-                        // Notifications
-                        VStack(alignment: .leading, spacing: 12) {
-                            Toggle(isOn: $notificationsEnabled) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "bell.fill")
-                                        .foregroundColor(.brandPrimary)
                                     
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Workout Reminders")
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                            .foregroundColor(.primaryText)
-                                        
-                                        Text("Get motivated with daily reminders")
-                                            .font(.caption)
-                                            .foregroundColor(.secondaryText)
+                                    // Weight
+                                    MetricRow(
+                                        title: "Weight",
+                                        value: "\(Int(viewModel.weightValue)) lbs",
+                                        icon: "scalemass"
+                                    ) {
+                                        if editingWeight {
+                                            VStack(spacing: 8) {
+                                                HStack {
+                                                    Text("\(Int(viewModel.weightValue)) lbs")
+                                                        .font(.title3.monospacedDigit())
+                                                        .fontWeight(.semibold)
+                                                        .foregroundColor(.primaryText)
+                                                    
+                                                    Spacer()
+                                                    
+                                                    Button("Done") {
+                                                        withAnimation {
+                                                            editingWeight = false
+                                                        }
+                                                    }
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.brandPrimary)
+                                                }
+                                                
+                                                Slider(value: $viewModel.weightValue, in: 50...400, step: 1)
+                                                    .tint(.brandPrimary)
+                                                    .onChange(of: viewModel.weightValue) { _, _ in
+                                                        viewModel.hasUnsavedChanges = true
+                                                    }
+                                            }
+                                        } else {
+                                            Button(action: {
+                                                withAnimation {
+                                                    editingWeight = true
+                                                }
+                                            }) {
+                                                HStack {
+                                                    Text("\(Int(viewModel.weightValue)) lbs")
+                                                        .foregroundColor(.primaryText)
+                                                    Image(systemName: "pencil")
+                                                        .font(.caption)
+                                                        .foregroundColor(.brandPrimary)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Gender
+                                    MetricRow(
+                                        title: "Gender",
+                                        value: viewModel.gender.display,
+                                        icon: "person"
+                                    ) {
+                                        Picker("Gender", selection: $viewModel.gender) {
+                                        Text("Male").tag(WodAiAPI.Gender.male)
+                                        Text("Female").tag(WodAiAPI.Gender.female)
+                                        }
+                                        .pickerStyle(.segmented)
+                                        .onChange(of: viewModel.gender) { _, _ in
+                                            viewModel.hasUnsavedChanges = true
+                                        }
                                     }
                                 }
                             }
-                            .tint(.brandPrimary)
-                            .onChange(of: notificationsEnabled) { _, _ in
-                                hasUnsavedChanges = true
-                            }
-                            .padding()
-                            .background(Color(.surface))
-                            .cornerRadius(12)
-                        }
-                        
-                        // Save Button
-                        if hasUnsavedChanges {
-                            Button(action: saveProfile) {
-                                HStack {
-                                    if saving {
-                                        ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                            .scaleEffect(0.8)
-                                    } else {
-                                        Image(systemName: "checkmark.circle.fill")
+                            
+                            // Save Button
+                            if viewModel.hasUnsavedChanges {
+                                Button(action: { viewModel.saveProfile() }) {
+                                    HStack {
+                                        if viewModel.isSaving {
+                                            ProgressView()
+                                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                                .scaleEffect(0.8)
+                                        } else {
+                                            Image(systemName: "checkmark.circle.fill")
+                                        }
+                                        Text(viewModel.isSaving ? "Saving..." : "Save Changes")
+                                            .fontWeight(.semibold)
                                     }
-                                    Text(saving ? "Saving..." : "Save Changes")
-                                        .fontWeight(.semibold)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(
-                                    LinearGradient(
-                                        colors: [.heroStart, .heroEnd],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(
+                                        LinearGradient(
+                                            colors: [.heroStart, .heroEnd],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
                                     )
-                                )
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(12)
+                                }
+                                .disabled(viewModel.isSaving)
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
                             }
-                            .disabled(saving)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                            
+                            // Sign Out Button
+                            VStack(spacing: 16) {
+                                Divider()
+                                    .padding(.vertical, 8)
+                                
+                                Button(action: signOut) {
+                                    HStack {
+                                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                                            .font(.body)
+                                        Text("Sign Out")
+                                            .fontWeight(.medium)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color(.surface))
+                                    .foregroundColor(.error)
+                                    .cornerRadius(12)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color(.error).opacity(0.3), lineWidth: 1)
+                                    )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                            .padding(.top, 20)
                         }
+                        .padding()
                     }
-                    .padding()
                 }
             }
             .navigationTitle("Profile")
@@ -351,7 +319,7 @@ struct ProfileView: View {
             .overlay(
                 // Success Toast
                 VStack {
-                    if showSuccessToast {
+                    if viewModel.showSuccessToast {
                         HStack {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.success)
@@ -368,98 +336,36 @@ struct ProfileView: View {
                     Spacer()
                 }
                 .padding()
-                .animation(.spring(), value: showSuccessToast)
+                .animation(.spring(), value: viewModel.showSuccessToast)
             )
+            .alert("Error", isPresented: $viewModel.showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(viewModel.errorMessage)
+            }
             .onAppear {
-                loadUserProfile()
+                viewModel.loadUserProfile()
+                // Update height UI values from view model
+                let (feet, inches) = viewModel.getHeightFeetAndInches()
+                heightFeet = feet
+                heightInches = inches
+            }
+            .onChange(of: viewModel.heightValue) { _, _ in
+                // Update UI when height changes from data load
+                let (feet, inches) = viewModel.getHeightFeetAndInches()
+                heightFeet = feet
+                heightInches = inches
             }
         }
     }
     
-    // MARK: - Helper Functions
-    
-    func getHeightString() -> String {
-        return "\(heightFeet)' \(heightInches)\""
-    }
-    
-    // MARK: - Save Profile
-    func saveProfile() {
-        guard !saving else { return }
+    // MARK: - Sign Out
+    private func signOut() {
+        // Clear any unsaved changes
+        viewModel.hasUnsavedChanges = false
         
-        saving = true
-        
-        let totalInches = Double((heightFeet * 12) + heightInches)
-        let weightInput = WeightInput(value: weight, unit: GraphQLEnum(WeightUnit.lbs))
-        let heightInput = HeightInput(value: totalInches, unit: GraphQLEnum(HeightUnit.inches))
-        
-        let input = UpdateUserInput(
-            age: GraphQLNullable(integerLiteral: age),
-            gender: GraphQLNullable(selectedGender),
-            fitnessLevel: GraphQLNullable(fitnessLevel),
-            goal: GraphQLNullable(stringLiteral: fitnessGoal),
-            weight: GraphQLNullable(weightInput),
-            height: GraphQLNullable(heightInput)
-        )
-        
-        Network.shared.client.perform(mutation: UpdateUserMutation(updateUserId: currentUserId, input: input)) { result in
-            DispatchQueue.main.async {
-                self.saving = false
-                
-                switch result {
-                case .success(let graphqlResult):
-                    if let errors = graphqlResult.errors, !errors.isEmpty {
-                        let errorMessage = errors.first?.message ?? "Unknown error"
-                        if errorMessage.contains("authorized") {
-                            authManager.signOut()
-                        }
-                        // Handle error silently or show inline error
-                    } else {
-                        self.hasUnsavedChanges = false
-                        self.showSuccessToast = true
-                        
-                        // Hide toast after 3 seconds
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                            self.showSuccessToast = false
-                        }
-                        
-                        // Update local state with saved values
-                        self.updateLocalProfileData(from: graphqlResult.data?.updateUser)
-                    }
-                    
-                case .failure(let error):
-                    // Handle error silently or show inline error
-                    print("Network error: \(error.localizedDescription)")
-                }
-            }
-        }
-    }
-    
-    func updateLocalProfileData(from userData: UpdateUserMutation.Data.UpdateUser?) {
-        guard let user = userData else { return }
-        
-        if let userAge = user.age {
-            self.age = userAge
-        }
-        
-        if let userHeight = user.height {
-            let totalInches = Int(userHeight.value)
-            self.heightFeet = totalInches / 12
-            self.heightInches = totalInches % 12
-        }
-        
-        if let userWeight = user.weight {
-            self.weight = userWeight.value
-        }
-        
-        if let goal = user.goal {
-            self.fitnessGoal = goal
-        }
-    }
-    
-    // MARK: - Data Loading
-    func loadUserProfile() {
-        // TODO: Implement loading user profile from backend
-        loading = false
+        // Sign out through auth manager
+        authManager.signOut()
     }
 }
 
@@ -588,192 +494,10 @@ struct GoalCard: View {
     }
 }
 
-// MARK: - Enhanced Height Selector View (kept for reference but not used in new design)
-struct EnhancedHeightSelectorView: View {
-    @Binding var feet: Int
-    @Binding var inches: Int
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 30) {
-                // Height Display
-                VStack(spacing: 8) {
-                    Text("Select Your Height")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                    
-                    Text("\(feet)' \(inches)\"")
-                        .font(.system(size: 48, weight: .bold, design: .rounded))
-                        .foregroundColor(.blue)
-                    
-                    Text("(\(getTotalInches()) inches total)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.top, 20)
-                
-                // Dual Picker
-                VStack(spacing: 20) {
-                    Text("Adjust with pickers below")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
-                    HStack(spacing: 40) {
-                        // Feet Picker
-                        VStack {
-                            Text("Feet")
-                                .font(.headline)
-                                .foregroundColor(.blue)
-                            
-                            Picker("Feet", selection: $feet) {
-                                ForEach(3...8, id: \.self) { foot in
-                                    Text("\(foot)")
-                                        .font(.title2)
-                                        .tag(foot)
-                                }
-                            }
-                            .pickerStyle(.wheel)
-                            .frame(width: 80, height: 120)
-                            .clipped()
-                        }
-                        
-                        // Inches Picker
-                        VStack {
-                            Text("Inches")
-                                .font(.headline)
-                                .foregroundColor(.blue)
-                            
-                            Picker("Inches", selection: $inches) {
-                                ForEach(0...11, id: \.self) { inch in
-                                    Text("\(inch)")
-                                        .font(.title2)
-                                        .tag(inch)
-                                }
-                            }
-                            .pickerStyle(.wheel)
-                            .frame(width: 80, height: 120)
-                            .clipped()
-                        }
-                    }
-                }
-                
-                // Height Range Info
-                VStack(spacing: 8) {
-                    Text("Common Height Range")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    HStack {
-                        HeightRangeItem(height: "4' 0\"", label: "Short")
-                        Spacer()
-                        HeightRangeItem(height: "5' 7\"", label: "Average")
-                        Spacer()
-                        HeightRangeItem(height: "6' 8\"", label: "Tall")
-                    }
-                    .padding(.horizontal, 20)
-                }
-                .padding(.top, 10)
-                
-                Spacer()
-                
-                // Quick Set Buttons
-                VStack(spacing: 12) {
-                    Text("Quick Select")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
-                        QuickHeightButton(feet: 5, inches: 0, currentFeet: $feet, currentInches: $inches)
-                        QuickHeightButton(feet: 5, inches: 4, currentFeet: $feet, currentInches: $inches)
-                        QuickHeightButton(feet: 5, inches: 8, currentFeet: $feet, currentInches: $inches)
-                        QuickHeightButton(feet: 5, inches: 10, currentFeet: $feet, currentInches: $inches)
-                        QuickHeightButton(feet: 6, inches: 0, currentFeet: $feet, currentInches: $inches)
-                        QuickHeightButton(feet: 6, inches: 2, currentFeet: $feet, currentInches: $inches)
-                    }
-                }
-                .padding(.horizontal, 20)
-                
-                Spacer()
-            }
-            .padding()
-            .navigationTitle("Height")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .fontWeight(.semibold)
-                }
-            }
-        }
-    }
-    
-    private func getTotalInches() -> Int {
-        return (feet * 12) + inches
-    }
-}
-
-// MARK: - Supporting Views for Height Selector
-struct HeightRangeItem: View {
-    let height: String
-    let label: String
-    
-    var body: some View {
-        VStack(spacing: 4) {
-            Text(height)
-                .font(.caption)
-                .fontWeight(.medium)
-            Text(label)
-                .font(.caption2)
-                .foregroundColor(.secondary)
-        }
-        .padding(.vertical, 6)
-        .padding(.horizontal, 12)
-        .background(Color(.systemGray6))
-        .cornerRadius(8)
-    }
-}
-
-struct QuickHeightButton: View {
-    let feet: Int
-    let inches: Int
-    @Binding var currentFeet: Int
-    @Binding var currentInches: Int
-    
-    private var isSelected: Bool {
-        currentFeet == feet && currentInches == inches
-    }
-    
-    var body: some View {
-        Button(action: {
-            currentFeet = feet
-            currentInches = inches
-        }) {
-            Text("\(feet)' \(inches)\"")
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundColor(isSelected ? .white : .blue)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .background(isSelected ? Color.blue : Color.blue.opacity(0.1))
-                .cornerRadius(8)
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
 // MARK: - Preview
 struct ProfileView_Previews: PreviewProvider {
     static var previews: some View {
         ProfileView()
             .environmentObject(AuthManager())
-    }
-}
-
-struct EnhancedHeightSelectorView_Previews: PreviewProvider {
-    static var previews: some View {
-        EnhancedHeightSelectorView(feet: .constant(5), inches: .constant(7))
     }
 }

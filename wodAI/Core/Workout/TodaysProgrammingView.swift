@@ -34,13 +34,17 @@ struct TodaysProgrammingView: View {
                 Text("Today's Programming")
                     .font(.headline)
                     .foregroundColor(Color("PrimaryText"))
-                
                 Spacer()
                 
                 if isLoading || isGenerating {
                     ProgressView()
                         .scaleEffect(0.8)
                 }
+            }
+            HStack {
+                Text("We have created this session based on your fitness level and activity.")
+                    .font(.subheadline)
+                    .foregroundColor(Color.secondaryText)
             }
             
             // Content
@@ -160,8 +164,7 @@ struct TodaysProgrammingView: View {
                     
                     // Check for GraphQL errors
                     if let errors = graphQLResult.errors, !errors.isEmpty {
-                        print("❌ GraphQL Errors: \(errors)")
-                        self.error = errors.first?.message ?? "Failed to generate workout"
+                        print("❌ GraphQL Errors: \(errors) \(String(describing: errors[0].path)) \(String(describing: errors[0].errorDescription))")
                         return
                     }
                     

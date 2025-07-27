@@ -7,9 +7,9 @@ import WodAiAPI
 public class GoogleLoginMutation: GraphQLMutation {
   public static let operationName: String = "GoogleLogin"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "7ed6b3153100009b0f45707b2bc5e56ba8d54b3c4d1157f6e985f97c24e170f0",
+    operationIdentifier: "2a4a8eac7afc8ba14e53602a329e4def52ce1035f3e5a0531cd6ddfb2fdc6950",
     definition: .init(
-      #"mutation GoogleLogin($idToken: String!) { loginWithGoogle(idToken: $idToken) { __typename user { __typename height { __typename value } gender fitnessLevel email age weight { __typename unit value } } token } }"#
+      #"mutation GoogleLogin($idToken: String!) { loginWithGoogle(idToken: $idToken) { __typename user { __typename id height { __typename value unit } gender fitnessLevel email age weight { __typename unit value } } token } }"#
     ))
 
   public var idToken: String
@@ -58,6 +58,7 @@ public class GoogleLoginMutation: GraphQLMutation {
         public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.User }
         public static var __selections: [ApolloAPI.Selection] { [
           .field("__typename", String.self),
+          .field("id", Int.self),
           .field("height", Height?.self),
           .field("gender", GraphQLEnum<WodAiAPI.Gender>?.self),
           .field("fitnessLevel", GraphQLEnum<WodAiAPI.FitnessLevel>.self),
@@ -66,6 +67,7 @@ public class GoogleLoginMutation: GraphQLMutation {
           .field("weight", Weight?.self),
         ] }
 
+        public var id: Int { __data["id"] }
         public var height: Height? { __data["height"] }
         public var gender: GraphQLEnum<WodAiAPI.Gender>? { __data["gender"] }
         public var fitnessLevel: GraphQLEnum<WodAiAPI.FitnessLevel> { __data["fitnessLevel"] }
@@ -84,9 +86,11 @@ public class GoogleLoginMutation: GraphQLMutation {
           public static var __selections: [ApolloAPI.Selection] { [
             .field("__typename", String.self),
             .field("value", Double.self),
+            .field("unit", GraphQLEnum<WodAiAPI.HeightUnit>.self),
           ] }
 
           public var value: Double { __data["value"] }
+          public var unit: GraphQLEnum<WodAiAPI.HeightUnit> { __data["unit"] }
         }
 
         /// LoginWithGoogle.User.Weight

@@ -20,7 +20,6 @@ struct EnhancedHomeView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Hero Section - Always visible
                     VStack(spacing: 16) {
                         Text("Ready to train?")
                             .font(.largeTitle)
@@ -30,65 +29,11 @@ struct EnhancedHomeView: View {
                     }
                     .padding(.top, 20)
                     
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Training Location")
-                                .font(.headline)
-                                .foregroundColor(Color("PrimaryText"))
-                            Spacer()
-                            
-                        }
-                        .padding(.horizontal)
-                        
-                        GymProfileSelector()
-                            .padding(.horizontal)
-                    }
-                    
-                    
                     TodaysProgrammingView()
                         .padding(.horizontal)
                         .transition(.move(edge: .top).combined(with: .opacity))
                     
                     
-                    VStack(spacing: 12) {
-                        HStack {
-                            Text("Generated Workouts")
-                                .font(.headline)
-                                .foregroundColor(Color("PrimaryText"))
-                            Spacer()
-                            
-                        }
-
-                        HStack(spacing: 12) {
-                            QuickStartCard(
-                                title: "Burner WOD",
-                                subtitle: "Build anaerobic capacity",
-                                icon: "flame",
-                                color: .red
-                            ) {
-                                generateQuickWorkout(type: .quick20)
-                            }
-                            
-                            QuickStartCard(
-                                title: "Strength",
-                                subtitle: "Targeted strength session",
-                                icon: "dumbbell.fill",
-                                color: .blue
-                            ) {
-                                generateQuickWorkout(type: .fullSession)
-                            }
-                            
-                            QuickStartCard(
-                                title: "Tabatta",
-                                subtitle: "High-intesity 20s intervals",
-                                icon: "clock.fill",
-                                color: .neutral
-                            ) {
-                                generateQuickWorkout(type: .fullSession)
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
                 }
             }
             .navigationBarHidden(true)
@@ -213,13 +158,10 @@ struct QuickWorkoutGenerationView: View {
     }
 }
 
-// MARK: - Preview
 #Preview {
     EnhancedHomeView()
         .environmentObject(EnhancedWorkoutGeneratorViewModel())
         .environmentObject(WODSessionManager.shared)
 }
 
-enum QuickWorkoutType {
-    case intelligent, quick20, fullSession
-}
+

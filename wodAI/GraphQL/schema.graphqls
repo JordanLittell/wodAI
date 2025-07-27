@@ -204,7 +204,7 @@ scalar DateTime
 scalar JSON
 
 type Query {
-  user(id: Int!): User
+  user: User
   users: [User!]!
   workout(id: String!): Workout
   workouts: [Workout!]!
@@ -219,8 +219,8 @@ type Query {
 }
 
 type Mutation {
-  updateUser(id: Int!, input: UpdateUserInput!): User!
-  deleteUser(id: Int!): User!
+  updateUser(input: UpdateUserInput!): User!
+  deleteUser: User!
   generateWod(page: Int): Workout!
   completeWod(id: String!): Workout!
   updateWod(id: String!, instructions: String): Workout!

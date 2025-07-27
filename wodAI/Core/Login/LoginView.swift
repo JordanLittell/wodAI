@@ -58,27 +58,13 @@ struct LoginView: View {
                     }
                     
                     VStack(spacing: 16) {
-                        ZStack {
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color("BrandPrimary"),
-                                            Color("BrandSecondary")
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 120, height: 120)
-                                .shadow(color: Color("BrandPrimary").opacity(0.3), radius: 20, x: 0, y: 10)
-                            
-                            Image(systemName: "dumbbell.fill")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 60, height: 60)
-                                .foregroundColor(.white)
-                        }
+                        // Logo Image
+                        Image("Logo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 120, height: 120)
+                            .cornerRadius(30) // Makes it rounded
+                            .shadow(color: Color("BrandPrimary").opacity(0.3), radius: 20, x: 0, y: 10)
                         
                         VStack(spacing: 8) {
                             Text("WOD.ai")
@@ -311,10 +297,11 @@ struct LoginView: View {
                     if let errors = graphqlResult.errors, !errors.isEmpty {
                         self.errorMessage = errors.first?.message ?? "Login failed"
                         self.showError = true
-                    } else if let token = graphqlResult.data?.loginWithCredentials.token {
+                    } else if let token = graphqlResult.data?.loginWithCredentials.token,
+                              let userId = graphqlResult.data?.loginWithCredentials.user.id {
                         // Success - authenticate user which will trigger navigation
-                        self.authManager.authenticate(token: token)
-                        print("✅ Login successful, token set")
+                        self.authManager.authenticate(token: token, userId: userId)
+                        print("✅ Login successful, token set, user ID: \(userId)")
                     } else {
                         self.errorMessage = "Invalid response from server"
                         self.showError = true
@@ -365,8 +352,9 @@ struct LoginView: View {
                             self.showError = true
                         } else if let token = graphqlResult.data?.loginWithGoogle.token {
                             // Success - authenticate user which will trigger navigation
-                            self.authManager.authenticate(token: token)
-                            print("✅ Google login successful, token set")
+                            let userId = graphqlResult.data?.loginWithGoogle.user.id
+                            self.authManager.authenticate(token: token, userId: userId)
+                            print("✅ Google login successful, token set" + (userId != nil ? ", user ID: \(userId!)" : ""))
                         } else {
                             self.errorMessage = "Invalid response from server"
                             self.showError = true
