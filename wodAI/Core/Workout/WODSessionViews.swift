@@ -30,7 +30,7 @@ struct WODMiniPlayer: View {
                         
                         // WOD info
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(wod.format)
+                            Text(wod.name)
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                                 .foregroundColor(.primary)
@@ -116,8 +116,15 @@ struct ActiveWODView: View {
                         TimerDisplay()
                             .padding(.top, 20)
                         
-                        // WOD Definition
-                        WODDefinitionCard(definition: wod.definition)
+                        // Workout Components
+                        ScrollView {
+                            VStack(spacing: 16) {
+                                ForEach(wod.components.sorted(by: { $0.order < $1.order })) { component in
+                                    WODDefinitionCard(definition: component.definition)
+                                }
+                            }
+                        }
+                        .frame(maxHeight: .infinity)
                         
                         Spacer()
                         

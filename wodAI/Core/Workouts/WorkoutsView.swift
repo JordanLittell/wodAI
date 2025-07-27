@@ -122,12 +122,15 @@ struct WorkoutsView: View {
                 case .success(let graphQLResult):
                     if let data = graphQLResult.data?.completedWods {
                         self.completedWorkouts = data.wods.enumerated().map { index, wod in
-                            CompletedWorkout(
-                                id: "\(self.currentPage)-\(index)", // Generate a unique ID
+                            let workoutDefinition = wod.components.first?.definition ?? wod.description
+                            let muscles = wod.components.flatMap { $0.muscles }.joined(separator: ", ")
+                            
+                            return CompletedWorkout(
+                                id: wod.id,
                                 name: wod.name,
-                                definition: wod.definition,
-                                muscles: wod.muscles.joined(separator: ", "),
-                                completedAt: self.parseDate(wod.updatedAt) ?? Date()
+                                definition: workoutDefinition,
+                                muscles: muscles.isEmpty ? nil : muscles,
+                                completedAt: self.parseDate(wod.completedAt ?? wod.updatedAt) ?? Date()
                             )
                         }
                         self.hasMore = data.hasMore
@@ -165,12 +168,16 @@ struct WorkoutsView: View {
                 case .success(let graphQLResult):
                     if let data = graphQLResult.data?.completedWods {
                         let newWorkouts = data.wods.enumerated().map { index, wod in
-                            CompletedWorkout(
-                                id: "\(nextPage)-\(index)",
+                            // Extract workout definition from components
+                            let workoutDefinition = wod.components.first?.definition ?? wod.description
+                            let muscles = wod.components.flatMap { $0.muscles }.joined(separator: ", ")
+                            
+                            return CompletedWorkout(
+                                id: wod.id,
                                 name: wod.name,
-                                definition: wod.definition,
-                                muscles: wod.muscles.joined(separator: ", "),
-                                completedAt: self.parseDate(wod.updatedAt) ?? Date()
+                                definition: workoutDefinition,
+                                muscles: muscles.isEmpty ? nil : muscles,
+                                completedAt: self.parseDate(wod.completedAt ?? wod.updatedAt) ?? Date()
                             )
                         }
                         self.completedWorkouts.append(contentsOf: newWorkouts)
@@ -520,13 +527,23 @@ struct WorkoutDetailView: View {
     }
     
     private func repeatWorkout() {
-        // Set the workout in the generator
+        // Create a simple workout from the completed workout data
         workoutGenerator.workout = Workout(
-            definition: workout.definition,
-            stimulus: "",
-            muscles: workout.muscles ?? "",
-            format: workout.name,
-            id: workout.id
+            id: UUID().uuidString,
+            name: workout.name,
+            description: "",
+            components: [
+                Component(
+                    name: "WOD",
+                    order: 1,
+                    definition: workout.definition,
+                    description: "",
+                    targetFitnessDomains: [],
+                    energySystems: []
+                )
+            ],
+            completedAt: nil,
+            completed: false
         )
         
         // Dismiss and navigate to home

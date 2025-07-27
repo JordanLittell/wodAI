@@ -41,33 +41,39 @@ class WorkoutFlowState: ObservableObject {
     func generateWorkout() {
         isGenerating = true
         
-        // Convert flow state to GraphQL input
-        let description = buildWorkoutDescription()
-        let input = CreateWodInput(
-            description: GraphQLNullable(stringLiteral: description),
-            loadParams: GraphQLNullable(
-                LoadParams(
-                    weight: GraphQLNullable(integerLiteral: Int.IntegerLiteralType(intensityLevel.weightMultiplier * 10)),
-                    volume: GraphQLNullable(integerLiteral: Int.IntegerLiteralType(duration / 5)
-                        )
-                    )
-                )
-            )
+        // Note: The new GraphQL schema doesn't accept any parameters for generateWod
+        // The backend will use the user's profile and context to generate appropriate workouts
+        let contextDescription = buildWorkoutDescription()
+        print("📋 Workout context: \(contextDescription)")
         
         // Call your existing generation logic
-        Network.shared.client.perform(mutation: GenerateWODMutation(input: input)) { result in
+        Network.shared.client.perform(mutation: GenerateWODMutation()) { [weak self] result in
             DispatchQueue.main.async {
+                guard let self = self else { return }
                 self.isGenerating = false
                 
                 switch result {
                 case .success(let graphqlResult):
-                    if let wodData = graphqlResult.data?.generateWod {
+                    if let wodData: GenerateWODMutation.Data.GenerateWod = graphqlResult.data?.generateWod {
+                        // Create workout from components
+                        let components = wodData.components.map { component in
+                            Component(
+                                name: component.name,
+                                order: component.order,
+                                definition: component.definition,
+                                description: component.description,
+                                targetFitnessDomains: ["power"],
+                                energySystems: ["aerobic"]
+                            )
+                        }
+                        
                         self.generatedWorkout = Workout(
-                            definition: wodData.definition,
-                            stimulus: "",
-                            muscles: "",
-                            format: wodData.format,
-                            id: wodData.id
+                            id: UUID().uuidString,
+                            name: wodData.name,
+                            description: wodData.description,
+                            components: components,
+                            completedAt: nil,
+                            completed: false
                         )
                     }
                 case .failure(let error):

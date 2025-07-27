@@ -30,18 +30,11 @@ struct WorkoutDefinitionView: View {
             // Workout Definition Display
             VStack(alignment: .leading, spacing: 12) {
                 // Format Title
-                Text(workout.format.uppercased())
+                Text(workout.name)
                     .font(.title3)
                     .fontWeight(.bold)
                     .foregroundColor(.brandPrimary)
-                
-                // Definition Text with better formatting
-                Text(workout.definition)
-                    .font(.body)
-                    .lineSpacing(8)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .foregroundColor(.primaryText)
-                    .padding(.vertical, 8)
+            
                 
             }
             .padding(16)

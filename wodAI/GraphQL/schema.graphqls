@@ -78,42 +78,13 @@ input HeightInput {
   unit: HeightUnit!
 }
 
-type MesoCycle {
-  id: Int!
-  userId: Int!
-  user: User!
-  name: String!
-  description: String
-  workoutsPerWeek: Int!
-  mesocycleLength: Int!
-  primaryFocus: Focus!
-  secondaryFocus: Focus
-  hasDeloadWeek: Boolean!
-  hasTestingWeek: Boolean!
-  timePerWorkout: Int!
-  status: GenerationStatus!
-  error: String
-  progress: Float!
-  workouts: [Workout!]!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
-
 type Workout {
-  id: Int!
+  id: String!
   name: String!
   description: String!
-  userId: Int
   user: User
-  trainingPlanId: String
-  trainingPlan: TrainingPlan
-  mesoCycleId: Int
-  mesoCycle: MesoCycle
   status: WorkoutStatus!
-  dateScheduled: DateTime
-  dateCompleted: DateTime
   order: Int
-  exercises: [Exercise!]!
   stimulus: String
   completed: Boolean!
   completedAt: DateTime
@@ -127,11 +98,12 @@ type Component {
   name: String!
   order: Int!
   definition: String!
-  stimulus: String!
-  equipment: [String!]!
+  description: String!
+  targetFitnessDomains: [String!]!
+  energySystems: [String!]!
   muscles: [String!]!
   movements: [String!]!
-  workoutId: Int!
+  workoutId: String!
   workout: Workout!
   createdAt: DateTime!
   updatedAt: DateTime!
@@ -143,68 +115,6 @@ type CompletedWodsResponse {
   hasMore: Boolean!
   currentPage: Int!
   totalPages: Int!
-}
-
-type Exercise {
-  id: String!
-  name: String!
-  description: String!
-  order: Int!
-  type: ExerciseType!
-  rounds: Int
-  definition: JSON!
-  workoutId: Int!
-  workout: Workout!
-  intervals: [Interval!]!
-  sets: [ExerciseSet!]!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
-
-type Interval {
-  id: Int!
-  type: IntervalType!
-  time: Int!
-  unit: TimeUnit!
-  completed: Boolean!
-  rest: Int!
-  restUnit: TimeUnit!
-  exerciseId: String!
-  exercise: Exercise!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
-
-type ExerciseSet {
-  id: String!
-  name: String!
-  reps: Int!
-  weight: Float!
-  unit: WeightUnit!
-  completed: Boolean!
-  rest: Int!
-  restUnit: TimeUnit!
-  exerciseId: String!
-  exercise: Exercise!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
-
-type TrainingPlan {
-  id: String!
-  name: String!
-  description: String!
-  goal: String!
-  threadId: String
-  startDate: DateTime!
-  endDate: DateTime
-  isActive: Boolean!
-  userId: Int
-  user: User
-  creatorId: Int!
-  workouts: [Workout!]!
-  createdAt: DateTime!
-  updatedAt: DateTime!
 }
 
 enum Gender {
@@ -282,54 +192,11 @@ enum FitnessEquipment {
   SeatedLegPressMachines
 }
 
-enum Focus {
-  STRENGTH
-  HYPERTROPHY
-  ENDURANCE
-  POWER
-  SPEED
-  AGILITY
-  FLEXIBILITY
-  BALANCE
-  COORDINATION
-  STABILITY
-}
-
-enum GenerationStatus {
-  PENDING
-  IN_PROGRESS
-  COMPLETED
-  FAILED
-}
-
 enum WorkoutStatus {
   GENERATED
   SCHEDULED
   COMPLETED
   CANCELLED
-}
-
-enum ExerciseType {
-  STRENGTH
-  DISTANCE
-  TIMED
-  TIMED_INTERVALS
-  DISTANCE_INTERVALS
-  AMRAP
-  EMOM
-  SUPERSET
-}
-
-enum IntervalType {
-  TIMED
-  DISTANCE
-  STRENGTH
-}
-
-enum TimeUnit {
-  SECONDS
-  MINUTES
-  HOURS
 }
 
 scalar DateTime
@@ -339,21 +206,12 @@ scalar JSON
 type Query {
   user(id: Int!): User
   users: [User!]!
-  mesoCycle(id: Int!): MesoCycle
-  mesoCycles: [MesoCycle!]!
-  workout(id: Int!): Workout
+  workout(id: String!): Workout
   workouts: [Workout!]!
-  exercise(id: String!): Exercise
-  exercises: [Exercise!]!
-  interval(id: Int!): Interval
-  intervals: [Interval!]!
-  exerciseSet(id: String!): ExerciseSet
-  exerciseSets: [ExerciseSet!]!
-  trainingPlan(id: String!): TrainingPlan
-  trainingPlans: [TrainingPlan!]!
-  wod(id: Int!): Workout
+  wod(id: String!): Workout
   wods(searchText: String): [Workout!]!
   completedWods(page: Int): CompletedWodsResponse!
+  currentWod: Workout
   gymProfiles: [GymProfile!]!
   activeGymProfile: GymProfile
   equipment: [Equipment!]!
@@ -363,26 +221,9 @@ type Query {
 type Mutation {
   updateUser(id: Int!, input: UpdateUserInput!): User!
   deleteUser(id: Int!): User!
-  createMesoCycle(input: CreateMesoCycleInput!): MesoCycle!
-  updateMesoCycle(id: Int!, input: UpdateMesoCycleInput!): MesoCycle!
-  deleteMesoCycle(id: Int!): MesoCycle!
-  createWorkout(input: CreateWorkoutInput!): Workout!
-  updateWorkout(id: Int!, input: UpdateWorkoutInput!): Workout!
-  deleteWorkout(id: Int!): Workout!
-  createExercise(input: CreateExerciseInput!): Exercise!
-  updateExercise(id: String!, input: UpdateExerciseInput!): Exercise!
-  deleteExercise(id: String!): Exercise!
-  createInterval(input: CreateIntervalInput!): Interval!
-  updateInterval(id: Int!, input: UpdateIntervalInput!): Interval!
-  deleteInterval(id: Int!): Interval!
-  createExerciseSet(input: CreateExerciseSetInput!): ExerciseSet!
-  updateExerciseSet(id: String!, input: UpdateExerciseSetInput!): ExerciseSet!
-  deleteExerciseSet(id: String!): ExerciseSet!
-  createTrainingPlan(input: CreateTrainingPlanInput!): TrainingPlan!
-  updateTrainingPlan(id: String!, input: UpdateTrainingPlanInput!): TrainingPlan!
-  deleteTrainingPlan(id: String!): TrainingPlan!
   generateWod(page: Int): Workout!
-  completeWod(id: Int!): Workout!
+  completeWod(id: String!): Workout!
+  updateWod(id: String!, instructions: String): Workout!
   register(email: String!, password: String!, firstName: String, lastName: String): AuthPayload!
   loginWithCredentials(email: String!, password: String!): AuthPayload!
   loginWithGoogle(idToken: String!): AuthPayload!
@@ -403,133 +244,6 @@ input UpdateUserInput {
   goal: String
   weight: WeightInput
   height: HeightInput
-}
-
-input CreateMesoCycleInput {
-  userId: Int!
-  name: String!
-  description: String
-  workoutsPerWeek: Int!
-  mesocycleLength: Int!
-  primaryFocus: Focus!
-  secondaryFocus: Focus
-  hasDeloadWeek: Boolean
-  hasTestingWeek: Boolean
-  timePerWorkout: Int!
-}
-
-input UpdateMesoCycleInput {
-  name: String
-  description: String
-  workoutsPerWeek: Int
-  mesocycleLength: Int
-  primaryFocus: Focus
-  secondaryFocus: Focus
-  hasDeloadWeek: Boolean
-  hasTestingWeek: Boolean
-  timePerWorkout: Int
-  status: GenerationStatus
-  error: String
-  progress: Float
-}
-
-input CreateWorkoutInput {
-  name: String!
-  description: String
-  userId: Int
-  trainingPlanId: String
-  mesoCycleId: Int
-  status: WorkoutStatus
-  dateScheduled: DateTime
-  order: Int
-}
-
-input UpdateWorkoutInput {
-  name: String
-  description: String
-  status: WorkoutStatus
-  dateScheduled: DateTime
-  dateCompleted: DateTime
-  order: Int
-}
-
-input CreateExerciseInput {
-  name: String!
-  description: String!
-  order: Int!
-  type: ExerciseType!
-  rounds: Int
-  definition: JSON!
-  workoutId: Int!
-}
-
-input UpdateExerciseInput {
-  name: String
-  description: String
-  order: Int
-  type: ExerciseType
-  rounds: Int
-  definition: JSON
-}
-
-input CreateIntervalInput {
-  type: IntervalType!
-  time: Int!
-  unit: TimeUnit!
-  rest: Int!
-  restUnit: TimeUnit!
-  exerciseId: String!
-}
-
-input UpdateIntervalInput {
-  type: IntervalType
-  time: Int
-  unit: TimeUnit
-  completed: Boolean
-  rest: Int
-  restUnit: TimeUnit
-}
-
-input CreateExerciseSetInput {
-  name: String!
-  reps: Int!
-  weight: Float!
-  unit: WeightUnit!
-  rest: Int!
-  restUnit: TimeUnit!
-  exerciseId: String!
-}
-
-input UpdateExerciseSetInput {
-  name: String
-  reps: Int
-  weight: Float
-  unit: WeightUnit
-  completed: Boolean
-  rest: Int
-  restUnit: TimeUnit
-}
-
-input CreateTrainingPlanInput {
-  name: String!
-  description: String!
-  goal: String!
-  threadId: String
-  startDate: DateTime!
-  endDate: DateTime
-  isActive: Boolean
-  userId: Int
-  creatorId: Int
-}
-
-input UpdateTrainingPlanInput {
-  name: String
-  description: String
-  goal: String
-  threadId: String
-  startDate: DateTime
-  endDate: DateTime
-  isActive: Boolean
 }
 
 type AuthPayload {

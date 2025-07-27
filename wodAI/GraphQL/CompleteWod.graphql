@@ -1,4 +1,4 @@
-mutation CompleteWodMutation($completeWodId: Int!) {
+mutation CompleteWodMutation($completeWodId: String!) {
   completeWod(id: $completeWodId) {
     completed
   }

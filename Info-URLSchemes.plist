@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Google Sign-In URL Scheme Configuration -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>com.googleusercontent.apps.323431688528-e8s8oo9o1qtf6vrcu69uf0hnb9etvdg3</string>
+            </array>
+            <key>CFBundleURLName</key>
+            <string>Google Sign-In</string>
+        </dict>
+    </array>
+    
+    <!-- Required for Google Sign-In on iOS 9+ -->
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+        <string>googlechromes</string>
+        <string>safari</string>
+    </array>
+    
+    <!-- If your app uses Sign in with Apple -->
+    <key>SignInWithApple</key>
+    <true/>
+</dict>
+</plist>

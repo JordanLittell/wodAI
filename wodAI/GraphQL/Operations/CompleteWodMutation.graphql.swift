@@ -7,9 +7,9 @@ import WodAiAPI
 public class CompleteWodMutation: GraphQLMutation {
   public static let operationName: String = "CompleteWodMutation"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "1de3abda8f519db1922e341462fce3bca044750d0953b286e7de98bf4935cc0f",
+    operationIdentifier: "af4f2972fabc41e0af3f1c9b642e5bc3aae7183522da09588a49c3ccf3509bad",
     definition: .init(
-      #"mutation CompleteWodMutation($completeWodId: String!) { completeWod(id: $completeWodId) { __typename definition completed createdAt } }"#
+      #"mutation CompleteWodMutation($completeWodId: String!) { completeWod(id: $completeWodId) { __typename completed } }"#
     ))
 
   public var completeWodId: String
@@ -33,22 +33,18 @@ public class CompleteWodMutation: GraphQLMutation {
 
     /// CompleteWod
     ///
-    /// Parent Type: `Wod`
+    /// Parent Type: `Workout`
     public struct CompleteWod: WodAiAPI.SelectionSet {
       public let __data: DataDict
       public init(_dataDict: DataDict) { __data = _dataDict }
 
-      public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.Wod }
+      public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.Workout }
       public static var __selections: [ApolloAPI.Selection] { [
         .field("__typename", String.self),
-        .field("definition", String.self),
         .field("completed", Bool.self),
-        .field("createdAt", WodAiAPI.DateTime?.self),
       ] }
 
-      public var definition: String { __data["definition"] }
       public var completed: Bool { __data["completed"] }
-      public var createdAt: WodAiAPI.DateTime? { __data["createdAt"] }
     }
   }
 }

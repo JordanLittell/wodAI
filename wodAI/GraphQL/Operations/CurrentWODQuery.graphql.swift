@@ -4,12 +4,12 @@
 @_exported import ApolloAPI
 import WodAiAPI
 
-public class GenerateWODMutation: GraphQLMutation {
-  public static let operationName: String = "GenerateWODMutation"
+public class CurrentWODQuery: GraphQLQuery {
+  public static let operationName: String = "CurrentWOD"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "30374af7564928be4e0f3e4d7c2de376e7329444ad84fc507ba94abe4c7883cd",
+    operationIdentifier: "778f100fa72dd31532e5be466c47dc160b9d5cdc33f676b7887912731829c835",
     definition: .init(
-      #"mutation GenerateWODMutation { generateWod { __typename id name description components { __typename description order name definition } } }"#
+      #"query CurrentWOD { currentWod { __typename id name description completed components { __typename id name definition order } } }"#
     ))
 
   public init() {}
@@ -18,17 +18,17 @@ public class GenerateWODMutation: GraphQLMutation {
     public let __data: DataDict
     public init(_dataDict: DataDict) { __data = _dataDict }
 
-    public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.Mutation }
+    public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.Query }
     public static var __selections: [ApolloAPI.Selection] { [
-      .field("generateWod", GenerateWod.self),
+      .field("currentWod", CurrentWod?.self),
     ] }
 
-    public var generateWod: GenerateWod { __data["generateWod"] }
+    public var currentWod: CurrentWod? { __data["currentWod"] }
 
-    /// GenerateWod
+    /// CurrentWod
     ///
     /// Parent Type: `Workout`
-    public struct GenerateWod: WodAiAPI.SelectionSet {
+    public struct CurrentWod: WodAiAPI.SelectionSet {
       public let __data: DataDict
       public init(_dataDict: DataDict) { __data = _dataDict }
 
@@ -38,15 +38,17 @@ public class GenerateWODMutation: GraphQLMutation {
         .field("id", String.self),
         .field("name", String.self),
         .field("description", String.self),
+        .field("completed", Bool.self),
         .field("components", [Component].self),
       ] }
 
       public var id: String { __data["id"] }
       public var name: String { __data["name"] }
       public var description: String { __data["description"] }
+      public var completed: Bool { __data["completed"] }
       public var components: [Component] { __data["components"] }
 
-      /// GenerateWod.Component
+      /// CurrentWod.Component
       ///
       /// Parent Type: `Component`
       public struct Component: WodAiAPI.SelectionSet {
@@ -56,16 +58,16 @@ public class GenerateWODMutation: GraphQLMutation {
         public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.Component }
         public static var __selections: [ApolloAPI.Selection] { [
           .field("__typename", String.self),
-          .field("description", String.self),
-          .field("order", Int.self),
+          .field("id", String.self),
           .field("name", String.self),
           .field("definition", String.self),
+          .field("order", Int.self),
         ] }
 
-        public var description: String { __data["description"] }
-        public var order: Int { __data["order"] }
+        public var id: String { __data["id"] }
         public var name: String { __data["name"] }
         public var definition: String { __data["definition"] }
+        public var order: Int { __data["order"] }
       }
     }
   }

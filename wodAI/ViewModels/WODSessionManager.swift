@@ -55,7 +55,7 @@ class WODSessionManager: ObservableObject {
         // Post notification for UI updates
         NotificationCenter.default.post(name: .wodSessionStarted, object: workout)
         
-        print("🏋️‍♂️ WOD session started: \(workout.format)")
+        print("🏋️‍♂️ WOD session started")
     }
     
     func pauseWOD() {
@@ -262,13 +262,4 @@ extension Notification.Name {
     static let wodSessionPaused = Notification.Name("wodSessionPaused")
     static let wodSessionResumed = Notification.Name("wodSessionResumed")
     static let wodSessionCompleted = Notification.Name("wodSessionCompleted")
-}
-
-// MARK: - Integration Extension for WorkoutGeneratorViewModel
-extension WorkoutGeneratorViewModel {
-    func startWODSession() {
-        Task { @MainActor in
-            WODSessionManager.shared.startWOD(self.workout)
-        }
-    }
 }

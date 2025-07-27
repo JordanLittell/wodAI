@@ -1,7 +1,13 @@
-mutation UpdateWod($updateWodId: String!, $input: UpdateWodInput!) {
-  updateWod(id: $updateWodId, input: $input) {
-    definition
-    format
+mutation UpdateWod($updateWodId: String!, $instructions: String!) {
+  updateWod(id: $updateWodId, instructions: $instructions) {
     id
+    name
+    description
+    components {
+      order
+      name
+      definition
+      description
+    }
   }
 }

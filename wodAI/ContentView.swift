@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
+    @State private var hasCheckedAppleCredentials = false
 
     var body: some View {
         Group {
@@ -25,6 +26,25 @@ struct ContentView: View {
             // Force UI update by triggering the published property
             DispatchQueue.main.async {
                 authManager.isAuthenticated = false
+            }
+        }
+        .onAppear {
+            checkAppleSignInCredentials()
+        }
+    }
+    
+    private func checkAppleSignInCredentials() {
+        guard !hasCheckedAppleCredentials else { return }
+        hasCheckedAppleCredentials = true
+        
+        // Check Apple Sign-In credential state on app launch
+        AppleSignInService.shared.checkCredentialState { isValid in
+            if isValid {
+                print("✅ Apple credentials are valid")
+                // You might want to refresh the session here
+            } else {
+                print("❌ Apple credentials are invalid or not found")
+                // Clear any Apple-related session data if needed
             }
         }
     }

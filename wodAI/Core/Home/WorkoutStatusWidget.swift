@@ -157,7 +157,7 @@ struct WorkoutReadyWidget: View {
                     .foregroundColor(.primaryText)
                 
                 if let workout = workoutGenerator.workout {
-                    Text(workout.format)
+                    Text(workout.name)
                         .font(.subheadline)
                         .foregroundColor(.secondaryText)
                         .lineLimit(1)

@@ -15,8 +15,6 @@ struct EnhancedHomeView: View {
     @State private var showingQuickWorkout = false
     @State private var showingWorkoutExecution = false
     @State private var showingWorkout = false
-    @State private var showingHeroWorkouts = false
-    @State private var showingGirlWorkouts = false
     
     var body: some View {
         NavigationStack {
@@ -29,14 +27,9 @@ struct EnhancedHomeView: View {
                             .fontWeight(.bold)
                             .foregroundColor(Color(.primaryText))
                         
-                        Text("Your AI fitness companion is ready to create the perfect workout for you")
-                            .font(.subheadline)
-                            .foregroundColor(.secondaryText)
-                            .multilineTextAlignment(.center)
                     }
                     .padding(.top, 20)
                     
-                    // Gym Profile Selector
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Text("Training Location")
@@ -51,95 +44,51 @@ struct EnhancedHomeView: View {
                             .padding(.horizontal)
                     }
                     
-                    // Workout Status Widget - Shows when workout exists or is active
-                    if workoutGenerator.workout != nil || wodSessionManager.isActive {
-                        WorkoutStatusWidget()
-                            .padding(.horizontal)
-                            .onTapGesture {
-                                showingWorkout = true
-                            }
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                    }
                     
-                    // Quick Start Options - Always visible
+                    TodaysProgrammingView()
+                        .padding(.horizontal)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                    
+                    
                     VStack(spacing: 12) {
-                        // Primary CTA
-                        Button(action: {
-                            generateQuickWorkout(type: .intelligent)
-                        }) {
-                            HStack {
-                                Image(systemName: "brain.head.profile")
-                                    .font(.title2)
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Smart Workout")
-                                        .font(.headline)
-                                    Text("AI picks the perfect workout for you")
-                                        .font(.caption)
-                                        .foregroundColor(.white.opacity(0.8))
-                                }
-                                Spacer()
-                                Image(systemName: "arrow.right")
-                            }
-                            .padding()
-                            .background(
-                                LinearGradient(
-                                    colors: [.heroStart, .heroEnd],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .foregroundColor(.white)
-                            .cornerRadius(16)
+                        HStack {
+                            Text("Generated Workouts")
+                                .font(.headline)
+                                .foregroundColor(Color("PrimaryText"))
+                            Spacer()
+                            
                         }
-                        
-                        // Quick Options Row
+
                         HStack(spacing: 12) {
                             QuickStartCard(
-                                title: "Quick 20min",
-                                subtitle: "High intensity",
-                                icon: "timer",
-                                color: .orange
+                                title: "Burner WOD",
+                                subtitle: "Build anaerobic capacity",
+                                icon: "flame",
+                                color: .red
                             ) {
                                 generateQuickWorkout(type: .quick20)
                             }
                             
                             QuickStartCard(
-                                title: "Full Session",
-                                subtitle: "45-60 mins",
-                                icon: "flame.fill",
-                                color: .red
+                                title: "Strength",
+                                subtitle: "Targeted strength session",
+                                icon: "dumbbell.fill",
+                                color: .blue
                             ) {
                                 generateQuickWorkout(type: .fullSession)
                             }
                             
                             QuickStartCard(
-                                title: "Custom",
-                                subtitle: "Your way",
-                                icon: "slider.horizontal.3",
-                                color: .green
+                                title: "Tabatta",
+                                subtitle: "High-intesity 20s intervals",
+                                icon: "clock.fill",
+                                color: .neutral
                             ) {
-                                showingCustomFlow = true
+                                generateQuickWorkout(type: .fullSession)
                             }
                         }
                     }
                     .padding(.horizontal)
-                    
-                    // Special Workouts Section
-                    SpecialWorkoutsRow(
-                        onHeroSelected: {
-                            showingHeroWorkouts = true
-                        },
-                        onGirlSelected: {
-                            showingGirlWorkouts = true
-                        }
-                    )
-                    .padding(.horizontal)
-                    
-                    // Recent Workouts Section
-                    // RecentWorkoutsSection()
-                    
-                    // Progress Insights
-                    // ProgressInsightsSection()
                 }
             }
             .navigationBarHidden(true)
@@ -178,24 +127,10 @@ struct EnhancedHomeView: View {
                 showingWorkout = true
             }
         }
-        .sheet(isPresented: $showingHeroWorkouts) {
-            SpecialWorkoutSelectionView(category: .hero) { specialWorkout in
-                generateSpecialWorkout(specialWorkout)
-            }
-        }
-        .sheet(isPresented: $showingGirlWorkouts) {
-            SpecialWorkoutSelectionView(category: .girls) { specialWorkout in
-                generateSpecialWorkout(specialWorkout)
-            }
-        }
     }
     
     private func generateQuickWorkout(type: QuickWorkoutType) {
         workoutGenerator.generateQuickWorkout(type: type)
-    }
-    
-    private func generateSpecialWorkout(_ specialWorkout: SpecialWorkout) {
-        workoutGenerator.generateQuickWorkout(type: .specialWorkout(specialWorkout))
     }
 }
 
@@ -287,5 +222,4 @@ struct QuickWorkoutGenerationView: View {
 
 enum QuickWorkoutType {
     case intelligent, quick20, fullSession
-    case specialWorkout(SpecialWorkout)
 }

@@ -1,13 +1,14 @@
-mutation GenerateWODMutation {
-  generateWod {
+query CurrentWOD {
+  currentWod {
     id
     name
     description
+    completed
     components {
-      description
-      order
+      id
       name
       definition
+      order
     }
   }
 }

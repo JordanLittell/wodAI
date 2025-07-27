@@ -1,0 +1,17 @@
+mutation AppleLogin($identityToken: String!, $fullName: String, $email: String, $user: String!) {
+  loginWithApple(
+    identityToken: $identityToken
+    fullName: $fullName
+    email: $email
+    user: $user
+  ) {
+    token
+    user {
+      id
+      email
+      firebaseId
+      createdAt
+      updatedAt
+    }
+  }
+}

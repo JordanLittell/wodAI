@@ -1,13 +1,22 @@
-query CompletedWodsQuery {
-  completedWods {
+query CompletedWodsQuery($page: Int) {
+  completedWods(page: $page) {
     wods {
+      id
+      name
+      description
+      completedAt
+      stimulus
       components {
         definition
         muscles
         name
       }
+      createdAt
+      updatedAt
     }
+    total
     hasMore
     currentPage
+    totalPages
   }
 }

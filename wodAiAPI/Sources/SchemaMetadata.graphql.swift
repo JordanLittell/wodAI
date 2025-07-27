@@ -22,6 +22,7 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     switch typename {
     case "AuthPayload": return WodAiAPI.Objects.AuthPayload
     case "CompletedWodsResponse": return WodAiAPI.Objects.CompletedWodsResponse
+    case "Component": return WodAiAPI.Objects.Component
     case "Equipment": return WodAiAPI.Objects.Equipment
     case "GymProfile": return WodAiAPI.Objects.GymProfile
     case "HeightMeasurement": return WodAiAPI.Objects.HeightMeasurement
@@ -29,7 +30,7 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "Query": return WodAiAPI.Objects.Query
     case "User": return WodAiAPI.Objects.User
     case "WeightMeasurement": return WodAiAPI.Objects.WeightMeasurement
-    case "Wod": return WodAiAPI.Objects.Wod
+    case "Workout": return WodAiAPI.Objects.Workout
     default: return nil
     }
   }

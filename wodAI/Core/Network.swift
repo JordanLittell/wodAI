@@ -120,4 +120,5 @@ class NetworkInterceptorProvider: InterceptorProvider {
 // MARK: - Notification Names
 extension Notification.Name {
     static let userDidLogout = Notification.Name("userDidLogout")
+    static let workoutCompleted = Notification.Name("workoutCompleted")
 }

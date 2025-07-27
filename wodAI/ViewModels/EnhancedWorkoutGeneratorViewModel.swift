@@ -37,7 +37,6 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
     // MARK: - Customization States
     @Published var isCustomizing: Bool = false
     @Published var availableAlternatives: [String: [ExerciseAlternative]] = [:]
-    @Published var pendingSwaps: [ExerciseSwap] = []
     
     // MARK: - Error Handling
     @Published var errorMessage: String?
@@ -73,7 +72,7 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
         generationStep = .analyzing
         
         let preferences = buildQuickWorkoutPreferences(for: type)
-        performGeneration(with: preferences)
+        performGeneration()
     }
     
     private func buildQuickWorkoutPreferences(for type: QuickWorkoutType) -> WorkoutGenerationPreferences {
@@ -87,7 +86,7 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
                 duration: userPreferences.preferredDuration,
                 intensity: userPreferences.preferredIntensity,
                 equipment: availableEquipment,
-                muscleGroups: inferFocusFromHistory(),
+                muscleGroups: [],
                 energyLevel: .good,
                 isQuick: true,
                 useAIRecommendations: true
@@ -114,65 +113,27 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
                 isQuick: false,
                 useAIRecommendations: true
             )
-            
-        case .specialWorkout(let specialWorkout):
-            return WorkoutGenerationPreferences(
-                duration: specialWorkout.estimatedDuration,
-                intensity: specialWorkout.difficulty == .elite || specialWorkout.difficulty == .advanced ? .intense : .moderate,
-                equipment: availableEquipment,
-                muscleGroups: [],
-                energyLevel: .good,
-                isQuick: false,
-                useAIRecommendations: false,
-                contextualPrompt: buildSpecialWorkoutPrompt(for: specialWorkout)
-            )
         }
     }
     
-    // MARK: - Custom Workout Generation (from flow)
     func generateCustomWorkout() {
         generating = true
         generationStep = .analyzing
-        
-        let preferences = buildCustomWorkoutPreferences(from: flowState)
-        performGeneration(with: preferences)
+        performGeneration()
     }
     
-    private func buildCustomWorkoutPreferences(from state: WorkoutFlowState) -> WorkoutGenerationPreferences {
-        return WorkoutGenerationPreferences(
-            duration: Int(state.duration),
-            intensity: state.intensityLevel,
-            equipment: state.selectedEquipment,
-            muscleGroups: state.selectedMuscleGroups,
-            energyLevel: state.energyLevel,
-            isQuick: false,
-            useAIRecommendations: true,
-            contextualPrompt: buildContextualPrompt(from: state)
-        )
-    }
-    
-    // MARK: - Core Generation Logic
-    private func performGeneration(with preferences: WorkoutGenerationPreferences) {
+    private func performGeneration() {
         // Debug: Check authentication
         let authManager = AuthManager()
         print("🔐 Auth Status: isAuthenticated = \(authManager.isAuthenticated), token exists = \(authManager.token != nil)")
         
         simulateGenerationSteps()
         
-        let input = CreateWodInput(
-            description: GraphQLNullable(stringLiteral: preferences.buildDescription()),
-            loadParams: GraphQLNullable(
-                LoadParams(
-                    weight: GraphQLNullable(integerLiteral: preferences.calculateWeightParameter()),
-                    volume: GraphQLNullable(integerLiteral: preferences.calculateVolumeParameter()),
-                    skill: GraphQLNullable(integerLiteral: preferences.energyLevel.skillLevel)
-                )
-            )
-        )
+        // Note: The new GraphQL schema doesn't accept any parameters for generateWod
+        // The backend will use the user's profile and context to generate appropriate workouts
+        print("📤 Sending workout generation request")
         
-        print("📤 Sending workout generation request with input: \(preferences.buildDescription())")
-        
-        networkService.client.perform(mutation: GenerateWODMutation(input: input)) { [weak self] result in
+        networkService.client.perform(mutation: GenerateWODMutation()) { [weak self] result in
             DispatchQueue.main.async {
                 self?.generating = false
                 self?.generationStep = .complete
@@ -182,75 +143,36 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
                     if let errors = graphqlResult.errors, !errors.isEmpty {
                         print("❌ GraphQL Errors: \(errors)")
                         self?.handleGenerationError(errors.first?.message ?? "Generation failed")
-                    } else if let wodData = graphqlResult.data?.generateWod {
+                    } else if let wodData: GenerateWODMutation.Data.GenerateWod = graphqlResult.data?.generateWod {
                         print("✅ Workout generated successfully!")
+                        
+                        let components: [Component] = wodData.components.map { component in
+                            Component(
+                                name: component.name,
+                                order: component.order,
+                                definition: component.definition,
+                                description: component.description,
+                                targetFitnessDomains: [],
+                                energySystems: [])
+                        }
+                        
                         let newWorkout = Workout(
-                            definition: wodData.definition,
-                            stimulus: "",
-                            muscles: "",
-                            format: wodData.format,
-                            id: wodData.id
+                            id: wodData.id,
+                            name: wodData.name,
+                            description: wodData.description,
+                            components: components,
+                            completedAt: nil,
+                            completed: false
                         )
                         
                         self?.workout = newWorkout
                         self?.lastGeneratedWorkout = newWorkout
                         self?.addToHistory(newWorkout)
-                        self?.updateUserPreferences(based: preferences)
                         self?.loadExerciseAlternatives(for: newWorkout)
                     }
                     
                 case .failure(let error):
                     print("❌ Network Error: \(error)")
-                    self?.handleGenerationError(error.localizedDescription)
-                }
-            }
-        }
-    }
-    
-    
-    // MARK: - Workout Customization
-    func swapExercise(_ exerciseId: String, with alternativeId: String) {
-        guard let currentWorkout = workout else { return }
-        
-        updating = true
-        
-        let swap = ExerciseSwap(
-            originalExerciseId: exerciseId,
-            newExerciseId: alternativeId,
-            reason: "User preference"
-        )
-        
-        // Add to pending swaps
-        pendingSwaps.append(swap)
-        
-        // Call backend to update workout
-        let input = UpdateWodInput(
-            id: GraphQLNullable(stringLiteral: currentWorkout.id),
-            instructions: GraphQLNullable(stringLiteral: "Swap exercise \(exerciseId) with \(alternativeId)")
-        )
-        
-        networkService.client.perform(mutation: UpdateWodMutation(
-            updateWodId: currentWorkout.id,
-            input: input
-        )) { [weak self] result in
-            DispatchQueue.main.async {
-                self?.updating = false
-                
-                switch result {
-                case .success(let graphqlResult):
-                    if let errors = graphqlResult.errors {
-                        self?.handleGenerationError(errors.first?.message ?? "Update failed")
-                    } else if let updatedWod = graphqlResult.data?.updateWod {
-                        self?.workout = Workout(
-                            definition: updatedWod.definition,
-                            stimulus: "",
-                            muscles: "",
-                            format: updatedWod.format,
-                            id: updatedWod.id
-                        )
-                    }
-                    
-                case .failure(let error):
                     self?.handleGenerationError(error.localizedDescription)
                 }
             }
@@ -263,16 +185,12 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
         updating = true
         
         let instruction = buildIntensityInstruction(adjustment)
-        let input = UpdateWodInput(
-            id: GraphQLNullable(stringLiteral: currentWorkout.id),
-            instructions: GraphQLNullable(stringLiteral: instruction)
-        )
         
         networkService.client.perform(mutation: UpdateWodMutation(
             updateWodId: currentWorkout.id,
-            input: input
+            instructions: instruction
         )) { [weak self] result in
-            DispatchQueue.main.async {
+            DispatchQueue.main.async { [weak self] in
                 self?.updating = false
                 
                 switch result {
@@ -280,13 +198,7 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
                     if let errors = graphqlResult.errors {
                         self?.handleGenerationError(errors.first?.message ?? "Update failed")
                     } else if let updatedWod = graphqlResult.data?.updateWod {
-                        self?.workout = Workout(
-                            definition: updatedWod.definition,
-                            stimulus: "",
-                            muscles: "",
-                            format: updatedWod.format,
-                            id: updatedWod.id
-                        )
+                        
                     }
                     
                 case .failure(let error):
@@ -295,119 +207,49 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
             }
         }
     }
-    
-    func adjustDuration(_ newDuration: Int) {
-        guard let currentWorkout = workout else { return }
-        
-        updating = true
-        
-        let instruction = "Adjust workout duration to \(newDuration) minutes while maintaining effectiveness"
-        let input = UpdateWodInput(
-            id: GraphQLNullable(stringLiteral: currentWorkout.id),
-            instructions: GraphQLNullable(stringLiteral: instruction)
-        )
-        
-        networkService.client.perform(mutation: UpdateWodMutation(
-            updateWodId: currentWorkout.id,
-            input: input
-        )) { [weak self] result in
-            DispatchQueue.main.async {
-                self?.updating = false
-                
-                switch result {
-                case .success(let graphqlResult):
-                    if let errors = graphqlResult.errors {
-                        self?.handleGenerationError(errors.first?.message ?? "Update failed")
-                    } else if let updatedWod = graphqlResult.data?.updateWod {
-                        self?.workout = Workout(
-                            definition: updatedWod.definition,
-                            stimulus: "",
-                            muscles: "",
-                            format: updatedWod.format,
-                            id: updatedWod.id
-                        )
-                    }
-                    
-                case .failure(let error):
-                    self?.handleGenerationError(error.localizedDescription)
-                }
-            }
-        }
-    }
-    
-    // MARK: - Smart Suggestions
-    func generateContextualSuggestions() -> [WorkoutSuggestion] {
-        var suggestions: [WorkoutSuggestion] = []
-        
-        // Analyze workout history for patterns
-        let recentWorkouts = workoutHistory.suffix(5)
-        
-        // Check for muscle group balance
-        if shouldSuggestCardio(from: recentWorkouts) {
-            suggestions.append(WorkoutSuggestion(
-                type: .addCardio,
-                title: "Add Some Cardio?",
-                description: "You haven't done cardio in a while. Want to add some?",
-                impact: .positive
-            ))
-        }
-        
-        // Check for recovery needs
-        if shouldSuggestRecovery(from: recentWorkouts) {
-            suggestions.append(WorkoutSuggestion(
-                type: .recovery,
-                title: "Focus on Recovery",
-                description: "Based on your recent workouts, maybe try something gentler today?",
-                impact: .neutral
-            ))
-        }
-        
-        // Check for progression opportunities
-        if canSuggestProgression(from: recentWorkouts) {
-            suggestions.append(WorkoutSuggestion(
-                type: .progression,
-                title: "Ready to Level Up?",
-                description: "You've been consistent! Want to try increased intensity?",
-                impact: .challenging
-            ))
-        }
-        
-        return suggestions
-    }
-    
-    // MARK: - Workout Completion
+
     func markCompleted() {
         guard let currentWorkout = workout else { return }
         
-        // Update local state
         userPreferences.lastWorkoutDate = Date()
         userPreferences.totalWorkoutsCompleted += 1
+        savePreferences()
         
-        // Call backend to mark as completed
+        print("🎯 Marking workout as completed: \(currentWorkout.id)")
         networkService.client.perform(mutation: CompleteWodMutation(completeWodId: currentWorkout.id)) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
-                case .success:
-                    self?.workout = nil
+                case .success(let graphQLResult):
+                    if let errors = graphQLResult.errors, !errors.isEmpty {
+                        print("❌ Error completing workout: \(errors)")
+                        self?.handleGenerationError(errors.first?.message ?? "Failed to complete workout")
+                    } else {
+                        print("✅ Workout marked as completed")
+                        self?.workout = nil
+                        // Post notification that workout was completed
+                        NotificationCenter.default.post(name: .workoutCompleted, object: nil)
+                    }
                 case .failure(let error):
+                    print("❌ Network error completing workout: \(error)")
                     self?.handleGenerationError(error.localizedDescription)
                 }
             }
         }
     }
     
-    // MARK: - WOD Session Integration
+    private func savePreferences() {
+        userPreferencesService.savePreferences(userPreferences)
+    }
+    
     func startWODSession() {
         guard let currentWorkout = workout else { return }
         WODSessionManager.shared.startWOD(currentWorkout)
     }
     
-    // MARK: - Helper Methods
     private func setupFlowStateDefaults() {
         flowState.duration = Double(userPreferences.preferredDuration)
         flowState.intensityLevel = userPreferences.preferredIntensity
         
-        // Use equipment from selected gym profile, fallback to user preferences
         let availableEquipment = gymProfileManager.selectedEquipment.isEmpty ? 
             userPreferences.availableEquipment : gymProfileManager.selectedEquipment
         flowState.selectedEquipment = availableEquipment
@@ -436,62 +278,6 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
         }
     }
     
-    private func buildContextualPrompt(from state: WorkoutFlowState) -> String {
-        var prompt = "Generate a \(Int(state.duration))-minute \(state.intensityLevel.rawValue) workout"
-        
-        if !state.selectedMuscleGroups.isEmpty {
-            let muscles = state.selectedMuscleGroups.map { $0.displayName }.joined(separator: ", ")
-            prompt += " focusing on \(muscles)"
-        }
-        
-        if !state.selectedEquipment.isEmpty {
-            let equipment = state.selectedEquipment.map { $0.name }.joined(separator: ", ")
-            prompt += " using \(equipment)"
-        }
-        
-        prompt += ". User energy level: \(state.energyLevel.rawValue)."
-        prompt += " \(state.energyLevel.workoutHint)"
-        
-        return prompt
-    }
-    
-    private func buildSpecialWorkoutPrompt(for specialWorkout: SpecialWorkout) -> String {
-        var prompt = "Generate the exact \(specialWorkout.name) workout"
-        
-        if let story = specialWorkout.story {
-            prompt += ". Background: \(story)"
-        }
-        
-        prompt += ". This is a \(specialWorkout.category.rawValue) WOD with the following definition: \(specialWorkout.definition)"
-        prompt += ". Estimated duration: \(specialWorkout.estimatedDuration) minutes."
-        prompt += ". Difficulty level: \(specialWorkout.difficulty.rawValue)."
-        
-        if !specialWorkout.equipment.isEmpty {
-            let equipment = specialWorkout.equipment.joined(separator: ", ")
-            prompt += " Required equipment: \(equipment)."
-        }
-        
-        if !specialWorkout.movements.isEmpty {
-            let movements = specialWorkout.movements.joined(separator: ", ")
-            prompt += " Key movements: \(movements)."
-        }
-        
-        prompt += " Please generate this specific workout exactly as defined, maintaining its traditional format and structure."
-        
-        return prompt
-    }
-    
-    private func inferFocusFromHistory() -> Set<MuscleGroup> {
-        // Analyze recent workouts to suggest complementary muscle groups
-        let recentMuscleGroups = workoutHistory.suffix(3).compactMap { workout in
-            // Parse muscle groups from workout definition
-            // This would depend on your backend's response format
-            return extractMuscleGroups(from: workout.definition)
-        }.flatMap { $0 }
-        
-        // Return complementary muscle groups
-        return Set(getComplementaryMuscleGroups(from: recentMuscleGroups))
-    }
     
     private func loadUserPreferences() {
         userPreferences = userPreferencesService.loadPreferences()
@@ -540,33 +326,6 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
         generationStep = .idle
     }
     
-    
-    // MARK: - Analysis Helper Methods
-    private func shouldSuggestCardio(from workouts: ArraySlice<Workout>) -> Bool {
-        // Logic to determine if user needs more cardio
-        return workouts.allSatisfy { !$0.format.lowercased().contains("cardio") }
-    }
-    
-    private func shouldSuggestRecovery(from workouts: ArraySlice<Workout>) -> Bool {
-        // Logic to determine if user needs recovery
-        return workouts.count >= 3 // Worked out 3+ days in a row
-    }
-    
-    private func canSuggestProgression(from workouts: ArraySlice<Workout>) -> Bool {
-        // Logic to determine if user is ready for progression
-        return workouts.count >= 5 // Consistent for 5+ workouts
-    }
-    
-    private func extractMuscleGroups(from definition: String) -> [MuscleGroup] {
-        // Parse workout definition to extract muscle groups
-        // Implementation depends on your backend response format
-        return []
-    }
-    
-    private func getComplementaryMuscleGroups(from recent: [MuscleGroup]) -> [MuscleGroup] {
-        // Return muscle groups that complement recent training
-        return MuscleGroup.allCases.filter { !recent.contains($0) }
-    }
     
     private func buildIntensityInstruction(_ adjustment: IntensityAdjustment) -> String {
         switch adjustment {
@@ -745,13 +504,6 @@ struct ExerciseAlternative {
     let difficulty: String
     let equipment: [Equipment]
     let muscleGroups: [MuscleGroup]
-}
-
-struct ExerciseSwap {
-    let originalExerciseId: String
-    let newExerciseId: String
-    let reason: String
-    let timestamp: Date = Date()
 }
 
 struct WorkoutSuggestion {

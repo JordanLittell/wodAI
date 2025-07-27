@@ -12,7 +12,7 @@ struct WorkoutSummaryCard: View {
     var body: some View {
         VStack(spacing: 16) {
             HStack {
-                Text(workout.format)
+                Text(workout.name)
                     .font(.title2)
                     .fontWeight(.bold)
                 Spacer()
@@ -33,7 +33,7 @@ struct WorkoutSummaryCard: View {
             }
             
             // Brief description
-            Text(parseWorkoutDescription(workout.definition))
+            Text(workout.description)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
