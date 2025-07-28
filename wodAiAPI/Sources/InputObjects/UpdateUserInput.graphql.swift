@@ -19,8 +19,10 @@ public struct UpdateUserInput: InputObject {
     fitnessLevel: GraphQLNullable<GraphQLEnum<WodAiAPI.FitnessLevel>> = nil,
     equipment: GraphQLNullable<[GraphQLEnum<WodAiAPI.FitnessEquipment>]> = nil,
     goal: GraphQLNullable<String> = nil,
-    weight: GraphQLNullable<WodAiAPI.WeightInput> = nil,
-    height: GraphQLNullable<WodAiAPI.HeightInput> = nil
+    weight: GraphQLNullable<Int> = nil,
+    height: GraphQLNullable<Int> = nil,
+    activeDaysPerWeek: GraphQLNullable<Int> = nil,
+    sessionLengthMinutes: GraphQLNullable<Int> = nil
   ) {
     __data = InputDict([
       "firstName": firstName,
@@ -32,7 +34,9 @@ public struct UpdateUserInput: InputObject {
       "equipment": equipment,
       "goal": goal,
       "weight": weight,
-      "height": height
+      "height": height,
+      "activeDaysPerWeek": activeDaysPerWeek,
+      "sessionLengthMinutes": sessionLengthMinutes
     ])
   }
 
@@ -76,13 +80,23 @@ public struct UpdateUserInput: InputObject {
     set { __data["goal"] = newValue }
   }
 
-  public var weight: GraphQLNullable<WodAiAPI.WeightInput> {
+  public var weight: GraphQLNullable<Int> {
     get { __data["weight"] }
     set { __data["weight"] = newValue }
   }
 
-  public var height: GraphQLNullable<WodAiAPI.HeightInput> {
+  public var height: GraphQLNullable<Int> {
     get { __data["height"] }
     set { __data["height"] = newValue }
+  }
+
+  public var activeDaysPerWeek: GraphQLNullable<Int> {
+    get { __data["activeDaysPerWeek"] }
+    set { __data["activeDaysPerWeek"] = newValue }
+  }
+
+  public var sessionLengthMinutes: GraphQLNullable<Int> {
+    get { __data["sessionLengthMinutes"] }
+    set { __data["sessionLengthMinutes"] = newValue }
   }
 }

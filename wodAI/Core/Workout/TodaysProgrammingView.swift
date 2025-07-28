@@ -33,9 +33,11 @@ struct TodaysProgrammingView: View {
                 }
             }
             HStack {
-                Text("We have created this session based on your fitness level and activity.")
-                    .font(.subheadline)
-                    .foregroundColor(Color.secondaryText)
+                if todaysWorkout != nil {
+                    Text("We have created this session based on your fitness level and activity.")
+                        .font(.subheadline)
+                        .foregroundColor(Color.secondaryText)
+                }
             }
             
             // Content

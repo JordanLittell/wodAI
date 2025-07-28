@@ -220,10 +220,10 @@ struct ProfileView: View {
                                                     get: { Double(viewModel.weight) },
                                                     set: { viewModel.weight = Int($0) }
                                                 ), in: 50...400, step: 1)
-                                                    .tint(.brandPrimary)
-                                                    .onChange(of: viewModel.weight) { _, _ in
-                                                        viewModel.hasUnsavedChanges = true
-                                                    }
+                                                .tint(.brandPrimary)
+                                                .onChange(of: viewModel.weight) { _, _ in
+                                                    viewModel.hasUnsavedChanges = true
+                                                }
                                             }
                                         } else {
                                             Button(action: {
@@ -249,14 +249,19 @@ struct ProfileView: View {
                                         icon: "person"
                                     ) {
                                         Picker("Gender", selection: $viewModel.gender) {
-                                        Text("Male").tag(WodAiAPI.Gender.male)
-                                        Text("Female").tag(WodAiAPI.Gender.female)
+                                            Text("Male").tag(WodAiAPI.Gender.male)
+                                            Text("Female").tag(WodAiAPI.Gender.female)
                                         }
                                         .pickerStyle(.segmented)
                                         .onChange(of: viewModel.gender) { _, _ in
                                             viewModel.hasUnsavedChanges = true
                                         }
                                     }
+                                }
+                                VStack(alignment: .leading, spacing: 16) {
+                                    Text("Workout Preferences")
+                                        .font(.headline)
+                                        .foregroundColor(.primaryText)
                                     
                                     MetricRow(
                                         title: "Session duration",
@@ -334,10 +339,10 @@ struct ProfileView: View {
                                                     get: { Double(viewModel.activeDays) },
                                                     set: { viewModel.activeDays = Int($0) }
                                                 ), in: 0...7, step: 1)
-                                                    .tint(.brandPrimary)
-                                                    .onChange(of: viewModel.activeDays) { _, _ in
-                                                        viewModel.hasUnsavedChanges = true
-                                                    }
+                                                .tint(.brandPrimary)
+                                                .onChange(of: viewModel.activeDays) { _, _ in
+                                                    viewModel.hasUnsavedChanges = true
+                                                }
                                             }
                                         } else {
                                             Button(action: {

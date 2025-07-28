@@ -25,11 +25,9 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "Component": return WodAiAPI.Objects.Component
     case "Equipment": return WodAiAPI.Objects.Equipment
     case "GymProfile": return WodAiAPI.Objects.GymProfile
-    case "HeightMeasurement": return WodAiAPI.Objects.HeightMeasurement
     case "Mutation": return WodAiAPI.Objects.Mutation
     case "Query": return WodAiAPI.Objects.Query
     case "User": return WodAiAPI.Objects.User
-    case "WeightMeasurement": return WodAiAPI.Objects.WeightMeasurement
     case "Workout": return WodAiAPI.Objects.Workout
     default: return nil
     }

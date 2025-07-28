@@ -90,7 +90,9 @@ class ProfileViewModel: ObservableObject {
             fitnessLevel: .some(GraphQLEnum(level)),
             goal: .some(goal),
             weight: .some(weight),
-            height: .some(height)
+            height: .some(height),
+            activeDaysPerWeek: .some(activeDays),
+            sessionLengthMinutes: .some(sessionDuration)
         )
         
         Network.shared.client.perform(mutation: UpdateUserMutation(input: input)) { [weak self] result in
@@ -147,6 +149,14 @@ class ProfileViewModel: ObservableObject {
             self.height = userHeight
         }
         
+        if let sessionLength = userData.sessionLengthMinutes {
+            self.sessionDuration = sessionLength
+        }
+        
+        if let activeDaysPerWeek = userData.activeDaysPerWeek {
+            self.activeDays = activeDaysPerWeek
+        }
+        
         // Note: goal is not in the UserQuery, so we can't set it here
     }
     
@@ -173,6 +183,14 @@ class ProfileViewModel: ObservableObject {
         
         if let userGoal = userData.goal {
             self.goal = userGoal
+        }
+        
+        if let sessionLength = userData.sessionLengthMinutes {
+            self.sessionDuration = sessionLength
+        }
+        
+        if let activeDaysPerWeek = userData.activeDaysPerWeek {
+            self.activeDays = activeDaysPerWeek
         }
     }
     
