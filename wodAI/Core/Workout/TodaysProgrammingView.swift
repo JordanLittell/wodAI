@@ -4,15 +4,6 @@
 //
 //  Created by Jordan Littell on 7/22/25.
 //
-
-
-//
-//  TodaysProgrammingView.swift
-//  wodAI
-//
-//  Displays today's programming fetched from the backend
-//
-
 import SwiftUI
 import WodAiAPI
 import Foundation

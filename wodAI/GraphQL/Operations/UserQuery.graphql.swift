@@ -7,9 +7,9 @@ import WodAiAPI
 public class UserQuery: GraphQLQuery {
   public static let operationName: String = "User"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "106550d709cf80e696f9b03dde1b030aa8b5a316d45f0614814820baad860ab7",
+    operationIdentifier: "6413d55ec92295c2938b269ff8eac6023df99776c3195266736e080d326ab383",
     definition: .init(
-      #"query User { user { __typename weight { __typename value unit } age fitnessLevel gender height { __typename unit value } } }"#
+      #"query User { user { __typename age fitnessLevel gender goal height weight activeDaysPerWeek sessionLengthMinutes } }"#
     ))
 
   public init() {}
@@ -35,54 +35,24 @@ public class UserQuery: GraphQLQuery {
       public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.User }
       public static var __selections: [ApolloAPI.Selection] { [
         .field("__typename", String.self),
-        .field("weight", Weight?.self),
         .field("age", Int?.self),
         .field("fitnessLevel", GraphQLEnum<WodAiAPI.FitnessLevel>.self),
         .field("gender", GraphQLEnum<WodAiAPI.Gender>?.self),
-        .field("height", Height?.self),
+        .field("goal", String?.self),
+        .field("height", Int?.self),
+        .field("weight", Int?.self),
+        .field("activeDaysPerWeek", Int?.self),
+        .field("sessionLengthMinutes", Int?.self),
       ] }
 
-      public var weight: Weight? { __data["weight"] }
       public var age: Int? { __data["age"] }
       public var fitnessLevel: GraphQLEnum<WodAiAPI.FitnessLevel> { __data["fitnessLevel"] }
       public var gender: GraphQLEnum<WodAiAPI.Gender>? { __data["gender"] }
-      public var height: Height? { __data["height"] }
-
-      /// User.Weight
-      ///
-      /// Parent Type: `WeightMeasurement`
-      public struct Weight: WodAiAPI.SelectionSet {
-        public let __data: DataDict
-        public init(_dataDict: DataDict) { __data = _dataDict }
-
-        public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.WeightMeasurement }
-        public static var __selections: [ApolloAPI.Selection] { [
-          .field("__typename", String.self),
-          .field("value", Double.self),
-          .field("unit", GraphQLEnum<WodAiAPI.WeightUnit>.self),
-        ] }
-
-        public var value: Double { __data["value"] }
-        public var unit: GraphQLEnum<WodAiAPI.WeightUnit> { __data["unit"] }
-      }
-
-      /// User.Height
-      ///
-      /// Parent Type: `HeightMeasurement`
-      public struct Height: WodAiAPI.SelectionSet {
-        public let __data: DataDict
-        public init(_dataDict: DataDict) { __data = _dataDict }
-
-        public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.HeightMeasurement }
-        public static var __selections: [ApolloAPI.Selection] { [
-          .field("__typename", String.self),
-          .field("unit", GraphQLEnum<WodAiAPI.HeightUnit>.self),
-          .field("value", Double.self),
-        ] }
-
-        public var unit: GraphQLEnum<WodAiAPI.HeightUnit> { __data["unit"] }
-        public var value: Double { __data["value"] }
-      }
+      public var goal: String? { __data["goal"] }
+      public var height: Int? { __data["height"] }
+      public var weight: Int? { __data["weight"] }
+      public var activeDaysPerWeek: Int? { __data["activeDaysPerWeek"] }
+      public var sessionLengthMinutes: Int? { __data["sessionLengthMinutes"] }
     }
   }
 }

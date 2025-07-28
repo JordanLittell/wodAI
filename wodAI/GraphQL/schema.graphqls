@@ -43,39 +43,10 @@ type User {
   fitnessLevel: FitnessLevel!
   threadId: String
   goal: String
-  weight: WeightMeasurement
-  height: HeightMeasurement
-}
-
-enum WeightUnit {
-  lbs
-  kg
-}
-
-enum HeightUnit {
-  feet
-  inches
-  meters
-}
-
-type WeightMeasurement {
-  value: Float!
-  unit: WeightUnit!
-}
-
-type HeightMeasurement {
-  value: Float!
-  unit: HeightUnit!
-}
-
-input WeightInput {
-  value: Float!
-  unit: WeightUnit!
-}
-
-input HeightInput {
-  value: Float!
-  unit: HeightUnit!
+  weight: Int
+  height: Int
+  activeDaysPerWeek: Int
+  sessionLengthMinutes: Int
 }
 
 type Workout {
@@ -128,16 +99,6 @@ enum FitnessLevel {
   ADVANCED
   ELITE
   PRO
-}
-
-enum Weight {
-  lbs
-  kg
-}
-
-enum Height {
-  inches
-  meters
 }
 
 enum FitnessEquipment {
@@ -242,8 +203,10 @@ input UpdateUserInput {
   fitnessLevel: FitnessLevel
   equipment: [FitnessEquipment!]
   goal: String
-  weight: WeightInput
-  height: HeightInput
+  weight: Int
+  height: Int
+  activeDaysPerWeek: Int
+  sessionLengthMinutes: Int
 }
 
 type AuthPayload {

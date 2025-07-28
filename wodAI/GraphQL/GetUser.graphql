@@ -1,15 +1,12 @@
 query User {
   user {
-    weight {
-      value
-      unit
-    }
     age
     fitnessLevel
     gender
-    height {
-      unit
-      value
-    }
+    goal
+    height
+    weight
+    activeDaysPerWeek
+    sessionLengthMinutes
   }
 }

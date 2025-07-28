@@ -29,6 +29,8 @@ struct ProfileView: View {
     // UI State
     @State private var editingHeight = false
     @State private var editingWeight = false
+    @State private var editingSessionDuration = false
+    @State private var editingActiveDays = false
     @State private var heightFeet = 5
     @State private var heightInches = 7
     
@@ -129,6 +131,7 @@ struct ProfileView: View {
                                         }
                                     }
                                     
+                                    
                                     // Height
                                     MetricRow(
                                         title: "Height",
@@ -191,13 +194,13 @@ struct ProfileView: View {
                                     // Weight
                                     MetricRow(
                                         title: "Weight",
-                                        value: "\(Int(viewModel.weightValue)) lbs",
+                                        value: "\(Int(viewModel.weight)) lbs",
                                         icon: "scalemass"
                                     ) {
                                         if editingWeight {
                                             VStack(spacing: 8) {
                                                 HStack {
-                                                    Text("\(Int(viewModel.weightValue)) lbs")
+                                                    Text("\(Int(viewModel.weight)) lbs")
                                                         .font(.title3.monospacedDigit())
                                                         .fontWeight(.semibold)
                                                         .foregroundColor(.primaryText)
@@ -213,9 +216,12 @@ struct ProfileView: View {
                                                     .foregroundColor(.brandPrimary)
                                                 }
                                                 
-                                                Slider(value: $viewModel.weightValue, in: 50...400, step: 1)
+                                                Slider(value: Binding<Double>(
+                                                    get: { Double(viewModel.weight) },
+                                                    set: { viewModel.weight = Int($0) }
+                                                ), in: 50...400, step: 1)
                                                     .tint(.brandPrimary)
-                                                    .onChange(of: viewModel.weightValue) { _, _ in
+                                                    .onChange(of: viewModel.weight) { _, _ in
                                                         viewModel.hasUnsavedChanges = true
                                                     }
                                             }
@@ -226,7 +232,7 @@ struct ProfileView: View {
                                                 }
                                             }) {
                                                 HStack {
-                                                    Text("\(Int(viewModel.weightValue)) lbs")
+                                                    Text("\(Int(viewModel.weight)) lbs")
                                                         .foregroundColor(.primaryText)
                                                     Image(systemName: "pencil")
                                                         .font(.caption)
@@ -249,6 +255,104 @@ struct ProfileView: View {
                                         .pickerStyle(.segmented)
                                         .onChange(of: viewModel.gender) { _, _ in
                                             viewModel.hasUnsavedChanges = true
+                                        }
+                                    }
+                                    
+                                    MetricRow(
+                                        title: "Session duration",
+                                        value: "\(viewModel.sessionDuration) minutes",
+                                        icon: "clock"
+                                    ) {
+                                        if editingSessionDuration {
+                                            VStack(spacing: 8) {
+                                                HStack {
+                                                    Text(viewModel.displayDuration())
+                                                        .font(.body.monospacedDigit())
+                                                        .foregroundColor(.primaryText)
+                                                    
+                                                    Spacer()
+                                                    
+                                                    Button("Done") {
+                                                        withAnimation {
+                                                            editingSessionDuration = false
+                                                        }
+                                                    }
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.brandPrimary)
+                                                }
+                                                
+                                                Slider(value: Binding<Double>(
+                                                    get: { Double(viewModel.sessionDuration) },
+                                                    set: { viewModel.sessionDuration = Int($0) }
+                                                ), in: 0...200, step: 5)
+                                                    .tint(.brandPrimary)
+                                                    .onChange(of: viewModel.sessionDuration) { _, _ in
+                                                        viewModel.hasUnsavedChanges = true
+                                                    }
+                                            }
+                                        } else {
+                                            Button(action: {
+                                                withAnimation {
+                                                    editingSessionDuration = true
+                                                }
+                                            }) {
+                                                HStack {
+                                                    Text(viewModel.displayDuration())
+                                                        .foregroundColor(.primaryText)
+                                                    Image(systemName: "pencil")
+                                                        .font(.caption)
+                                                        .foregroundColor(.brandPrimary)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    MetricRow(
+                                        title: "Active days per week",
+                                        value: "\(viewModel.activeDays) days",
+                                        icon: "dumbbell"
+                                    ) {
+                                        if editingActiveDays {
+                                            VStack(spacing: 8) {
+                                                HStack {
+                                                    Text("\(viewModel.activeDays) days")
+                                                        .font(.body.monospacedDigit())
+                                                        .foregroundColor(.primaryText)
+                                                    
+                                                    Spacer()
+                                                    
+                                                    Button("Done") {
+                                                        withAnimation {
+                                                            editingActiveDays = false
+                                                        }
+                                                    }
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.brandPrimary)
+                                                }
+                                                
+                                                Slider(value: Binding<Double>(
+                                                    get: { Double(viewModel.activeDays) },
+                                                    set: { viewModel.activeDays = Int($0) }
+                                                ), in: 0...7, step: 1)
+                                                    .tint(.brandPrimary)
+                                                    .onChange(of: viewModel.activeDays) { _, _ in
+                                                        viewModel.hasUnsavedChanges = true
+                                                    }
+                                            }
+                                        } else {
+                                            Button(action: {
+                                                withAnimation {
+                                                    editingActiveDays = true
+                                                }
+                                            }) {
+                                                HStack {
+                                                    Text("\(viewModel.activeDays) per week")
+                                                        .foregroundColor(.primaryText)
+                                                    Image(systemName: "pencil")
+                                                        .font(.caption)
+                                                        .foregroundColor(.brandPrimary)
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -317,7 +421,6 @@ struct ProfileView: View {
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
             .overlay(
-                // Success Toast
                 VStack {
                     if viewModel.showSuccessToast {
                         HStack {
@@ -350,7 +453,7 @@ struct ProfileView: View {
                 heightFeet = feet
                 heightInches = inches
             }
-            .onChange(of: viewModel.heightValue) { _, _ in
+            .onChange(of: viewModel.height) { _, _ in
                 // Update UI when height changes from data load
                 let (feet, inches) = viewModel.getHeightFeetAndInches()
                 heightFeet = feet

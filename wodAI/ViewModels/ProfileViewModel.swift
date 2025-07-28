@@ -12,17 +12,19 @@ import SwiftUI
 @MainActor
 class ProfileViewModel: ObservableObject {
     // Published properties for the view
-    @Published var weight: WodAiAPI.WeightUnit = .lbs
-    @Published var weightValue: Double = 150
+    @Published var weight: Int = 100
+    @Published var height: Int = 72
     
-    @Published var height: WodAiAPI.HeightUnit = .inches
-    @Published var heightValue: Double = 60
+    
     
     @Published var level: WodAiAPI.FitnessLevel = .intermediate
     
     @Published var age: Int = 25
     @Published var gender: WodAiAPI.Gender = .male
     @Published var goal: String = "Build muscle"
+    
+    @Published var sessionDuration: Int = 60
+    @Published var activeDays: Int = 3
     
     // UI State
     @Published var isLoading = false
@@ -33,6 +35,20 @@ class ProfileViewModel: ObservableObject {
     @Published var showSuccessToast = false
     
     init() {
+    }
+    
+    func displayDuration() -> String {
+        let hours: Int = (self.sessionDuration / 60)
+        let mins: Int = (self.sessionDuration % 60)
+        
+        var displayTime = ""
+        if hours > 0 {
+            displayTime += "\(hours) \(hours > 1 ? "hrs" : "hr")"
+        }
+        if mins > 0 {
+            displayTime += " \(mins) \(mins > 1 ? "mins" : "min")"
+        }
+        return displayTime
     }
     
     // MARK: - Data Loading
@@ -66,17 +82,15 @@ class ProfileViewModel: ObservableObject {
     // MARK: - Update Profile
     func saveProfile() {
         isSaving = true
-        
-        let weightInput = WeightInput(value: weightValue, unit: GraphQLEnum(weight))
-        let heightInput = HeightInput(value: heightValue, unit: GraphQLEnum(height))
+
         
         let input = UpdateUserInput(
             age: .some(age),
             gender: .some(GraphQLEnum(gender)),
             fitnessLevel: .some(GraphQLEnum(level)),
             goal: .some(goal),
-            weight: .some(weightInput),
-            height: .some(heightInput)
+            weight: .some(weight),
+            height: .some(height)
         )
         
         Network.shared.client.perform(mutation: UpdateUserMutation(input: input)) { [weak self] result in
@@ -126,17 +140,11 @@ class ProfileViewModel: ObservableObject {
         }
         
         if let userWeight = userData.weight {
-            self.weightValue = userWeight.value
-            if let unit = userWeight.unit.value {
-                self.weight = unit
-            }
+            self.weight = userWeight
         }
         
         if let userHeight = userData.height {
-            self.heightValue = userHeight.value
-            if let unit = userHeight.unit.value {
-                self.height = unit
-            }
+            self.height = userHeight
         }
         
         // Note: goal is not in the UserQuery, so we can't set it here
@@ -156,17 +164,11 @@ class ProfileViewModel: ObservableObject {
         }
         
         if let userWeight = userData.weight {
-            self.weightValue = userWeight.value
-            if let unit = userWeight.unit.value {
-                self.weight = unit
-            }
+            self.weight = userWeight
         }
         
         if let userHeight = userData.height {
-            self.heightValue = userHeight.value
-            if let unit = userHeight.unit.value {
-                self.height = unit
-            }
+            self.height = userHeight
         }
         
         if let userGoal = userData.goal {
@@ -176,14 +178,14 @@ class ProfileViewModel: ObservableObject {
     
     // Convert height for display
     func getHeightFeetAndInches() -> (feet: Int, inches: Int) {
-        let totalInches = Int(heightValue)
+        let totalInches = Int(self.height)
         return (feet: totalInches / 12, inches: totalInches % 12)
     }
     
     // Set height from feet and inches
     func setHeightFromFeetAndInches(feet: Int, inches: Int) {
-        let totalInches = Double((feet * 12) + inches)
-        self.heightValue = totalInches
+        let totalInches = (feet * 12) + inches
+        self.height = totalInches
         self.hasUnsavedChanges = true
     }
 }

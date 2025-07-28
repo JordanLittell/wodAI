@@ -4,13 +4,9 @@ mutation UpdateUser($input: UpdateUserInput!) {
     fitnessLevel
     gender
     goal
-    weight {
-      value
-      unit
-    }
-    height {
-      value
-      unit
-    }
+    height
+    weight
+    activeDaysPerWeek
+    sessionLengthMinutes
   }
 }
