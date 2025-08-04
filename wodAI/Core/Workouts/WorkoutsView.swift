@@ -215,7 +215,7 @@ struct ErrorStateView: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
-                    .background(Color.error)
+                    .background(Color("Error"))
                     .cornerRadius(10)
             }
         }

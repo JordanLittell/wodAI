@@ -16,8 +16,6 @@ extension WodAiAPI.Gender {
             return "Male"
         case .female:
             return "Female"
-        default:
-            return "Other"
         }
     }
 }

@@ -1,0 +1,166 @@
+# WodAI iOS Application - Project Manifest
+
+## Overview
+WodAI is an iOS application that generates personalized workouts for users based on their fitness profile, goals, and available equipment. The app uses GraphQL for backend communication and follows the MVVM (Model-View-ViewModel) architecture pattern.
+
+## Project Structure
+
+### Root Directory
+- **Location**: `/Users/jordanlittell/IOSProjects/wodAI`
+- **Main Directories**:
+  - `wodAI/` - Main application code
+  - `wodAI.xcodeproj/` - Xcode project files
+  - `wodAiAPI/` - Swift Package for Apollo GraphQL integration
+  - `Configurations/` - Build configurations
+  - `TestWrite/`, `wodAITests/`, `wodAIUITests/` - Test directories
+
+### Core Architecture (MVVM)
+
+#### Models (`/wodAI/Models/`)
+- **Workout.swift**: Core domain model for workouts
+  - `Workout`: Container for workout components
+  - `Component`: Individual workout segments with exercises
+- **Profile.swift**: User profile model
+- **GymProfile.swift**: Gym/equipment profile model
+
+#### ViewModels (`/wodAI/ViewModels/`)
+- **WODSessionManager.swift**: Manages active workout sessions (singleton)
+- **EnhancedWorkoutGeneratorViewModel.swift**: Handles workout generation logic
+- **ProfileViewModel.swift**: Manages user profile state
+- **SignUpViewModel.swift**: Handles user registration
+- **GymProfileManager.swift**: Manages gym profiles
+- **EquipmentManager.swift**: Handles equipment selection
+- **WorkoutFlowState.swift**: Manages workout flow states
+
+#### Views (Distributed across `/wodAI/Core/`)
+- **MainTabView.swift**: Main tab navigation
+- **AuthenticationView.swift**: Login/signup flow
+- **ContentView.swift**: Root view controller
+- Various feature-specific views in subdirectories
+
+### Core Modules
+
+#### 1. Authentication (`/wodAI/Core/Auth/`)
+- **AuthManager.swift**: Central authentication state management
+  - Manages auth tokens in UserDefaults
+  - Handles session expiration
+  - Tracks provisioning status
+  - Uses `@Published` properties for reactive UI updates
+
+#### 2. GraphQL Integration
+- **Location**: `/wodAI/GraphQL/`
+- **Schema**: `schema.graphqls` - Defines all types and operations
+- **Operations**: Individual `.graphql` files for each query/mutation
+- **Apollo Client**: Configured in `Network.swift`
+- **Code Generation**: Uses `apollo-ios-cli` with `apollo-codegen-config.json`
+
+#### 3. Network Layer (`/wodAI/Core/Network.swift`)
+- Singleton pattern for Apollo client
+- Custom interceptors for authorization headers
+- Automatic logout on 401/unauthorized responses
+- Environment-specific endpoints via `AppConfig.swift`
+
+#### 4. Configuration (`/wodAI/Config/`)
+- **AppConfig.swift**: Environment-specific settings
+  - GraphQL endpoints (localhost for debug, production for release)
+  - Logging configuration
+  - Build configuration detection
+
+#### 5. UI Components (`/wodAI/Core/Components/`)
+- Reusable UI components following iOS design patterns
+- Custom buttons, sliders, navigation bars
+- Theme colors defined in Assets.xcassets/ThemeColors
+
+### Key Features Implementation
+
+#### 1. Workout Generation Flow
+- User fills out workout preferences
+- ViewModel sends GraphQL mutation `GenerateWOD`
+- Response creates Workout with Components
+- Components contain exercise definitions in plaintext
+
+#### 2. Workout Execution
+- WODSessionManager tracks active workouts
+- Timer functionality for tracking duration
+- Pause/resume capabilities
+- Completion sends `CompleteWod` mutation
+
+#### 3. User Provisioning
+- New users go through provisioning flow
+- Collects: gender, fitness level, workout duration, benchmarks, injuries
+- Updates user profile via GraphQL
+
+#### 4. Session Management
+- AuthManager stores tokens in UserDefaults
+- Network interceptor adds Bearer tokens to requests
+- Automatic logout on session expiration
+- NotificationCenter for app-wide auth state changes
+
+### Technical Details
+
+#### Authorization Flow
+1. User logs in via credentials or social auth (Google/Apple)
+2. Server returns JWT token
+3. Token stored in UserDefaults via AuthManager
+4. All GraphQL requests include "Authorization: Bearer {token}" header
+5. 401 responses trigger automatic logout
+
+#### GraphQL Integration
+- **Package**: WodAiAPI (local Swift Package)
+- **Dependencies**: Apollo iOS 1.20.0
+- **Code Generation**: Automatic from .graphql files
+- **Type Safety**: Strongly typed queries/mutations
+
+#### Build Configuration
+- Debug builds use localhost:3000
+- Release builds use production API
+- Configuration via Xcode schemes and .xcconfig files
+
+### Design System
+- **Colors**: Defined in Assets.xcassets/ThemeColors
+  - BrandPrimary, BrandSecondary
+  - Semantic colors: Success, Warning, Error
+  - Neutral colors for backgrounds and borders
+- **Components**: Consistent button styles, navigation patterns
+- **Typography**: System fonts with semantic sizing
+
+### Data Persistence
+- **UserDefaults**: Auth tokens, user preferences, session state
+- **No Core Data**: All data fetched from GraphQL API
+- **Caching**: Apollo client handles GraphQL response caching
+
+### Third-Party Dependencies
+- **Apollo iOS**: GraphQL client
+- **SwiftUI**: UI framework (iOS 12+)
+- **Combine**: Reactive programming for ViewModels
+
+### Testing Structure
+- Unit tests in `wodAITests/`
+- UI tests in `wodAIUITests/`
+- Test fixtures in `/wodAI/Core/Fixtures/`
+
+## Development Guidelines
+
+### Adding New Features
+1. Create GraphQL operation in `/GraphQL/`
+2. Run code generation: `./apollo-ios-cli generate`
+3. Create/update ViewModel for business logic
+4. Build SwiftUI views using MVVM pattern
+5. Use ThemeColors for consistent styling
+
+### GraphQL Operations
+- Queries: Fetch data (GetUser, CurrentWOD, etc.)
+- Mutations: Modify data (GenerateWOD, CompleteWod, etc.)
+- All operations require authentication except login/register
+
+### State Management
+- ViewModels use `@Published` for reactive updates
+- AuthManager is `@StateObject` at app root
+- Pass down as `@EnvironmentObject` to child views
+- Use `@ObservedObject` for ViewModels in views
+
+### Error Handling
+- Network errors bubble up through Apollo
+- GraphQL errors checked in interceptor
+- User-facing errors shown via alerts or inline messages
+- Session expiration triggers automatic re-login flow

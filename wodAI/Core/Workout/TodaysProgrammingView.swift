@@ -36,7 +36,7 @@ struct TodaysProgrammingView: View {
                 if todaysWorkout != nil {
                     Text("We have created this session based on your fitness level and activity.")
                         .font(.subheadline)
-                        .foregroundColor(Color.secondaryText)
+                        .foregroundColor(Color("SecondaryText"))
                 }
             }
             

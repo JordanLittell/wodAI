@@ -32,6 +32,14 @@ struct MainTabView: View {
                 }
                 .tag(AppTab.home)
             
+            // Calendar Tab
+            WeeklyWorkoutView()
+                .tabItem {
+                    Image(systemName: selectedTab == .calendar ? "calendar.circle.fill" : "calendar.circle")
+                    Text("Calendar")
+                }
+                .tag(AppTab.calendar)
+            
             // Workouts Tab
             WorkoutsView()
                 .tabItem {
@@ -70,6 +78,7 @@ struct MainTabView: View {
 // MARK: - App Tab Enum
 enum AppTab: String, CaseIterable {
     case home = "home"
+    case calendar = "calendar"
     case workouts = "workouts"
     case setup = "setup"
     case profile = "profile"
@@ -77,6 +86,7 @@ enum AppTab: String, CaseIterable {
     var title: String {
         switch self {
         case .home: return "Home"
+        case .calendar: return "Calendar"
         case .workouts: return "Workouts"
         case .setup: return "Setup"
         case .profile: return "Profile"
@@ -86,6 +96,7 @@ enum AppTab: String, CaseIterable {
     var icon: String {
         switch self {
         case .home: return "house"
+        case .calendar: return "calendar.circle"
         case .workouts: return "dumbbell"
         case .setup: return "gearshape"
         case .profile: return "person"
@@ -95,6 +106,7 @@ enum AppTab: String, CaseIterable {
     var selectedIcon: String {
         switch self {
         case .home: return "house.fill"
+        case .calendar: return "calendar.circle.fill"
         case .workouts: return "dumbbell.fill"
         case .setup: return "gearshape.fill"
         case .profile: return "person.fill"

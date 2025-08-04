@@ -24,7 +24,7 @@ struct EnhancedHomeView: View {
                         Text("Ready to train?")
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                            .foregroundColor(Color(.primaryText))
+                            .foregroundColor(Color("PrimaryText"))
                         
                     }
                     .padding(.top, 20)
@@ -96,7 +96,7 @@ struct QuickWorkoutGenerationView: View {
                 VStack(spacing: 20) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 60))
-                        .foregroundColor(.warning)
+                        .foregroundColor(Color("Warning"))
                     
                     Text("Generation Failed")
                         .font(.title2)
@@ -104,7 +104,7 @@ struct QuickWorkoutGenerationView: View {
                     
                     Text(errorMessage)
                         .font(.body)
-                        .foregroundColor(.secondaryText)
+                        .foregroundColor(Color("SecondaryText"))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                     

@@ -30,7 +30,7 @@ struct WorkoutInfoCard: View {
                         if workout.completed {
                             Text("Completed \(workout.completedAt!.formatted(date: Date.FormatStyle.DateStyle.abbreviated, time: Date.FormatStyle.TimeStyle.omitted))")
                                 .font(.subheadline)
-                                .foregroundColor(Color.brandSecondary)
+                                .foregroundColor(Color("BrandSecondary"))
                                 .lineLimit(1)
                         }
                         
