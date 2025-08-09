@@ -98,45 +98,53 @@ struct WorkoutsView: View {
         currentPage = 1
         
         network.client.fetch(query: CompletedWodsQuery(page: GraphQLNullable(integerLiteral: currentPage))) { result in
-            DispatchQueue.main.async {
-                self.isLoading = false
+            Task { @MainActor in
+                isLoading = false
                 
                 switch result {
                 case .success(let graphQLResult):
                     if let data = graphQLResult.data?.completedWods {
-                        self.completedWorkouts = data.wods.enumerated().map { index, wod in
+                        completedWorkouts = data.wods.enumerated().map { index, wod in
                             return Workout(
                                 id: wod.id,
                                 name: wod.name,
                                 description: wod.description,
+                                coaching: nil,
+                                stimulus: nil,
+                                scheduledDate: nil,
+                                status: .completed,
                                 components:  wod.components.map { component in
                                     Component(
                                         name: component.name,
                                         order: 1,
                                         definition: component.definition,
                                         description: "",
+                                        equipment: nil,
+                                        muscles: [],
+                                        movements: [],
+                                        stimulus: nil,
                                         targetFitnessDomains: [],
                                         energySystems: [])
                                 },
                                 completedAt: DateParser().parseDate(wod.completedAt),
                                 completed: true)
                         }
-                        self.hasMore = data.hasMore
-                        self.currentPage = data.currentPage
+                        hasMore = data.hasMore
+                        currentPage = data.currentPage
                     }
                     
                     if let errors = graphQLResult.errors {
                         print("GraphQL errors: \(errors)")
-                        self.error = NSError(
+                        error = NSError(
                             domain: "WorkoutsView",
                             code: 0,
                             userInfo: [NSLocalizedDescriptionKey: "Failed to load workouts"]
                         )
                     }
                     
-                case .failure(let error):
-                    print("Network error loading workouts: \(error)")
-                    self.error = error
+                case .failure(let networkError):
+                    print("Network error loading workouts: \(networkError)")
+                    error = networkError
                 }
             }
         }
@@ -149,8 +157,8 @@ struct WorkoutsView: View {
         let nextPage = currentPage + 1
         
         network.client.fetch(query: CompletedWodsQuery(page: GraphQLNullable(integerLiteral: nextPage))) { result in
-            DispatchQueue.main.async {
-                self.isLoading = false
+            Task { @MainActor in
+                isLoading = false
                 
                 switch result {
                 case .success(let graphQLResult):
@@ -160,21 +168,29 @@ struct WorkoutsView: View {
                                 id: wod.id,
                                 name: wod.name,
                                 description: wod.description,
+                                coaching: nil,
+                                stimulus: nil,
+                                scheduledDate: nil,
+                                status: .completed,
                                 components:  wod.components.map { component in
                                     Component(
                                         name: component.name,
                                         order: 1,
                                         definition: component.definition,
                                         description: "",
+                                        equipment: nil,
+                                        muscles: [],
+                                        movements: [],
+                                        stimulus: nil,
                                         targetFitnessDomains: [],
                                         energySystems: [])
                                 },
                                 completedAt: DateParser().parseDate(wod.completedAt),
                                 completed: true)
                         }
-                        self.completedWorkouts.append(contentsOf: newWorkouts)
-                        self.hasMore = data.hasMore
-                        self.currentPage = data.currentPage
+                        completedWorkouts.append(contentsOf: newWorkouts)
+                        hasMore = data.hasMore
+                        currentPage = data.currentPage
                     }
                     
                 case .failure(let error):

@@ -308,7 +308,7 @@ struct WorkoutView: View {
                 case .success(let graphqlResult):
                     if let errors = graphqlResult.errors, !errors.isEmpty {
                         print("Update error: \(errors.first?.message ?? "Unknown error")")
-                    } else if let updatedWod = graphqlResult.data?.updateWod {
+                    } else if let _ = graphqlResult.data?.updateWod {
                         // Update the workout in the view model
                         // Note: This needs to be adapted based on your actual GraphQL response structure
                         isUpdatingWOD = false

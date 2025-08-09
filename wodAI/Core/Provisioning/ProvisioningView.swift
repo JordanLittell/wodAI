@@ -136,9 +136,6 @@ struct ProvisioningView: View {
             } message: {
                 Text(viewModel.errorMessage)
             }
-            .onAppear {
-                viewModel.authManager = authManager
-            }
             .onReceive(NotificationCenter.default.publisher(for: .userDidCompleteProvisioning)) { _ in
                 // Provisioning complete, dismiss this view
                 dismiss()

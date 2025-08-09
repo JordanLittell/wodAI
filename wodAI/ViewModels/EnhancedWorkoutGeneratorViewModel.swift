@@ -46,19 +46,22 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
     private let networkService: Network
     private let userPreferencesService: UserPreferencesService
     private let gymProfileManager: GymProfileManager
+    private let authProvider: AuthenticationProvider
     
     init(
         generating: Bool = false,
         workout: Workout? = nil,
         networkService: Network = Network.shared,
         userPreferencesService: UserPreferencesService = UserPreferencesService(),
-        gymProfileManager: GymProfileManager = GymProfileManager.shared
+        gymProfileManager: GymProfileManager = GymProfileManager.shared,
+        authProvider: AuthenticationProvider = AuthState.shared
     ) {
         self.generating = generating
         self.workout = workout
         self.networkService = networkService
         self.userPreferencesService = userPreferencesService
         self.gymProfileManager = gymProfileManager
+        self.authProvider = authProvider
         
         loadUserPreferences()
         setupFlowStateDefaults()
@@ -71,7 +74,7 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
         generating = true
         generationStep = .analyzing
         
-        let preferences = buildQuickWorkoutPreferences(for: type)
+        let _ = buildQuickWorkoutPreferences(for: type)
         performGeneration()
     }
     
@@ -124,8 +127,7 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
     
     private func performGeneration() {
         // Debug: Check authentication
-        let authManager = AuthManager()
-        print("🔐 Auth Status: isAuthenticated = \(authManager.isAuthenticated), token exists = \(authManager.token != nil)")
+        print("🔐 Auth Status: isAuthenticated = \(authProvider.isAuthenticated)")
         
         simulateGenerationSteps()
         
@@ -152,14 +154,24 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
                                 order: component.order,
                                 definition: component.definition,
                                 description: component.description,
+                                equipment: [],
+                                muscles: [],
+                                movements: [],
+                                stimulus: nil,
                                 targetFitnessDomains: [],
-                                energySystems: [])
+                                energySystems: []
+                            )
+                        
                         }
                         
                         let newWorkout = Workout(
                             id: wodData.id,
                             name: wodData.name,
                             description: wodData.description,
+                            coaching: "Focus on the hips",
+                            stimulus: nil,
+                            scheduledDate: Date.now,
+                            status: WorkoutStatus.generating,
                             components: components,
                             completedAt: nil,
                             completed: false
@@ -197,8 +209,8 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
                 case .success(let graphqlResult):
                     if let errors = graphqlResult.errors {
                         self?.handleGenerationError(errors.first?.message ?? "Update failed")
-                    } else if let updatedWod = graphqlResult.data?.updateWod {
-                        
+                    } else if let _ = graphqlResult.data?.updateWod {
+                        print("✅ Workout updated successfully")
                     }
                     
                 case .failure(let error):
@@ -312,8 +324,7 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
             print("🔓 Unauthorized error detected in view model - auth handled by Network layer")
             // Auth error is handled by the Network layer's interceptor
             // which will redirect to login automatically
-            let authManager = AuthManager()
-            authManager.handleSessionExpired()
+            authProvider.handleSessionExpired()
             
         } else {
             // Show regular error for non-auth issues

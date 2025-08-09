@@ -1,0 +1,7 @@
+mutation GenerateWorkoutSchedule {
+  generateWorkoutSchedule {
+    success
+    message
+    scheduledDates
+  }
+}

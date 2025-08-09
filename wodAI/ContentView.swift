@@ -8,13 +8,14 @@
 import SwiftUI
 
 struct ContentView: View {
-    @EnvironmentObject var authManager: AuthManager
+    @StateObject private var authState = AuthState.shared
+    @StateObject private var authManager = AuthManager() // Backwards compatibility
     @State private var hasCheckedAppleCredentials = false
 
     var body: some View {
         Group {
-            if authManager.isAuthenticated {
-                if authManager.needsProvisioning {
+            if authState.isAuthenticated {
+                if authState.needsProvisioning {
                     ProvisioningView()
                 } else {
                     RootAppView()
@@ -25,11 +26,13 @@ struct ContentView: View {
                 AuthenticationView()
             }
         }
+        .environmentObject(authState)      // Inject new AuthState
+        .environmentObject(authManager)    // Keep for backwards compatibility
         .onReceive(NotificationCenter.default.publisher(for: .userDidLogout)) { _ in
             print("🔓 Received logout notification, forcing authentication state update")
             // Force UI update by triggering the published property
             DispatchQueue.main.async {
-                authManager.isAuthenticated = false
+                authState.signOut()
             }
         }
         .onAppear {
@@ -76,5 +79,4 @@ struct RootAppView: View {
 
 #Preview {
     ContentView()
-        .environmentObject(AuthManager())
 }

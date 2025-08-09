@@ -68,7 +68,12 @@ class SessionManager: ObservableObject {
     @Published var showSessionExpired = false
     @Published var pendingAction: (() -> Void)?
     
-    private let authManager = AuthManager()
+    // MARK: - Dependencies
+    private let authProvider: AuthenticationProvider
+    
+    init(authProvider: AuthenticationProvider = AuthState.shared) {
+        self.authProvider = authProvider
+    }
     
     func handleUnauthorized(retry: @escaping () -> Void) {
         // Store the action to retry after re-authentication
@@ -78,7 +83,7 @@ class SessionManager: ObservableObject {
     
     func handleReauthentication() {
         showSessionExpired = false
-        authManager.signOut()
+        authProvider.logout()
         NotificationCenter.default.post(name: .userDidLogout, object: nil)
     }
     

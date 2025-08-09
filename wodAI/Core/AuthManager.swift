@@ -1,128 +1,92 @@
 import Foundation
 import SwiftUI
 import WodAiAPI
+import Combine
 
-// Create a helper class to manage authentication token
-class AuthManager : ObservableObject {
-    @Published var isAuthenticated: Bool
+// Backwards-compatible AuthManager that wraps the new AuthState
+class AuthManager: ObservableObject {
+    // MARK: - Dependency
+    private let authState: AuthState
+    private var cancellables = Set<AnyCancellable>()
+    
+    // MARK: - Published Properties (for backwards compatibility)
+    @Published var isAuthenticated: Bool = false
     @Published var isProvisioned: Bool = false
     @Published var needsProvisioning: Bool = false
     @Published var currentUserId: Int?
     
-    private let tokenKey = "authToken"
-    private let sessionExpiredKey = "sessionExpiredMessage"
-    private let provisionedKey = "userProvisioned"
-    private let userIdKey = "currentUserId"
-    
+    // MARK: - Computed Properties
     var token: String? {
-        get {
-            return UserDefaults.standard.string(forKey: tokenKey)
-        }
-        set {
-            UserDefaults.standard.set(newValue, forKey: tokenKey)
-            // Update the published property when token changes
-            DispatchQueue.main.async { [weak self] in
-                self?.isAuthenticated = newValue != nil
+        get { authState.currentToken }
+        set { 
+            if let newValue = newValue {
+                authState.currentToken = newValue
+            } else {
+                authState.signOut()
             }
         }
-    }
-    
-    
-    init() {
-        // Set initial authentication state without triggering property observers
-        self.isAuthenticated = UserDefaults.standard.string(forKey: tokenKey) != nil
-        self.isProvisioned = UserDefaults.standard.bool(forKey: provisionedKey)
-        self.currentUserId = UserDefaults.standard.object(forKey: userIdKey) as? Int
-        
-        // Check if user needs provisioning on init
-        checkProvisioningStatus()
     }
     
     var sessionExpiredMessage: String? {
-        get {
-            return UserDefaults.standard.string(forKey: sessionExpiredKey)
-        }
-        set {
-            UserDefaults.standard.set(newValue, forKey: sessionExpiredKey)
-        }
+        get { authState.sessionExpiredMessage }
+        set { authState.sessionExpiredMessage = newValue }
     }
     
+    // MARK: - Initialization
+    init(authState: AuthState = AuthState.shared) {
+        self.authState = authState
+        setupBindings()
+    }
+    
+    // MARK: - Private Methods
+    private func setupBindings() {
+        // Bind AuthState properties to local @Published properties for backwards compatibility
+        authState.$isAuthenticated
+            .assign(to: \.isAuthenticated, on: self)
+            .store(in: &cancellables)
+        
+        authState.$isProvisioned
+            .assign(to: \.isProvisioned, on: self)
+            .store(in: &cancellables)
+        
+        authState.$needsProvisioning
+            .assign(to: \.needsProvisioning, on: self)
+            .store(in: &cancellables)
+        
+        authState.$currentUserId
+            .assign(to: \.currentUserId, on: self)
+            .store(in: &cancellables)
+    }
+    
+    // MARK: - Public Methods
     func authenticate(token: String, userId: Int? = nil) {
-        self.token = token
-        // This automatically triggers isAuthenticated = true via the setter
-        
-        // Store user ID if provided
-        if let userId = userId {
-            self.currentUserId = userId
-            UserDefaults.standard.set(userId, forKey: userIdKey)
-        }
-        
-        // Check provisioning status after authentication
-        checkProvisioningStatus()
+        authState.authenticate(token: token, userId: userId)
     }
     
     func signOut() {
-        clearToken()
-        clearSessionExpiredMessage()
-        clearUserId()
-        isProvisioned = false
-        needsProvisioning = false
-    }
-    
-    private func clearToken() {
-        UserDefaults.standard.removeObject(forKey: tokenKey)
-        print("setting token to null")
-        DispatchQueue.main.async { [weak self] in
-            self?.isAuthenticated = false
-        }
-    }
-    
-    private func clearUserId() {
-        UserDefaults.standard.removeObject(forKey: userIdKey)
-        currentUserId = nil
+        authState.signOut()
     }
     
     func clearSessionExpiredMessage() {
-        UserDefaults.standard.removeObject(forKey: sessionExpiredKey)
-        sessionExpiredMessage = nil
+        authState.clearSessionExpiredMessage()
     }
     
     func handleSessionExpired() {
-        print("🔓 Handling session expiration...")
-        sessionExpiredMessage = "Your session has expired. Please log in again."
-        signOut()
-        
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(name: .userDidLogout, object: nil)
-        }
+        authState.handleSessionExpired()
     }
     
     func checkProvisioningStatus() {
-        guard isAuthenticated else {
-            needsProvisioning = false
-            return
-        }
-        
-        // Use the stub service to check provisioning status
-        ProvisioningService.shared.checkProvisioningStatus { [weak self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let isProvisioned):
-                    self?.isProvisioned = isProvisioned
-                    self?.needsProvisioning = !isProvisioned
-                    UserDefaults.standard.set(isProvisioned, forKey: self?.provisionedKey ?? "")
-                case .failure(_):
-                    // In case of error, assume not provisioned
-                    self?.isProvisioned = false
-                    self?.needsProvisioning = true
-                }
-            }
+        Task {
+            await authState.checkProvisioningStatus()
         }
     }
     
     func completeProvisioning() {
-        isProvisioned = true
-        needsProvisioning = false
-        UserDefaults.standard.set(true, forKey: provisionedKey)
+        authState.completeProvisioning()
     }
+}
+
+// MARK: - Shared Instance
+extension AuthState {
+    static let shared = AuthState()
 }

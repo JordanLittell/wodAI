@@ -110,7 +110,11 @@ struct TodaysProgrammingView: View {
                                 name: component.name,
                                 order: component.order,
                                 definition: component.definition,
-                                description: "", // Add description if available in GraphQL
+                                description: "",
+                                equipment: [],
+                                muscles: [],
+                                movements: [],
+                                stimulus: nil,
                                 targetFitnessDomains: nil,
                                 energySystems: nil
                             )
@@ -120,6 +124,10 @@ struct TodaysProgrammingView: View {
                             id: currentWod.id,
                             name: currentWod.name,
                             description: currentWod.description,
+                            coaching: nil,
+                            stimulus: nil,
+                            scheduledDate: Date(),
+                            status: .completed,
                             components: components,
                             completedAt: nil,
                             completed: currentWod.completed
@@ -170,6 +178,10 @@ struct TodaysProgrammingView: View {
                                 order: component.order,
                                 definition: component.definition,
                                 description: component.description,
+                                equipment: [],
+                                muscles: [],
+                                movements: [],
+                                stimulus: nil,
                                 targetFitnessDomains: nil,
                                 energySystems: nil
                             )
@@ -179,6 +191,10 @@ struct TodaysProgrammingView: View {
                             id: generatedWod.id,
                             name: generatedWod.name,
                             description: generatedWod.description,
+                            coaching: nil,
+                            stimulus: nil,
+                            scheduledDate: Date(),
+                            status: .completed,
                             components: components,
                             completedAt: nil,
                             completed: false

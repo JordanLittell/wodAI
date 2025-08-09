@@ -26,10 +26,10 @@ enum Gender: String, CaseIterable, Codable {
 
 // MARK: - Fitness Level
 enum FitnessLevel: String, CaseIterable, Codable {
-    case beginner = "beginner"
-    case intermediate = "intermediate"
-    case advanced = "advanced"
-    case elite = "elite"
+    case beginner = "BEGINNER"
+    case intermediate = "INTERMEDIATE"
+    case advanced = "ADVANCED"
+    case elite = "ELITE"
     
     var displayName: String {
         switch self {
@@ -209,8 +209,8 @@ struct ProvisioningData: Codable {
 
 // MARK: - API Models
 struct ProvisionUserRequest: Codable {
-    let gender: String
-    let fitnessLevel: String
+    let gender: Gender
+    let fitnessLevel: FitnessLevel
     let workoutDuration: Int // in minutes
     let benchmarks: [BenchmarkData]
     let injuries: [InjuryData]

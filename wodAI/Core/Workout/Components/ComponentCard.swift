@@ -84,7 +84,7 @@ struct ComponentCard: View {
                             .fill(Color("InteractiveSurface"))
                     )
                     .overlay(
-                        isUpdating ? 
+                        isUpdating ?
                         RoundedRectangle(cornerRadius: 12)
                             .fill(Color.black.opacity(0.3))
                             .overlay(
@@ -122,6 +122,10 @@ struct ComponentCard: View {
                 order: 1,
                 definition: "5 min row\n10 PVC pass-throughs\n10 Overhead squats (empty bar)",
                 description: "Prepare the body for the workout",
+                equipment: ["Rower", "PVC Pipe", "Barbell"],
+                muscles: ["Full Body"],
+                movements: ["Row", "PVC Pass-Through", "Overhead Squat"],
+                stimulus: "Light aerobic preparation",
                 targetFitnessDomains: ["flexibility", "mobility"],
                 energySystems: ["aerobic"]
             ),
@@ -135,6 +139,10 @@ struct ComponentCard: View {
                 order: 2,
                 definition: "Back Squat\n5-5-3-3-1-1\nWork up to a heavy single",
                 description: "Build strength in the posterior chain",
+                equipment: ["Barbell", "Plates", "Squat Rack"],
+                muscles: ["Quads", "Glutes", "Hamstrings", "Core"],
+                movements: ["Back Squat"],
+                stimulus: "Heavy strength training",
                 targetFitnessDomains: ["strength"],
                 energySystems: ["phosphagen"]
             ),

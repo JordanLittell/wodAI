@@ -107,28 +107,28 @@ struct WorkoutProgressView: View {
 }
 
 // MARK: - Preview
-#Preview {
-    VStack(spacing: 20) {
-        WorkoutProgressView(workout: Workout.example)
-            .padding()
-        
-        // Example with multiple components
-        WorkoutProgressView(
-            workout: Workout(
-                id: "example-2",
-                name: "Full Body Workout",
-                description: "Complete workout with multiple components",
-                components: [
-                    Component(name: "Warm-up", order: 1, definition: "5 min row", description: "", targetFitnessDomains: nil, energySystems: nil),
-                    Component(name: "Strength", order: 2, definition: "Deadlifts 5x5", description: "", targetFitnessDomains: nil, energySystems: nil),
-                    Component(name: "Metcon", order: 3, definition: "21-15-9 Thrusters and Pull-ups", description: "", targetFitnessDomains: nil, energySystems: nil),
-                    Component(name: "Cool Down", order: 4, definition: "Stretching", description: "", targetFitnessDomains: nil, energySystems: nil)
-                ],
-                completedAt: nil,
-                completed: true
-            )
-        )
-        .padding()
-    }
-    .background(Color("Background"))
-}
+//#Preview {
+//    VStack(spacing: 20) {
+//        WorkoutProgressView(workout: Workout.example)
+//            .padding()
+//        
+//        // Example with multiple components
+//        WorkoutProgressView(
+//            workout: Workout(
+//                id: "example-2",
+//                name: "Full Body Workout",
+//                description: "Complete workout with multiple components",
+//                components: [
+//                    Component(name: "Warm-up", order: 1, definition: "5 min row", description: "", targetFitnessDomains: nil, energySystems: nil),
+//                    Component(name: "Strength", order: 2, definition: "Deadlifts 5x5", description: "", targetFitnessDomains: nil, energySystems: nil),
+//                    Component(name: "Metcon", order: 3, definition: "21-15-9 Thrusters and Pull-ups", description: "", targetFitnessDomains: nil, energySystems: nil),
+//                    Component(name: "Cool Down", order: 4, definition: "Stretching", description: "", targetFitnessDomains: nil, energySystems: nil)
+//                ],
+//                completedAt: nil,
+//                completed: true
+//            )
+//        )
+//        .padding()
+//    }
+//    .background(Color("Background"))
+//}

@@ -301,18 +301,16 @@ struct FlowLayout: Layout {
 #Preview {
     ComponentDetailView(
         component: Component(
-            name: "WOD - Olympic Conditioning",
-            order: 1,
-            definition: """
-            3 rounds for time:
-            7 Power cleans (225 lbs)
-            7 Ring muscle-ups
-            500m row
-            10 Box jumps (30 inch)
-            """,
-            description: "High-intensity workout combining heavy Olympic lifting with gymnastics and cardio",
-            targetFitnessDomains: ["strength", "power", "endurance"],
-            energySystems: ["glycolytic", "oxidative"]
+            name: "Strength",
+            order: 2,
+            definition: "Back Squat\n5-5-3-3-1-1\nWork up to a heavy single",
+            description: "Build strength in the posterior chain",
+            equipment: ["Barbell", "Plates", "Squat Rack"],
+            muscles: ["Quads", "Glutes", "Hamstrings", "Core"],
+            movements: ["Back Squat"],
+            stimulus: "Heavy strength training",
+            targetFitnessDomains: ["strength"],
+            energySystems: ["phosphagen"]
         ),
         isCompleted: .constant(false)
     )

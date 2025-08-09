@@ -62,6 +62,10 @@ class WorkoutFlowState: ObservableObject {
                                 order: component.order,
                                 definition: component.definition,
                                 description: component.description,
+                                equipment: [],
+                                muscles: [],
+                                movements: [],
+                                stimulus: nil,
                                 targetFitnessDomains: ["power"],
                                 energySystems: ["aerobic"]
                             )
@@ -71,6 +75,10 @@ class WorkoutFlowState: ObservableObject {
                             id: UUID().uuidString,
                             name: wodData.name,
                             description: wodData.description,
+                            coaching: "",
+                            stimulus: nil,
+                            scheduledDate: Date.now,
+                            status: WorkoutStatus.completed,
                             components: components,
                             completedAt: nil,
                             completed: false

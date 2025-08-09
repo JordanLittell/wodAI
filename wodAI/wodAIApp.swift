@@ -9,11 +9,14 @@ import SwiftUI
 
 @main
 struct wodAIApp: App {
-    @StateObject private var authManager = AuthManager()
+    // Use the shared AuthState instance for consistency
+    @StateObject private var authState = AuthState.shared
+    @StateObject private var authManager = AuthManager() // Backwards compatibility
     
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(authState)
                 .environmentObject(authManager)
         }
     }
@@ -21,5 +24,6 @@ struct wodAIApp: App {
 
 #Preview {
     ContentView()
+        .environmentObject(AuthState.shared)
         .environmentObject(AuthManager())
 }

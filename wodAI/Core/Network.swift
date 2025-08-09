@@ -10,6 +10,7 @@ import Foundation
 import Apollo
 import WodAiAPI
 import SwiftUI
+import Combine
 
 class Network {
     static let shared = Network()
@@ -38,11 +39,21 @@ class Network {
     }()
 }
 
-// Simplified authorization interceptor - GraphQL errors only
+// Updated authorization interceptor using dependency injection
 class AuthorizationInterceptor: ApolloInterceptor {
     var id: String = "AuthorizationInterceptor"
     
-    let authManager: AuthManager = AuthManager()
+    // MARK: - Dependencies
+    private let tokenProvider: TokenProvider
+    private let authProvider: AuthenticationProvider
+    private var cancellables = Set<AnyCancellable>()
+    
+    // MARK: - Initialization
+    init(tokenProvider: TokenProvider = AuthState.shared, 
+         authProvider: AuthenticationProvider = AuthState.shared) {
+        self.tokenProvider = tokenProvider
+        self.authProvider = authProvider
+    }
     
     func interceptAsync<Operation>(
         chain: RequestChain,
@@ -52,7 +63,7 @@ class AuthorizationInterceptor: ApolloInterceptor {
     ) where Operation: GraphQLOperation {
         
         // Add authorization header if token exists
-        if let token = authManager.token {
+        if let token = tokenProvider.currentToken {
             request.addHeader(name: "Authorization", value: "Bearer \(token)")
         }
         
@@ -98,17 +109,23 @@ class AuthorizationInterceptor: ApolloInterceptor {
         print("⚠️ Session expired. Redirecting to login...")
         
         DispatchQueue.main.async { [weak self] in
-            self?.authManager.handleSessionExpired()
+            self?.authProvider.handleSessionExpired()
             NotificationCenter.default.post(name: .userDidLogout, object: nil)
         }
     }
 }
 
-// Simplified interceptor provider - no HTTP status code handling
+// Updated interceptor provider using dependency injection
 class NetworkInterceptorProvider: InterceptorProvider {
+    private let authorizationInterceptor: AuthorizationInterceptor
+    
+    init(authorizationInterceptor: AuthorizationInterceptor = AuthorizationInterceptor()) {
+        self.authorizationInterceptor = authorizationInterceptor
+    }
+    
     func interceptors<Operation>(for operation: Operation) -> [ApolloInterceptor] where Operation: GraphQLOperation {
         return [
-            AuthorizationInterceptor(),
+            authorizationInterceptor,
             NetworkFetchInterceptor(client: URLSessionClient()),
             ResponseCodeInterceptor(),  // Standard Apollo interceptor
             JSONResponseParsingInterceptor(),

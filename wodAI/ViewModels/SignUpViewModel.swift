@@ -41,6 +41,7 @@ class SignUpViewModel: ObservableObject {
                 }
                 
                 // Authenticate user and update UI state
+                print("user signed up!")
                 DispatchQueue.main.async {
                     self?.authManager?.authenticate(token: token)
                     self?.isSignedUp = true

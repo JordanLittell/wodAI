@@ -1,0 +1,6 @@
+mutation UpdateUserRestDays($restDays: [RestDay!]!) {
+  updateUserRestDays(restDays: $restDays) {
+    id
+    restDays
+  }
+}

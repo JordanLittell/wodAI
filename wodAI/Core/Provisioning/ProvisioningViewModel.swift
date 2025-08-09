@@ -23,7 +23,15 @@ class ProvisioningViewModel: ObservableObject {
     @Published var selectedInjuries: [Injury] = []
     @Published var showAddInjurySheet = false
     
-    var authManager: AuthManager?
+    // MARK: - Dependencies
+    private let provisioningProvider: ProvisioningProvider
+    private let provisioningService: ProvisioningService
+    
+    init(provisioningProvider: ProvisioningProvider = AuthState.shared,
+         provisioningService: ProvisioningService = ProvisioningService.shared) {
+        self.provisioningProvider = provisioningProvider
+        self.provisioningService = provisioningService
+    }
     
     enum ProvisioningStep: Int, CaseIterable {
         case gender = 0
@@ -178,34 +186,40 @@ class ProvisioningViewModel: ObservableObject {
         }
         
         let request = ProvisionUserRequest(
-            gender: provisioningData.gender?.rawValue ?? "",
-            fitnessLevel: provisioningData.fitnessLevel?.rawValue ?? "",
+            gender: provisioningData.gender ?? Gender.male,
+            fitnessLevel: provisioningData.fitnessLevel ?? FitnessLevel.intermediate,
             workoutDuration: provisioningData.workoutDuration?.minutes ?? 60,
             benchmarks: benchmarks,
             injuries: injuries
         )
         
-        // TODO: Replace with actual API call
-        // For now, simulate the API call
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-            self?.isLoading = false
-            
-            // Simulate successful provisioning
-            print("✅ User provisioned with data:")
-            print("Gender: \(request.gender)")
-            print("Fitness Level: \(request.fitnessLevel)")
-            print("Workout Duration: \(request.workoutDuration) minutes")
-            print("Benchmarks: \(request.benchmarks)")
-            print("Injuries: \(request.injuries)")
-            
-            // Mark user as provisioned
-            UserDefaults.standard.set(true, forKey: "userProvisioned")
-            
-            // Update AuthManager
-            self?.authManager?.completeProvisioning()
-            
-            // Notify the app that provisioning is complete
-            NotificationCenter.default.post(name: .userDidCompleteProvisioning, object: nil)
+        Task {
+            do {
+                let response = try await provisioningService.provisionUser(request: request)
+                
+                await MainActor.run {
+                    self.isLoading = false
+                    
+                    if response.success {
+                        print("✅ User provisioned successfully")
+                        
+                        // Mark user as provisioned through the provider
+                        self.provisioningProvider.completeProvisioning()
+                        
+                        // Notify the app that provisioning is complete
+                        NotificationCenter.default.post(name: .userDidCompleteProvisioning, object: nil)
+                    } else {
+                        self.errorMessage = response.message ?? "Provisioning failed"
+                        self.showError = true
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.isLoading = false
+                    self.errorMessage = error.localizedDescription
+                    self.showError = true
+                }
+            }
         }
     }
 }
@@ -213,31 +227,4 @@ class ProvisioningViewModel: ObservableObject {
 // MARK: - Notification Names
 extension Notification.Name {
     static let userDidCompleteProvisioning = Notification.Name("userDidCompleteProvisioning")
-}
-
-// MARK: - API Service Stub
-class ProvisioningService {
-    static let shared = ProvisioningService()
-    
-    private init() {}
-    
-    func checkProvisioningStatus(completion: @escaping (Result<Bool, Error>) -> Void) {
-        // TODO: Replace with actual API call
-        // For now, check UserDefaults
-        let isProvisioned = UserDefaults.standard.bool(forKey: "userProvisioned")
-        completion(.success(isProvisioned))
-    }
-    
-    func provisionUser(request: ProvisionUserRequest, completion: @escaping (Result<ProvisionUserResponse, Error>) -> Void) {
-        // TODO: Replace with actual API call
-        // Simulate API call
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            let response = ProvisionUserResponse(
-                success: true,
-                message: "User provisioned successfully",
-                userId: UUID().uuidString
-            )
-            completion(.success(response))
-        }
-    }
 }
