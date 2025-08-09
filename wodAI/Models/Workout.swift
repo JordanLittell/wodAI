@@ -58,7 +58,7 @@ extension Workout {
         id: "example-1",
         name: "Elite Olympic Conditioning",
         description: "This workout is appropriate for an elite 30-year-old male athlete weighing 180 pounds due to its heavy loads, complex movements, and high-intensity nature. The combination of Olympic lifting, gymnastics, and cardio aligns with CrossFit's methodology of constantly varied, functional movements performed at high intensity.",
-        components: [
+        components: [t
             Component(
                 name: "WOD - Olympic Conditioning",
                 order: 1,
