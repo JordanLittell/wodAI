@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import WodAiAPI
 
 struct GymProfile: Identifiable, Codable, Equatable {
     let id: UUID

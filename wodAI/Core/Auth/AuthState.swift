@@ -208,3 +208,8 @@ extension AuthState: ProvisioningProvider {
             .eraseToAnyPublisher()
     }
 }
+
+// MARK: - Notification Names
+extension Notification.Name {
+    static let userDidLogout = Notification.Name("userDidLogout")
+}

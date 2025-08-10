@@ -57,7 +57,7 @@ public class GetWorkoutsByDateRangeQuery: GraphQLQuery {
         .field("description", String.self),
         .field("coaching", String?.self),
         .field("stimulus", String?.self),
-        .field("scheduledDate", WodAiAPI.DateTime?.self),
+        .field("scheduledDate", WodAiAPI.DateTime.self),
         .field("status", GraphQLEnum<WodAiAPI.WorkoutStatus>.self),
         .field("completed", Bool.self),
         .field("completedAt", WodAiAPI.DateTime?.self),
@@ -69,7 +69,7 @@ public class GetWorkoutsByDateRangeQuery: GraphQLQuery {
       public var description: String { __data["description"] }
       public var coaching: String? { __data["coaching"] }
       public var stimulus: String? { __data["stimulus"] }
-      public var scheduledDate: WodAiAPI.DateTime? { __data["scheduledDate"] }
+      public var scheduledDate: WodAiAPI.DateTime { __data["scheduledDate"] }
       public var status: GraphQLEnum<WodAiAPI.WorkoutStatus> { __data["status"] }
       public var completed: Bool { __data["completed"] }
       public var completedAt: WodAiAPI.DateTime? { __data["completedAt"] }

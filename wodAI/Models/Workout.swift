@@ -10,7 +10,10 @@ import Foundation
 // MARK: - Workout Status Enum
 enum WorkoutStatus: String, CaseIterable, Codable {
     case pending = "PENDING"
-    case generating = "GENERATING" 
+    case started = "STARTED"
+    case cancelled = "CANCELLED"
+    case generating = "GENERATING"
+    case generated = "GENERATED"
     case completed = "COMPLETED"
     case failed = "FAILED"
     
@@ -18,8 +21,10 @@ enum WorkoutStatus: String, CaseIterable, Codable {
         switch self {
         case .pending: return "Scheduled"
         case .generating: return "Generating..."
-        case .completed: return "Ready"
+        case .generated: return "Ready"
+        case .completed: return "Completed"
         case .failed: return "Error"
+        default: return ""
         }
     }
     

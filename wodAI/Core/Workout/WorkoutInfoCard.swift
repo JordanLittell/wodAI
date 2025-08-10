@@ -11,8 +11,7 @@ struct WorkoutInfoCard: View {
     let onTap: () -> Void
     
     var body: some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 12) {
                 // Header with icon and name
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: "calendar.circle.fill")
@@ -62,13 +61,11 @@ struct WorkoutInfoCard: View {
                 .padding(.vertical, 8)
                 .background(Color("Surface2"))
                 .cornerRadius(8)
-            }
-            .padding()
-            .background(Color("Surface"))
-            .cornerRadius(16)
-            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding()
+        .background(Color("Surface"))
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
     }
 }
 

@@ -24,23 +24,15 @@ struct MainTabView: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            // Home Tab
-            EnhancedHomeView()
+            
+            WeeklyWorkoutView()
                 .tabItem {
-                    Image(systemName: selectedTab == .home ? "house.fill" : "house")
+                    Image(systemName: selectedTab == .workouts ? "house.fill" : "house")
                     Text("Home")
                 }
                 .tag(AppTab.home)
             
-            // Calendar Tab
-            WeeklyWorkoutView()
-                .tabItem {
-                    Image(systemName: selectedTab == .calendar ? "calendar.circle.fill" : "calendar.circle")
-                    Text("Calendar")
-                }
-                .tag(AppTab.calendar)
-            
-            // Workouts Tab
+            // Home view is workouts view
             WorkoutsView()
                 .tabItem {
                     Image(systemName: selectedTab == .workouts ? "dumbbell.fill" : "dumbbell")

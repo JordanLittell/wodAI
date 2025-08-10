@@ -14,7 +14,6 @@ struct WorkoutsView: View {
     @State private var searchText = ""
     @State private var isLoading = false
     @State private var completedWorkouts: [Workout] = []
-    @State private var showingWorkoutDetail: Workout?
     @State private var currentPage = 1
     @State private var hasMore = true
     @State private var error: Error?
@@ -47,9 +46,12 @@ struct WorkoutsView: View {
                                     .padding(.top, 60)
                                 } else {
                                     ForEach(completedWorkouts) { workout in
-                                        WorkoutInfoCard(workout: workout) {
-                                            
+                                        NavigationLink(destination: CompletedWorkoutView(workout: workout)) {
+                                            WorkoutInfoCard(workout: workout) {
+                                                // onTap is handled by NavigationLink
+                                            }
                                         }
+                                        .buttonStyle(PlainButtonStyle())
                                     }
                                     
                                     // Load more button
@@ -82,10 +84,7 @@ struct WorkoutsView: View {
             .onAppear {
                 loadWorkouts()
             }
-            .sheet(item: $showingWorkoutDetail) { workout in
-                WorkoutDetailView(workout: workout)
-                    .environmentObject(workoutGenerator)
-            }
+
         }
     }
     

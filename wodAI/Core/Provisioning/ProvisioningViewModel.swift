@@ -2,61 +2,84 @@
 //  ProvisioningViewModel.swift
 //  wodAI
 //
-//  Created for WodAI provisioning workflow
+//  Consolidated view model for collecting all user provisioning data
 //
 
 import Foundation
 import SwiftUI
+import WodAiAPI
 
 class ProvisioningViewModel: ObservableObject {
-    @Published var currentStep: ProvisioningStep = .gender
-    @Published var provisioningData = ProvisioningData()
+    @Published var currentStep: ProvisioningStep = .age
+    @Published var provisioningData = ConsolidatedProvisioningData()
     @Published var isLoading = false
     @Published var errorMessage = ""
     @Published var showError = false
-    
-    // Benchmark input states
-    @Published var selectedBenchmarks: Set<BenchmarkType> = []
-    @Published var benchmarkInputs: [BenchmarkType: String] = [:]
-    
-    // Injury input states
-    @Published var selectedInjuries: [Injury] = []
-    @Published var showAddInjurySheet = false
+    @Published var availableEquipment: [Equipment] = []
     
     // MARK: - Dependencies
     private let provisioningProvider: ProvisioningProvider
     private let provisioningService: ProvisioningService
+    private let equipmentManager: EquipmentManager
     
     init(provisioningProvider: ProvisioningProvider = AuthState.shared,
-         provisioningService: ProvisioningService = ProvisioningService.shared) {
+         provisioningService: ProvisioningService = ProvisioningService.shared,
+         equipmentManager: EquipmentManager = EquipmentManager.shared) {
         self.provisioningProvider = provisioningProvider
         self.provisioningService = provisioningService
+        self.equipmentManager = equipmentManager
     }
     
     enum ProvisioningStep: Int, CaseIterable {
-        case gender = 0
-        case fitnessLevel = 1
-        case workoutDuration = 2
-        case benchmarks = 3
-        case injuries = 4
+        case age = 0
+        case height = 1
+        case weight = 2
+        case gender = 3
+        case fitnessLevel = 4
+        case restDays = 5
+        case gymFrequency = 6
+        case injuries = 7
+        case equipment = 8
         
         var title: String {
             switch self {
-            case .gender: return "Personal Details"
-            case .fitnessLevel: return "Fitness Level"
-            case .workoutDuration: return "Workout Duration"
-            case .benchmarks: return "Performance Benchmarks"
-            case .injuries: return "Injuries & Limitations"
+            case .age: return "What is your age?"
+            case .height: return "What is your height?"
+            case .weight: return "What is your weight?"
+            case .gender: return "What is your gender?"
+            case .fitnessLevel: return "What is your fitness level?"
+            case .restDays: return "How many rest days?"
+            case .gymFrequency: return "How often are you at the gym?"
+            case .injuries: return "Any injuries?"
+            case .equipment: return "Equipment available?"
             }
         }
         
         var subtitle: String {
             switch self {
-            case .gender: return "Help us personalize your experience"
+            case .age: return "Help us personalize your workouts based on your age"
+            case .height: return "We'll use this to calculate proper scaling"
+            case .weight: return "This helps us determine appropriate loads"
+            case .gender: return "This helps us tailor your workout programming"
             case .fitnessLevel: return "Where are you in your fitness journey?"
-            case .workoutDuration: return "How much time do you have to train?"
-            case .benchmarks: return "Help us calibrate your workouts"
-            case .injuries: return "Any areas we should be careful with?"
+            case .restDays: return "Rest days are crucial for recovery and progress"
+            case .gymFrequency: return "This helps us understand your training schedule"
+            case .injuries: return "We'll modify workouts to work around any limitations"
+            case .equipment: return "We'll only suggest workouts with equipment you have"
+            }
+        }
+        
+        var icon: String {
+            switch self {
+            case .age: return "calendar"
+            case .height: return "ruler"
+            case .weight: return "scalemass"
+            case .gender: return "person.2"
+            case .fitnessLevel: return "trophy"
+            case .restDays: return "bed.double"
+            case .gymFrequency: return "calendar.badge.clock"
+            case .injuries: return "cross.case"
+            case .equipment: return "dumbbell"
             }
         }
     }
@@ -69,59 +92,33 @@ class ProvisioningViewModel: ObservableObject {
     
     var canProceed: Bool {
         switch currentStep {
+        case .age:
+            return provisioningData.age >= 16 && provisioningData.age <= 100
+        case .height:
+            return provisioningData.heightFeet >= 3 && provisioningData.heightFeet <= 8
+        case .weight:
+            return provisioningData.weight >= 100 && provisioningData.weight <= 400
         case .gender:
             return provisioningData.gender != nil
         case .fitnessLevel:
             return provisioningData.fitnessLevel != nil
-        case .workoutDuration:
-            return provisioningData.workoutDuration != nil
-        case .benchmarks:
-            return !selectedBenchmarks.isEmpty && allSelectedBenchmarksHaveValues
+        case .restDays:
+            return provisioningData.restDays.count <= 3
+        case .gymFrequency:
+            return provisioningData.gymFrequency != nil
         case .injuries:
             return true // Injuries are optional
+        case .equipment:
+            return !provisioningData.availableEquipment.isEmpty
         }
     }
     
-    private var allSelectedBenchmarksHaveValues: Bool {
-        for benchmark in selectedBenchmarks {
-            guard let value = benchmarkInputs[benchmark], !value.isEmpty else {
-                return false
-            }
-            
-            // Validate the input format
-            if benchmark == .runMile {
-                // Check for valid time format (mm:ss)
-                let components = value.split(separator: ":")
-                guard components.count == 2,
-                      let minutes = Int(components[0]),
-                      let seconds = Int(components[1]),
-                      minutes >= 0,
-                      seconds >= 0 && seconds < 60 else {
-                    return false
-                }
-            } else {
-                // Check for valid numeric input
-                guard Double(value) != nil else {
-                    return false
-                }
-            }
-        }
-        return true
+    var isLastStep: Bool {
+        return currentStep == .equipment
     }
     
     func nextStep() {
-        // Save current step data
-        switch currentStep {
-        case .benchmarks:
-            saveBenchmarks()
-        case .injuries:
-            provisioningData.injuries = selectedInjuries
-        default:
-            break
-        }
-        
-        if currentStep == .injuries {
-            // This is the last step, submit the data
+        if isLastStep {
             submitProvisioning()
         } else if let nextStep = ProvisioningStep(rawValue: currentStep.rawValue + 1) {
             withAnimation(.easeInOut(duration: 0.3)) {
@@ -138,59 +135,83 @@ class ProvisioningViewModel: ObservableObject {
         }
     }
     
-    private func saveBenchmarks() {
-        provisioningData.benchmarks = selectedBenchmarks.compactMap { benchmark in
-            guard let value = benchmarkInputs[benchmark], !value.isEmpty else { return nil }
-            return BenchmarkValue(type: benchmark, value: value)
+    // MARK: - Update Methods
+    func updateAge(_ age: Double) {
+        provisioningData.age = Int(age)
+    }
+    
+    func updateHeight(feet: Double, inches: Double) {
+        provisioningData.heightFeet = Int(feet)
+        provisioningData.heightInches = Int(inches)
+    }
+    
+    func updateWeight(_ weight: Double) {
+        provisioningData.weight = Int(weight)
+    }
+    
+    func toggleRestDay(_ day: DayOfWeek) {
+        if provisioningData.restDays.contains(day) {
+            provisioningData.restDays.remove(day)
+        } else if provisioningData.restDays.count < 3 {
+            provisioningData.restDays.insert(day)
         }
     }
     
-    func toggleBenchmark(_ benchmark: BenchmarkType) {
-        if selectedBenchmarks.contains(benchmark) {
-            selectedBenchmarks.remove(benchmark)
-            benchmarkInputs[benchmark] = nil
+    func toggleEquipment(_ equipment: Equipment) {
+        if provisioningData.availableEquipment.contains(equipment) {
+            provisioningData.availableEquipment.remove(equipment)
         } else {
-            selectedBenchmarks.insert(benchmark)
+            provisioningData.availableEquipment.insert(equipment)
         }
+    }
+    
+    func selectAllEquipment() {
+        provisioningData.availableEquipment = Set(availableEquipment)
+    }
+    
+    func clearAllEquipment() {
+        provisioningData.availableEquipment.removeAll()
+    }
+    
+    func loadEquipment() {
+        equipmentManager.fetchEquipment()
+        availableEquipment = equipmentManager.equipment
     }
     
     func addInjury(_ injury: Injury) {
-        selectedInjuries.append(injury)
-        provisioningData.hasInjuries = true
+        provisioningData.injuries.append(injury)
     }
     
     func removeInjury(at index: Int) {
-        selectedInjuries.remove(at: index)
-        provisioningData.hasInjuries = !selectedInjuries.isEmpty
+        provisioningData.injuries.remove(at: index)
     }
     
+    func removeInjuries() {
+        provisioningData.injuries.removeAll()
+    }
+    
+    // MARK: - Submission
     private func submitProvisioning() {
+        guard provisioningData.isComplete else {
+            errorMessage = "Please complete all required fields"
+            showError = true
+            return
+        }
+        
         isLoading = true
         
-        // Prepare the request
-        let benchmarks = provisioningData.benchmarks.compactMap { benchmark -> ProvisionUserRequest.BenchmarkData? in
-            guard let numericValue = benchmark.numericValue else { return nil }
-            return ProvisionUserRequest.BenchmarkData(
-                type: benchmark.type.rawValue,
-                value: numericValue,
-                unit: benchmark.type.unit
-            )
-        }
-        
-        let injuries = provisioningData.injuries.map { injury in
-            ProvisionUserRequest.InjuryData(
-                bodyPart: injury.bodyPart,
-                severity: injury.severity.rawValue,
-                description: injury.description
-            )
-        }
-        
-        let request = ProvisionUserRequest(
-            gender: provisioningData.gender ?? Gender.male,
-            fitnessLevel: provisioningData.fitnessLevel ?? FitnessLevel.intermediate,
-            workoutDuration: provisioningData.workoutDuration?.minutes ?? 60,
-            benchmarks: benchmarks,
-            injuries: injuries
+        let request = ProvisionUserInput(
+            age: provisioningData.age,
+            heightInches: provisioningData.totalHeightInches,
+            weight: provisioningData.weight,
+            gender: GraphQLEnum(provisioningData.gender!.toGraphQL),
+            fitnessLevel: GraphQLEnum(provisioningData.fitnessLevel!.toGraphQL),
+            workoutDuration: provisioningData.gymFrequency?.sessionDurationMinutes ?? 60,
+            benchmarks: [], // Can be added later if needed
+            injuries: GraphQLNullable.some(provisioningData.getInjuries()),
+            availableEquipment: provisioningData.graphQLEquipment(),
+            sessionDurationMinutes: provisioningData.gymFrequency?.sessionDurationMinutes ?? 60,
+            restDays: provisioningData.graphQLRestDays()
         )
         
         Task {
@@ -202,11 +223,7 @@ class ProvisioningViewModel: ObservableObject {
                     
                     if response.success {
                         print("✅ User provisioned successfully")
-                        
-                        // Mark user as provisioned through the provider
                         self.provisioningProvider.completeProvisioning()
-                        
-                        // Notify the app that provisioning is complete
                         NotificationCenter.default.post(name: .userDidCompleteProvisioning, object: nil)
                     } else {
                         self.errorMessage = response.message ?? "Provisioning failed"
@@ -220,6 +237,217 @@ class ProvisioningViewModel: ObservableObject {
                     self.showError = true
                 }
             }
+        }
+    }
+}
+
+// MARK: - Data Models
+
+struct ConsolidatedProvisioningData: Codable {
+    // Basic Information
+    var age: Int = 25
+    var heightFeet: Int = 5
+    var heightInches: Int = 0
+    var weight: Int = 150
+    var gender: Gender?
+    var hasInjuries = false
+    
+    // Fitness Information
+    var fitnessLevel: FitnessLevel?
+    var restDays: Set<DayOfWeek> = []
+    var gymFrequency: GymFrequency?
+    
+    // Health Information
+    var injuries: [Injury] = []
+    
+    // Equipment
+    var availableEquipment: Set<Equipment> = []
+    
+    var totalHeightInches: Int {
+        return heightFeet * 12 + heightInches
+    }
+    
+    func getInjuries () -> [WodAiAPI.InjuryInput] {
+        return injuries.compactMap { injury in
+            
+            return InjuryInput(
+                bodyPart: injury.bodyPart,
+                severity: GraphQLEnum(InjurySeverity(
+                    rawValue: injury.severity.rawValue
+                )?.rawValue ?? ""),
+                description: GraphQLNullable.some(injury.description ?? "")
+            )
+        }
+    }
+    
+    var isComplete: Bool {
+        return gender != nil &&
+               fitnessLevel != nil &&
+               gymFrequency != nil &&
+               restDays.count <= 3 &&
+               !availableEquipment.isEmpty
+    }
+    
+    func graphQLRestDays() -> [GraphQLEnum<WodAiAPI.RestDay>] {
+        return restDays.compactMap { iosDayOfWeek in
+            let graphQLRestDay: WodAiAPI.RestDay
+            
+            switch iosDayOfWeek {
+            case .monday: graphQLRestDay = .monday
+            case .tuesday: graphQLRestDay = .tuesday
+            case .wednesday: graphQLRestDay = .wednesday
+            case .thursday: graphQLRestDay = .thursday
+            case .friday: graphQLRestDay = .friday
+            case .saturday: graphQLRestDay = .saturday
+            case .sunday: graphQLRestDay = .sunday
+            }
+            
+            return GraphQLEnum(graphQLRestDay)
+        }
+    }
+    
+    func graphQLEquipment() -> [GraphQLEnum<WodAiAPI.FitnessEquipment>] {
+        return availableEquipment.compactMap { equipment in
+            // Map Equipment to GraphQL FitnessEquipment
+            // This mapping depends on your Equipment model and GraphQL schema
+            switch equipment.name.lowercased() {
+            case "barbell", "barbells":
+                return GraphQLEnum(WodAiAPI.FitnessEquipment.barbells)
+            case "pull-up bar", "pullup bar", "pull up bar":
+                return GraphQLEnum(WodAiAPI.FitnessEquipment.pullUpBars)
+            case "dumbbell", "dumbbells":
+                return GraphQLEnum(WodAiAPI.FitnessEquipment.dumbbells)
+            case "kettlebell", "kettlebells":
+                return GraphQLEnum(WodAiAPI.FitnessEquipment.kettlebells)
+            default:
+                return GraphQLEnum(WodAiAPI.FitnessEquipment.barbells) // Default fallback
+            }
+        }
+    }
+}
+
+enum GymFrequency: String, CaseIterable, Codable {
+    case rarely = "rarely"
+    case onceAWeek = "once_a_week"
+    case twiceAWeek = "twice_a_week"
+    case threeTimesAWeek = "three_times_a_week"
+    case fourTimesAWeek = "four_times_a_week"
+    case fiveTimesAWeek = "five_times_a_week"
+    case sixTimesAWeek = "six_times_a_week"
+    case daily = "daily"
+    
+    var displayName: String {
+        switch self {
+        case .rarely: return "Rarely (< 1x/week)"
+        case .onceAWeek: return "Once a week"
+        case .twiceAWeek: return "Twice a week"
+        case .threeTimesAWeek: return "3 times a week"
+        case .fourTimesAWeek: return "4 times a week"
+        case .fiveTimesAWeek: return "5 times a week"
+        case .sixTimesAWeek: return "6 times a week"
+        case .daily: return "Every day"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .rarely: return "Just getting started or very busy schedule"
+        case .onceAWeek: return "Light activity, maintenance focused"
+        case .twiceAWeek: return "Beginner friendly, sustainable pace"
+        case .threeTimesAWeek: return "Most popular choice for steady progress"
+        case .fourTimesAWeek: return "Serious about fitness goals"
+        case .fiveTimesAWeek: return "Advanced training schedule"
+        case .sixTimesAWeek: return "Elite level commitment"
+        case .daily: return "Professional athlete or extreme dedication"
+        }
+    }
+    
+    var sessionDurationMinutes: Int {
+        switch self {
+        case .rarely, .onceAWeek: return 90
+        case .twiceAWeek, .threeTimesAWeek: return 60
+        case .fourTimesAWeek, .fiveTimesAWeek: return 45
+        case .sixTimesAWeek, .daily: return 30
+        }
+    }
+}
+
+// MARK: - Equipment Model (if not already defined)
+struct Equipment: Codable, Hashable, Identifiable {
+    let id: Int
+    let name: String
+    let category: String?
+    
+    var icon: String {
+        switch name.lowercased() {
+        case "barbell", "barbells": return "barbell"
+        case "pull-up bar", "pullup bar", "pull up bar": return "arrow.up.and.down"
+        case "dumbbell", "dumbbells": return "dumbbell"
+        case "kettlebell", "kettlebells": return "figure.strengthtraining.traditional"
+        case "rowing machine", "erg", "rower": return "figure.rowing"
+        case "assault bike", "bike": return "bicycle"
+        case "jump rope", "rope": return "figure.jumprope"
+        case "box", "jump box": return "cube.box"
+        case "wall ball", "medicine ball": return "soccerball"
+        case "ab mat": return "figure.core.training"
+        case "ghd", "ghd machine": return "figure.strengthtraining.traditional"
+        case "bands", "resistance bands": return "oval.portrait"
+        case "sled": return "triangle"
+        default: return "dumbbell"
+        }
+    }
+}
+
+
+
+struct InjuryRow: View {
+    let injury: Injury
+    let onRemove: () -> Void
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(injury.bodyPart)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(Color("PrimaryText"))
+                
+                Text(injury.severity.displayName)
+                    .font(.caption)
+                    .foregroundColor(severityColor)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(severityColor.opacity(0.1))
+                    .cornerRadius(4)
+                
+                if let description = injury.description, !description.isEmpty {
+                    Text(description)
+                        .font(.caption)
+                        .foregroundColor(Color("SecondaryText"))
+                }
+            }
+            
+            Spacer()
+            
+            Button(action: onRemove) {
+                Image(systemName: "trash")
+                    .font(.system(size: 16))
+                    .foregroundColor(Color("Warning"))
+            }
+        }
+        .padding()
+        .background(Color("Surface"))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color("Border"), lineWidth: 1)
+        )
+    }
+    
+    private var severityColor: Color {
+        switch injury.severity {
+        case .minor: return Color("Success")
+        case .moderate: return Color("Warning")
+        case .severe: return Color("Warning")
         }
     }
 }

@@ -35,7 +35,7 @@ struct InjuriesInputView: View {
             HStack(spacing: 12) {
                 Button(action: {
                     viewModel.provisioningData.hasInjuries = false
-                    viewModel.selectedInjuries.removeAll()
+                    viewModel.removeInjuries();
                 }) {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
@@ -83,7 +83,7 @@ struct InjuriesInputView: View {
             }
             
             // Injuries List
-            if !viewModel.selectedInjuries.isEmpty {
+            if !viewModel.provisioningData.getInjuries().isEmpty {
                 VStack(spacing: 12) {
                     HStack {
                         Text("Current Injuries")
@@ -94,12 +94,12 @@ struct InjuriesInputView: View {
                         Spacer()
                     }
                     
-                    ForEach(Array(viewModel.selectedInjuries.enumerated()), id: \.offset) { index, injury in
+                    ForEach(Array(viewModel.provisioningData.getInjuries().enumerated()), id: \.offset) { index, injury in
                         InjuryCard(
-                            injury: injury,
+                            injury: Injury.from(input: injury),
                             onDelete: {
                                 viewModel.removeInjury(at: index)
-                                if viewModel.selectedInjuries.isEmpty {
+                                if viewModel.provisioningData.getInjuries().isEmpty {
                                     viewModel.provisioningData.hasInjuries = false
                                 }
                             }
@@ -110,7 +110,7 @@ struct InjuriesInputView: View {
             }
             
             // Info Card
-            if viewModel.provisioningData.hasInjuries && viewModel.selectedInjuries.isEmpty {
+            if viewModel.provisioningData.hasInjuries && viewModel.provisioningData.getInjuries().isEmpty {
                 HStack(spacing: 12) {
                     Image(systemName: "info.circle.fill")
                         .font(.title3)

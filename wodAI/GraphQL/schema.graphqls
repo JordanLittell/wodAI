@@ -59,7 +59,7 @@ type Workout {
   order: Int
   stimulus: String
   coaching: String
-  scheduledDate: DateTime
+  scheduledDate: DateTime!
   completed: Boolean!
   completedAt: DateTime
   components: [Component!]!
@@ -197,11 +197,17 @@ input InjuryInput {
 }
 
 input ProvisionUserInput {
+  age: Int!
+  heightInches: Int!
+  weight: Int!
   gender: Gender!
   fitnessLevel: FitnessLevel!
   workoutDuration: Int!
   benchmarks: [BenchmarkInput!]!
   injuries: [InjuryInput!]
+  availableEquipment: [FitnessEquipment!]!
+  sessionDurationMinutes: Int!
+  restDays: [RestDay!]!
 }
 
 type ProvisionUserResponse {

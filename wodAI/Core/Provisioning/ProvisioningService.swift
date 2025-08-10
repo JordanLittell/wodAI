@@ -56,30 +56,20 @@ class ProvisioningService {
         }
     }
     
-    func provisionUser(request: ProvisionUserRequest) async throws -> ProvisionUserResponse {
-        // Convert to GraphQL input
-        let benchmarks = request.benchmarks.map { benchmark in
-            BenchmarkInput(
-                type: benchmark.type,
-                value: benchmark.value,
-                unit: benchmark.unit
-            )
-        }
-        
-        let injuries = request.injuries.map { injury in
-            InjuryInput(
-                bodyPart: injury.bodyPart,
-                severity: GraphQLEnum(mapInjurySeverity(injury.severity)),
-                description: GraphQLNullable.some(injury.description ?? "")
-            )
-        }
+    func provisionUser(request: ProvisionUserInput) async throws -> ProvisionUserResponse {
         
         let mutation = ProvisionUserMutation(input: ProvisionUserInput(
-            gender: GraphQLEnum(request.gender.rawValue),
-            fitnessLevel: GraphQLEnum(request.fitnessLevel.rawValue),
+            age: request.age,
+            heightInches: request.heightInches,
+            weight: request.weight,
+            gender: request.gender,
+            fitnessLevel: request.fitnessLevel,
             workoutDuration: request.workoutDuration,
-            benchmarks: benchmarks,
-            injuries: GraphQLNullable.some(injuries)
+            benchmarks: request.benchmarks,
+            injuries: request.injuries,
+            availableEquipment: request.availableEquipment,
+            sessionDurationMinutes: request.sessionDurationMinutes,
+            restDays: request.restDays
         ))
         
         return try await withCheckedThrowingContinuation { continuation in
@@ -105,62 +95,6 @@ class ProvisioningService {
         }
     }
     
-    // Legacy callback-based method for backwards compatibility
-    func provisionUser(request: ProvisionUserRequest, completion: @escaping (Result<ProvisionUserResponse, Error>) -> Void) {
-        Task {
-            do {
-                let result = try await provisionUser(request: request)
-                completion(.success(result))
-            } catch {
-                completion(.failure(error))
-            }
-        }
-    }
-    
-    // MARK: - Helper Methods for Mapping
-    
-    private func mapGender(_ gender: String) -> Gender {
-        switch gender.lowercased() {
-        case "male":
-            return .male
-        case "female":
-            return .female
-        case "other":
-            return .other
-        case "prefer_not_to_say":
-            return .preferNotToSay
-        default:
-            return .preferNotToSay
-        }
-    }
-    
-    private func mapFitnessLevel(_ fitnessLevel: String) -> FitnessLevel {
-        switch fitnessLevel.lowercased() {
-        case "beginner":
-            return .beginner
-        case "intermediate":
-            return .intermediate
-        case "advanced":
-            return .advanced
-        case "elite":
-            return .elite
-        default:
-            return .beginner
-        }
-    }
-    
-    private func mapInjurySeverity(_ severity: String) -> InjurySeverity {
-        switch severity.lowercased() {
-        case "minor":
-            return .minor
-        case "moderate":
-            return .moderate
-        case "severe":
-            return .severe
-        default:
-            return .minor
-        }
-    }
 }
 
 // MARK: - Custom Errors

@@ -321,14 +321,7 @@ struct WorkoutView: View {
             }
         }
     }
-    
-    private func regenerateWorkout() {
-        isUpdatingWOD = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            wgvm.generateQuickWorkout(type: .intelligent)
-            isUpdatingWOD = false
-        }
-    }
+
     
     private func shareWorkout() {
         guard let workout = wgvm.workout else { return }

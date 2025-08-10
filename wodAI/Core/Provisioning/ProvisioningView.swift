@@ -2,7 +2,7 @@
 //  ProvisioningView.swift
 //  wodAI
 //
-//  Created for WodAI provisioning workflow
+//  Consolidated provisioning workflow for collecting user information
 //
 
 import SwiftUI
@@ -32,35 +32,54 @@ struct ProvisioningView: View {
                         .padding(.horizontal)
                         .padding(.top, 8)
                     
+                    // Header
+                    VStack(spacing: 8) {
+                        HStack {
+                            Image(systemName: viewModel.currentStep.icon)
+                                .font(.title2)
+                                .foregroundColor(Color("BrandPrimary"))
+                            
+                            Text(viewModel.currentStep.title)
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundColor(Color("PrimaryText"))
+                            
+                            Spacer()
+                        }
+                        
+                        HStack {
+                            Text(viewModel.currentStep.subtitle)
+                                .font(.subheadline)
+                                .foregroundColor(Color("SecondaryText"))
+                                .multilineTextAlignment(.leading)
+                            Spacer()
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 16)
+                    
                     // Content
                     ScrollView {
-                        VStack(spacing: 24) {
-                            // Header
-                            VStack(spacing: 8) {
-                                Text(viewModel.currentStep.title)
-                                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                                    .foregroundColor(Color("PrimaryText"))
-                                
-                                Text(viewModel.currentStep.subtitle)
-                                    .font(.subheadline)
-                                    .foregroundColor(Color("SecondaryText"))
-                                    .multilineTextAlignment(.center)
-                            }
-                            .padding(.top, 24)
-                            
-                            // Step Content
+                        VStack {
                             Group {
                                 switch viewModel.currentStep {
+                                case .age:
+                                    AgeSelectionView(viewModel: viewModel)
+                                case .height:
+                                    HeightSelectionView(viewModel: viewModel)
+                                case .weight:
+                                    WeightSelectionView(viewModel: viewModel)
                                 case .gender:
-                                    GenderSelectionView(provisioningData: $viewModel.provisioningData)
+                                    GenderSelectionView(viewModel: viewModel)
                                 case .fitnessLevel:
-                                    FitnessLevelSelectionView(provisioningData: $viewModel.provisioningData)
-                                case .workoutDuration:
-                                    WorkoutDurationSelectionView(provisioningData: $viewModel.provisioningData)
-                                case .benchmarks:
-                                    BenchmarksInputView(viewModel: viewModel)
+                                    FitnessLevelSelectionView(viewModel: viewModel)
+                                case .restDays:
+                                    RestDaysSelectionView(viewModel: viewModel)
+                                case .gymFrequency:
+                                    GymFrequencySelectionView(viewModel: viewModel)
                                 case .injuries:
                                     InjuriesInputView(viewModel: viewModel)
+                                case .equipment:
+                                    EquipmentSelectionView(viewModel: viewModel)
                                 }
                             }
                             .transition(.asymmetric(
@@ -70,7 +89,7 @@ struct ProvisioningView: View {
                             .animation(.easeInOut(duration: 0.3), value: viewModel.currentStep)
                         }
                         .padding(.horizontal)
-                        .padding(.bottom, 100) // Space for buttons
+                        .padding(.bottom, 120) // Space for buttons
                     }
                     
                     // Navigation Buttons
@@ -85,7 +104,7 @@ struct ProvisioningView: View {
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                         .scaleEffect(0.8)
                                 } else {
-                                    Text(viewModel.currentStep == .injuries ? "Complete Setup" : "Continue")
+                                    Text(viewModel.isLastStep ? "Complete Setup" : "Continue")
                                         .fontWeight(.semibold)
                                 }
                             }
@@ -137,7 +156,6 @@ struct ProvisioningView: View {
                 Text(viewModel.errorMessage)
             }
             .onReceive(NotificationCenter.default.publisher(for: .userDidCompleteProvisioning)) { _ in
-                // Provisioning complete, dismiss this view
                 dismiss()
             }
         }
@@ -176,40 +194,83 @@ struct ProgressBarView: View {
     }
 }
 
+// MARK: - Age Selection View
+struct AgeSelectionView: View {
+    @ObservedObject var viewModel: ProvisioningViewModel
+    
+    var body: some View {
+        SliderInputView(
+            title: "Age",
+            value: Double(viewModel.provisioningData.age),
+            range: 16...100,
+            step: 1,
+            unit: "years",
+            icon: "calendar",
+            onValueChange: { viewModel.updateAge($0) }
+        )
+        .padding(.top, 20)
+    }
+}
+
+// MARK: - Height Selection View
+struct HeightSelectionView: View {
+    @ObservedObject var viewModel: ProvisioningViewModel
+    
+    var body: some View {
+        HeightSliderView(
+            feet: Double(viewModel.provisioningData.heightFeet),
+            inches: Double(viewModel.provisioningData.heightInches),
+            onValueChange: { feet, inches in
+                viewModel.updateHeight(feet: feet, inches: inches)
+            }
+        )
+        .padding(.top, 20)
+    }
+}
+
+// MARK: - Weight Selection View
+struct WeightSelectionView: View {
+    @ObservedObject var viewModel: ProvisioningViewModel
+    
+    var body: some View {
+        SliderInputView(
+            title: "Weight",
+            value: Double(viewModel.provisioningData.weight),
+            range: 100...400,
+            step: 1,
+            unit: "lbs",
+            icon: "scalemass",
+            onValueChange: { viewModel.updateWeight($0) }
+        )
+        .padding(.top, 20)
+    }
+}
+
 // MARK: - Gender Selection View
 struct GenderSelectionView: View {
-    @Binding var provisioningData: ProvisioningData
+    @ObservedObject var viewModel: ProvisioningViewModel
     
     var body: some View {
         VStack(spacing: 16) {
             ForEach(Gender.allCases, id: \.self) { gender in
                 SelectionCard(
                     title: gender.displayName,
-                    isSelected: provisioningData.gender == gender,
-                    icon: genderIcon(for: gender)
+                    isSelected: viewModel.provisioningData.gender == gender,
+                    icon: gender.icon
                 ) {
                     withAnimation(.easeInOut(duration: 0.2)) {
-                        provisioningData.gender = gender
+                        viewModel.provisioningData.gender = gender
                     }
                 }
             }
         }
         .padding(.top, 20)
     }
-    
-    private func genderIcon(for gender: Gender) -> String {
-        switch gender {
-        case .male: return "person.fill"
-        case .female: return "person.fill"
-        case .other: return "person.2.fill"
-        case .preferNotToSay: return "questionmark.circle.fill"
-        }
-    }
 }
 
 // MARK: - Fitness Level Selection View
 struct FitnessLevelSelectionView: View {
-    @Binding var provisioningData: ProvisioningData
+    @ObservedObject var viewModel: ProvisioningViewModel
     
     var body: some View {
         VStack(spacing: 16) {
@@ -217,11 +278,11 @@ struct FitnessLevelSelectionView: View {
                 SelectionCard(
                     title: level.displayName,
                     subtitle: level.description,
-                    isSelected: provisioningData.fitnessLevel == level,
+                    isSelected: viewModel.provisioningData.fitnessLevel == level,
                     icon: fitnessIcon(for: level)
                 ) {
                     withAnimation(.easeInOut(duration: 0.2)) {
-                        provisioningData.fitnessLevel = level
+                        viewModel.provisioningData.fitnessLevel = level
                     }
                 }
             }
@@ -235,24 +296,75 @@ struct FitnessLevelSelectionView: View {
         case .intermediate: return "figure.run"
         case .advanced: return "figure.strengthtraining.traditional"
         case .elite: return "trophy.fill"
+        case .pro: return "crown.fill"
         }
     }
 }
 
-// MARK: - Workout Duration Selection View
-struct WorkoutDurationSelectionView: View {
-    @Binding var provisioningData: ProvisioningData
+// MARK: - Rest Days Selection View
+struct RestDaysSelectionView: View {
+    @ObservedObject var viewModel: ProvisioningViewModel
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            // Info card
+            HStack(spacing: 12) {
+                Image(systemName: "info.circle.fill")
+                    .font(.title3)
+                    .foregroundColor(Color("BrandPrimary"))
+                
+                Text("Select up to 3 rest days per week. Rest days are important for recovery.")
+                    .font(.subheadline)
+                    .foregroundColor(Color("SecondaryText"))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding()
+            .background(Color("BrandPrimary").opacity(0.1))
+            .cornerRadius(12)
+            
+            // Days grid
+            LazyVGrid(columns: [
+                GridItem(.flexible()),
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ], spacing: 12) {
+                ForEach(DayOfWeek.allCases, id: \.self) { day in
+                    RestDayButton(
+                        day: day,
+                        isSelected: viewModel.provisioningData.restDays.contains(day),
+                        isDisabled: !viewModel.provisioningData.restDays.contains(day) && viewModel.provisioningData.restDays.count >= 3,
+                        onTap: { viewModel.toggleRestDay(day) }
+                    )
+                }
+            }
+            
+            // Selected count
+            HStack {
+                Text("\(viewModel.provisioningData.restDays.count) of 3 rest days selected")
+                    .font(.caption)
+                    .foregroundColor(Color("SecondaryText"))
+                Spacer()
+            }
+        }
+        .padding(.top, 20)
+    }
+}
+
+// MARK: - Gym Frequency Selection View
+struct GymFrequencySelectionView: View {
+    @ObservedObject var viewModel: ProvisioningViewModel
     
     var body: some View {
         VStack(spacing: 16) {
-            ForEach(WorkoutDuration.allCases, id: \.self) { duration in
+            ForEach(GymFrequency.allCases, id: \.self) { frequency in
                 SelectionCard(
-                    title: duration.displayName,
-                    isSelected: provisioningData.workoutDuration == duration,
-                    icon: "clock.fill"
+                    title: frequency.displayName,
+                    subtitle: frequency.description,
+                    isSelected: viewModel.provisioningData.gymFrequency == frequency,
+                    icon: "calendar"
                 ) {
                     withAnimation(.easeInOut(duration: 0.2)) {
-                        provisioningData.workoutDuration = duration
+                        viewModel.provisioningData.gymFrequency = frequency
                     }
                 }
             }
@@ -261,7 +373,237 @@ struct WorkoutDurationSelectionView: View {
     }
 }
 
-// MARK: - Selection Card Component
+// MARK: - Equipment Selection View
+struct EquipmentSelectionView: View {
+    @ObservedObject var viewModel: ProvisioningViewModel
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            // Quick select buttons
+            HStack(spacing: 12) {
+                Button("Select All") {
+                    viewModel.selectAllEquipment()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color("BrandPrimary").opacity(0.1))
+                .foregroundColor(Color("BrandPrimary"))
+                .cornerRadius(8)
+                
+                Button("Clear All") {
+                    viewModel.clearAllEquipment()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color("Surface2"))
+                .foregroundColor(Color("SecondaryText"))
+                .cornerRadius(8)
+                
+                Spacer()
+            }
+            
+            // Equipment grid
+            LazyVGrid(columns: [
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ], spacing: 12) {
+                ForEach(Array(viewModel.availableEquipment), id: \.self) { equipment in
+                    EquipmentCard(
+                        equipment: equipment,
+                        isSelected: viewModel.provisioningData.availableEquipment.contains(equipment),
+                        onTap: { viewModel.toggleEquipment(equipment) }
+                    )
+                }
+            }
+        }
+        .padding(.top, 20)
+        .onAppear {
+            viewModel.loadEquipment()
+        }
+    }
+}
+
+// MARK: - Reusable Components
+
+struct SliderInputView: View {
+    let title: String
+    let value: Double
+    let range: ClosedRange<Double>
+    let step: Double
+    let unit: String
+    let icon: String
+    let onValueChange: (Double) -> Void
+    
+    @State private var sliderValue: Double
+    
+    init(title: String, value: Double, range: ClosedRange<Double>, step: Double, unit: String, icon: String, onValueChange: @escaping (Double) -> Void) {
+        self.title = title
+        self.value = value
+        self.range = range
+        self.step = step
+        self.unit = unit
+        self.icon = icon
+        self.onValueChange = onValueChange
+        self._sliderValue = State(initialValue: value)
+    }
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            // Header
+            HStack {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(Color("BrandPrimary"))
+                
+                Text(title)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(Color("PrimaryText"))
+                
+                Spacer()
+                
+                // Value Display
+                Text("\(Int(sliderValue)) \(unit)")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color("BrandPrimary"))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color("BrandPrimary").opacity(0.1))
+                    .cornerRadius(8)
+            }
+            
+            // Slider
+            VStack(spacing: 8) {
+                Slider(value: $sliderValue, in: range, step: step)
+                    .accentColor(Color("BrandPrimary"))
+                    .onChange(of: sliderValue) { _, newValue in
+                        onValueChange(newValue)
+                    }
+                
+                // Range Labels
+                HStack {
+                    Text("\(Int(range.lowerBound))")
+                        .font(.caption)
+                        .foregroundColor(Color("SecondaryText"))
+                    
+                    Spacer()
+                    
+                    Text("\(Int(range.upperBound))")
+                        .font(.caption)
+                        .foregroundColor(Color("SecondaryText"))
+                }
+            }
+        }
+        .padding()
+        .background(Color("Surface"))
+        .cornerRadius(16)
+        .onAppear {
+            sliderValue = value
+        }
+    }
+}
+
+struct HeightSliderView: View {
+    let feet: Double
+    let inches: Double
+    let onValueChange: (Double, Double) -> Void
+    
+    @State private var feetValue: Double
+    @State private var inchesValue: Double
+    
+    init(feet: Double, inches: Double, onValueChange: @escaping (Double, Double) -> Void) {
+        self.feet = feet
+        self.inches = inches
+        self.onValueChange = onValueChange
+        self._feetValue = State(initialValue: feet)
+        self._inchesValue = State(initialValue: inches)
+    }
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            // Header
+            HStack {
+                Image(systemName: "ruler")
+                    .font(.title2)
+                    .foregroundColor(Color("BrandPrimary"))
+                
+                Text("Height")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(Color("PrimaryText"))
+                
+                Spacer()
+                
+                // Value Display
+                Text("\(Int(feetValue))' \(Int(inchesValue))\"")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color("BrandPrimary"))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color("BrandPrimary").opacity(0.1))
+                    .cornerRadius(8)
+            }
+            
+            // Feet Slider
+            VStack(spacing: 8) {
+                HStack {
+                    Text("Feet")
+                        .font(.subheadline)
+                        .foregroundColor(Color("SecondaryText"))
+                    Spacer()
+                }
+                
+                Slider(value: $feetValue, in: 3...8, step: 1)
+                    .accentColor(Color("BrandPrimary"))
+                    .onChange(of: feetValue) { _, newValue in
+                        onValueChange(newValue, inchesValue)
+                    }
+                
+                HStack {
+                    Text("3")
+                        .font(.caption)
+                        .foregroundColor(Color("SecondaryText"))
+                    Spacer()
+                    Text("8")
+                        .font(.caption)
+                        .foregroundColor(Color("SecondaryText"))
+                }
+            }
+            
+            // Inches Slider
+            VStack(spacing: 8) {
+                HStack {
+                    Text("Inches")
+                        .font(.subheadline)
+                        .foregroundColor(Color("SecondaryText"))
+                    Spacer()
+                }
+                
+                Slider(value: $inchesValue, in: 0...11, step: 1)
+                    .accentColor(Color("BrandPrimary"))
+                    .onChange(of: inchesValue) { _, newValue in
+                        onValueChange(feetValue, newValue)
+                    }
+                
+                HStack {
+                    Text("0")
+                        .font(.caption)
+                        .foregroundColor(Color("SecondaryText"))
+                    Spacer()
+                    Text("11")
+                        .font(.caption)
+                        .foregroundColor(Color("SecondaryText"))
+                }
+            }
+        }
+        .padding()
+        .background(Color("Surface"))
+        .cornerRadius(16)
+        .onAppear {
+            feetValue = feet
+            inchesValue = inches
+        }
+    }
+}
+
 struct SelectionCard: View {
     let title: String
     var subtitle: String? = nil
@@ -315,6 +657,75 @@ struct SelectionCard: View {
                     radius: isSelected ? 8 : 4, 
                     x: 0, 
                     y: isSelected ? 4 : 2)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .scaleEffect(isSelected ? 1.02 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
+    }
+}
+
+struct RestDayButton: View {
+    let day: DayOfWeek
+    let isSelected: Bool
+    let isDisabled: Bool
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 4) {
+                Text(day.displayName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(isSelected ? .white : (isDisabled ? Color("TertiaryText") : Color("PrimaryText")))
+                
+                Text(day.fullName)
+                    .font(.caption2)
+                    .foregroundColor(isSelected ? .white : (isDisabled ? Color("TertiaryText") : Color("SecondaryText")))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(isSelected ? Color("BrandPrimary") : Color("Surface2"))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color("BrandPrimary") : Color("Border"), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.5 : 1.0)
+        .scaleEffect(isSelected ? 1.02 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
+    }
+}
+
+struct EquipmentCard: View {
+    let equipment: Equipment
+    let isSelected: Bool
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 8) {
+                Image(systemName: equipment.icon)
+                    .font(.title2)
+                    .foregroundColor(isSelected ? .white : Color("SecondaryText"))
+                
+                Text(equipment.name)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(isSelected ? .white : Color("PrimaryText"))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 80)
+            .padding()
+            .background(isSelected ? Color("BrandPrimary") : Color("Surface2"))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color("BrandPrimary") : Color("Border"), lineWidth: 1)
+            )
         }
         .buttonStyle(PlainButtonStyle())
         .scaleEffect(isSelected ? 1.02 : 1.0)

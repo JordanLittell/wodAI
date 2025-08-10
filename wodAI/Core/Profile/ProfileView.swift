@@ -91,7 +91,7 @@ struct ProfileView: View {
                                 
                                 VStack(spacing: 8) {
                                     ForEach(fitnessLevels, id: \.0) { level, title, description in
-                                        FitnessLevelCard(
+                                        ProfileFitnessLevelCard(
                                             title: title,
                                             description: description,
                                             isSelected: viewModel.level == level,
@@ -480,7 +480,7 @@ struct ProfileView: View {
 
 // MARK: - Supporting Views
 
-struct FitnessLevelCard: View {
+struct ProfileFitnessLevelCard: View {
     let title: String
     let description: String
     let isSelected: Bool
