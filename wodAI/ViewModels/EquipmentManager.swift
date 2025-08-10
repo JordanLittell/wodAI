@@ -9,11 +9,6 @@ import Foundation
 import Apollo
 import WodAiAPI
 
-// Simple model for equipment from GraphQL
-struct Equipment: Identifiable, Codable, Equatable, Hashable {
-    let id: Int
-    let name: String
-}
 
 class EquipmentManager: ObservableObject {
     static let shared = EquipmentManager()
@@ -51,7 +46,7 @@ class EquipmentManager: ObservableObject {
                 case .success(let graphQLResult):
                     if let equipmentData = graphQLResult.data?.equipment {
                         self?.equipment = equipmentData.map { 
-                            Equipment(id: $0.id, name: $0.name) 
+                            Equipment(id: $0.id, name: $0.name, category: "") 
                         }
                         self?.cacheEquipment()
                     }

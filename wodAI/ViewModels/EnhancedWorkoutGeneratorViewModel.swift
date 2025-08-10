@@ -27,8 +27,6 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
     // MARK: - User Preferences (for intelligent defaults)
     @Published var userPreferences: UserWorkoutPreferences = UserWorkoutPreferences()
     
-    // MARK: - Quick Generation Options
-    @Published var quickWorkoutType: QuickWorkoutType?
     @Published var lastGeneratedWorkout: Workout?
     
     // MARK: - Generation Flow State
@@ -66,63 +64,6 @@ class EnhancedWorkoutGeneratorViewModel: ObservableObject {
         loadUserPreferences()
         setupFlowStateDefaults()
         setupGymProfileListener()
-    }
-    
-    // MARK: - Quick Workout Generation
-    func generateQuickWorkout(type: QuickWorkoutType) {
-        quickWorkoutType = type
-        generating = true
-        generationStep = .analyzing
-        
-        let _ = buildQuickWorkoutPreferences(for: type)
-        performGeneration()
-    }
-    
-    private func buildQuickWorkoutPreferences(for type: QuickWorkoutType) -> WorkoutGenerationPreferences {
-        // Use equipment from selected gym profile, fallback to user preferences
-        let availableEquipment = gymProfileManager.selectedEquipment.isEmpty ? 
-            userPreferences.availableEquipment : gymProfileManager.selectedEquipment
-        
-        switch type {
-        case .intelligent:
-            return WorkoutGenerationPreferences(
-                duration: userPreferences.preferredDuration,
-                intensity: userPreferences.preferredIntensity,
-                equipment: availableEquipment,
-                muscleGroups: [],
-                energyLevel: .good,
-                isQuick: true,
-                useAIRecommendations: true
-            )
-            
-        case .quick20:
-            return WorkoutGenerationPreferences(
-                duration: 20,
-                intensity: .intense,
-                equipment: availableEquipment,
-                muscleGroups: [],
-                energyLevel: .good,
-                isQuick: true,
-                useAIRecommendations: true
-            )
-            
-        case .fullSession:
-            return WorkoutGenerationPreferences(
-                duration: 60,
-                intensity: .moderate,
-                equipment: availableEquipment,
-                muscleGroups: [],
-                energyLevel: .good,
-                isQuick: false,
-                useAIRecommendations: true
-            )
-        }
-    }
-    
-    func generateCustomWorkout() {
-        generating = true
-        generationStep = .analyzing
-        performGeneration()
     }
     
     private func performGeneration() {
