@@ -9,9 +9,12 @@ mutation AppleLogin($identityToken: String!, $fullName: String, $email: String, 
     user {
       id
       email
-      firebaseId
-      createdAt
-      updatedAt
+      sub
+      firstName
+      lastName
+      age
+      gender
+      fitnessLevel
     }
   }
 }

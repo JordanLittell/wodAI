@@ -1,0 +1,7 @@
+subscription AgentResponse($wodId: String!) {
+  agentResponse(wodId: $wodId) {
+    text
+    isComplete
+    conversationId
+  }
+}

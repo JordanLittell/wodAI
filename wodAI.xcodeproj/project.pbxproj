@@ -7,33 +7,41 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		C10C1F1C2E01BD6D00457E50 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C10C1F1B2E01BD6D00457E50 /* WodAiAPI */; };
-		C12671F02E03C3A400256993 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C12671EF2E03C3A400256993 /* WodAiAPI */; };
-		C12671F32E03C44B00256993 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C12671F22E03C44B00256993 /* WodAiAPI */; };
-		C12671F62E03C4D700256993 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C12671F52E03C4D700256993 /* WodAiAPI */; };
-		C12671F92E03C55F00256993 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C12671F82E03C55F00256993 /* WodAiAPI */; };
-		C12671FB2E03C5C200256993 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C12671FA2E03C5C200256993 /* WodAiAPI */; };
-		C126721B2E03C73500256993 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C126721A2E03C73500256993 /* WodAiAPI */; };
-		C185A1C72DBD8991000E8F53 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C16299432DB612C7003355D3 /* WodAiAPI */; };
+		C181A9392E37AC770083C8C4 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C181A9382E37AC770083C8C4 /* WodAiAPI */; };
+		C18509B22E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C16299432DB612C7003355D3 /* WodAiAPI */; };
+		C18509B32E40045000DA4B14 /* ApolloAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F7892DB8A517006A7BA4 /* ApolloAPI */; };
+		C18509B42E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F7B42DB8AA95006A7BA4 /* WodAiAPI */; };
+		C18509B52E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1D1B9592DBDBA0300932818 /* WodAiAPI */; };
+		C18509B62E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1D1B95B2DBECF0900932818 /* WodAiAPI */; };
+		C18509B72E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1D1BA432DBEDB6F00932818 /* WodAiAPI */; };
+		C18509B82E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1D1BA4A2DBF96B400932818 /* WodAiAPI */; };
+		C18509B92E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1D1BA512DBFAC0300932818 /* WodAiAPI */; };
+		C18509BA2E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1F44FA42DF5616900546957 /* WodAiAPI */; };
+		C18509BB2E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C10C1F1B2E01BD6D00457E50 /* WodAiAPI */; };
+		C18509BC2E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1FD42D02E03BA8D00B4C824 /* WodAiAPI */; };
+		C18509BD2E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1FD42DB2E03C27200B4C824 /* WodAiAPI */; };
+		C18509BE2E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C12671EF2E03C3A400256993 /* WodAiAPI */; };
+		C18509BF2E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C12671F22E03C44B00256993 /* WodAiAPI */; };
+		C18509C02E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C12671F52E03C4D700256993 /* WodAiAPI */; };
+		C18509C12E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C12671F82E03C55F00256993 /* WodAiAPI */; };
+		C18509C22E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C12671FA2E03C5C200256993 /* WodAiAPI */; };
+		C18509C32E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C126721A2E03C73500256993 /* WodAiAPI */; };
+		C18509C42E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1E71D632E3682E3008E089E /* WodAiAPI */; };
+		C1850AF22E47174100DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1850AF12E47174100DA4B14 /* WodAiAPI */; };
+		C1850AFD2E47871B00DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1850AFC2E47871B00DA4B14 /* WodAiAPI */; };
+		C1850B102E47B92900DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1850B0F2E47B92900DA4B14 /* WodAiAPI */; };
+		C1850B212E49062C00DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1850B202E49062C00DA4B14 /* WodAiAPI */; };
 		C1A12A5A2DBFD2CB00BB4776 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1A12A592DBFD2CB00BB4776 /* WodAiAPI */; };
 		C1A201CA2E16D9200094E759 /* Base.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C1A201C92E16D9200094E759 /* Base.xcconfig */; };
 		C1A201CC2E16D92E0094E759 /* Debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C1A201CB2E16D92E0094E759 /* Debug.xcconfig */; };
 		C1A201CE2E16D9370094E759 /* Release.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C1A201CD2E16D9370094E759 /* Release.xcconfig */; };
 		C1C1F7832DB8A3E6006A7BA4 /* Apollo in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F7822DB8A3E6006A7BA4 /* Apollo */; };
-		C1C1F78A2DB8A517006A7BA4 /* ApolloAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F7892DB8A517006A7BA4 /* ApolloAPI */; };
 		C1C1F78F2DB8A71A006A7BA4 /* ApolloSQLite in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F78E2DB8A71A006A7BA4 /* ApolloSQLite */; };
 		C1C1F7912DB8A71A006A7BA4 /* ApolloTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F7902DB8A71A006A7BA4 /* ApolloTestSupport */; };
-		C1C1F7B52DB8AA95006A7BA4 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F7B42DB8AA95006A7BA4 /* WodAiAPI */; };
-		C1D1B95A2DBDBA0300932818 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1D1B9592DBDBA0300932818 /* WodAiAPI */; };
-		C1D1B95C2DBECF0900932818 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1D1B95B2DBECF0900932818 /* WodAiAPI */; };
 		C1D1BA3A2DBED84200932818 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = C1D1BA392DBED84200932818 /* GoogleSignIn */; };
 		C1D1BA3C2DBED84200932818 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = C1D1BA3B2DBED84200932818 /* GoogleSignInSwift */; };
-		C1D1BA442DBEDB6F00932818 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1D1BA432DBEDB6F00932818 /* WodAiAPI */; };
-		C1D1BA4B2DBF96B400932818 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1D1BA4A2DBF96B400932818 /* WodAiAPI */; };
-		C1D1BA522DBFAC0300932818 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1D1BA512DBFAC0300932818 /* WodAiAPI */; };
-		C1F44FA52DF5616900546957 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1F44FA42DF5616900546957 /* WodAiAPI */; };
-		C1FD42D12E03BA8D00B4C824 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1FD42D02E03BA8D00B4C824 /* WodAiAPI */; };
-		C1FD42DC2E03C27200B4C824 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1FD42DB2E03C27200B4C824 /* WodAiAPI */; };
+		C1FD15712ED7BDDB006D8701 /* ApolloWebSocket in Frameworks */ = {isa = PBXBuildFile; productRef = C1FD15702ED7BDDB006D8701 /* ApolloWebSocket */; };
+		C1FD15762ED7C0B2006D8701 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1FD15752ED7C0B2006D8701 /* WodAiAPI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -73,6 +81,7 @@
 				GraphQL/SetActiveGymProfile.graphql,
 				GraphQL/SignInWithGoogle.graphql,
 				GraphQL/UpdateGymProfile.graphql,
+				Info.plist,
 			);
 			target = C19950502DB0B9F800786544 /* wodAI */;
 		};
@@ -121,30 +130,38 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C1850B102E47B92900DA4B14 /* WodAiAPI in Frameworks */,
+				C18509C42E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C18509C32E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C18509C22E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C18509C12E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C1850AF22E47174100DA4B14 /* WodAiAPI in Frameworks */,
+				C18509C02E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C18509BF2E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C18509BE2E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C18509BD2E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C1850B212E49062C00DA4B14 /* WodAiAPI in Frameworks */,
+				C18509BC2E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C18509BB2E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C18509BA2E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C1FD15712ED7BDDB006D8701 /* ApolloWebSocket in Frameworks */,
+				C18509B92E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C18509B82E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C1850AFD2E47871B00DA4B14 /* WodAiAPI in Frameworks */,
+				C18509B72E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C18509B62E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C18509B52E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C18509B42E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C1FD15762ED7C0B2006D8701 /* WodAiAPI in Frameworks */,
+				C18509B32E40045000DA4B14 /* ApolloAPI in Frameworks */,
+				C18509B22E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C181A9392E37AC770083C8C4 /* WodAiAPI in Frameworks */,
 				C1A12A5A2DBFD2CB00BB4776 /* WodAiAPI in Frameworks */,
-				C1D1B95A2DBDBA0300932818 /* WodAiAPI in Frameworks */,
-				C185A1C72DBD8991000E8F53 /* WodAiAPI in Frameworks */,
 				C1C1F7832DB8A3E6006A7BA4 /* Apollo in Frameworks */,
-				C1FD42DC2E03C27200B4C824 /* WodAiAPI in Frameworks */,
 				C1C1F78F2DB8A71A006A7BA4 /* ApolloSQLite in Frameworks */,
-				C12671F92E03C55F00256993 /* WodAiAPI in Frameworks */,
 				C1C1F7912DB8A71A006A7BA4 /* ApolloTestSupport in Frameworks */,
-				C12671F62E03C4D700256993 /* WodAiAPI in Frameworks */,
-				C10C1F1C2E01BD6D00457E50 /* WodAiAPI in Frameworks */,
 				C1D1BA3C2DBED84200932818 /* GoogleSignInSwift in Frameworks */,
-				C1D1BA522DBFAC0300932818 /* WodAiAPI in Frameworks */,
-				C12671F32E03C44B00256993 /* WodAiAPI in Frameworks */,
-				C12671FB2E03C5C200256993 /* WodAiAPI in Frameworks */,
-				C1D1BA442DBEDB6F00932818 /* WodAiAPI in Frameworks */,
-				C1C1F78A2DB8A517006A7BA4 /* ApolloAPI in Frameworks */,
-				C1F44FA52DF5616900546957 /* WodAiAPI in Frameworks */,
-				C1D1B95C2DBECF0900932818 /* WodAiAPI in Frameworks */,
-				C1C1F7B52DB8AA95006A7BA4 /* WodAiAPI in Frameworks */,
-				C12671F02E03C3A400256993 /* WodAiAPI in Frameworks */,
-				C1D1BA4B2DBF96B400932818 /* WodAiAPI in Frameworks */,
 				C1D1BA3A2DBED84200932818 /* GoogleSignIn in Frameworks */,
-				C126721B2E03C73500256993 /* WodAiAPI in Frameworks */,
-				C1FD42D12E03BA8D00B4C824 /* WodAiAPI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -241,6 +258,14 @@
 				C12671F82E03C55F00256993 /* WodAiAPI */,
 				C12671FA2E03C5C200256993 /* WodAiAPI */,
 				C126721A2E03C73500256993 /* WodAiAPI */,
+				C1E71D632E3682E3008E089E /* WodAiAPI */,
+				C181A9382E37AC770083C8C4 /* WodAiAPI */,
+				C1850AF12E47174100DA4B14 /* WodAiAPI */,
+				C1850AFC2E47871B00DA4B14 /* WodAiAPI */,
+				C1850B0F2E47B92900DA4B14 /* WodAiAPI */,
+				C1850B202E49062C00DA4B14 /* WodAiAPI */,
+				C1FD15702ED7BDDB006D8701 /* ApolloWebSocket */,
+				C1FD15752ED7C0B2006D8701 /* WodAiAPI */,
 			);
 			productName = wodAI;
 			productReference = C19950512DB0B9F800786544 /* wodAI.app */;
@@ -327,7 +352,7 @@
 			packageReferences = (
 				C16298DC2DB5AD4D003355D3 /* XCRemoteSwiftPackageReference "apollo-ios" */,
 				C1D1BA382DBED84200932818 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
-				C12672192E03C73500256993 /* XCLocalSwiftPackageReference "wodAiAPI" */,
+				C1FD15742ED7C0B2006D8701 /* XCLocalSwiftPackageReference "wodAiAPI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C19950522DB0B9F800786544 /* Products */;
@@ -461,6 +486,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 7SH9PCQBLP;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -524,6 +550,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 7SH9PCQBLP;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -550,12 +577,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = wodAI/wodAI.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"wodAI/Preview Content\"";
 				DEVELOPMENT_TEAM = 7SH9PCQBLP;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = wodAI/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -579,12 +608,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = wodAI/wodAI.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"wodAI/Preview Content\"";
 				DEVELOPMENT_TEAM = 7SH9PCQBLP;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = wodAI/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -717,7 +748,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		C12672192E03C73500256993 /* XCLocalSwiftPackageReference "wodAiAPI" */ = {
+		C1FD15742ED7C0B2006D8701 /* XCLocalSwiftPackageReference "wodAiAPI" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = wodAiAPI;
 		};
@@ -772,6 +803,26 @@
 			productName = WodAiAPI;
 		};
 		C16299432DB612C7003355D3 /* WodAiAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = WodAiAPI;
+		};
+		C181A9382E37AC770083C8C4 /* WodAiAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = WodAiAPI;
+		};
+		C1850AF12E47174100DA4B14 /* WodAiAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = WodAiAPI;
+		};
+		C1850AFC2E47871B00DA4B14 /* WodAiAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = WodAiAPI;
+		};
+		C1850B0F2E47B92900DA4B14 /* WodAiAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = WodAiAPI;
+		};
+		C1850B202E49062C00DA4B14 /* WodAiAPI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = WodAiAPI;
 		};
@@ -833,7 +884,20 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = WodAiAPI;
 		};
+		C1E71D632E3682E3008E089E /* WodAiAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = WodAiAPI;
+		};
 		C1F44FA42DF5616900546957 /* WodAiAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = WodAiAPI;
+		};
+		C1FD15702ED7BDDB006D8701 /* ApolloWebSocket */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C16298DC2DB5AD4D003355D3 /* XCRemoteSwiftPackageReference "apollo-ios" */;
+			productName = ApolloWebSocket;
+		};
+		C1FD15752ED7C0B2006D8701 /* WodAiAPI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = WodAiAPI;
 		};

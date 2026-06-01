@@ -13,6 +13,8 @@ struct WeeklyWorkoutView: View {
     
     @State private var displayedWeekDate = Date() // Tracks which week is shown
     @State private var showingWorkout = false
+    @State private var showingChat = false
+    @State private var workoutToEdit: Workout? = nil
     @State private var dragOffset: CGFloat = 0
     @State private var isDragging = false
     
@@ -231,6 +233,10 @@ struct WeeklyWorkoutView: View {
                                     onStartWorkout: {
                                         workoutGenerator.workout = workout
                                         showingWorkout = true
+                                    },
+                                    onEditWorkout: {
+                                        workoutToEdit = workout
+                                        showingChat = true
                                     }
                                 )
                                 .padding(.horizontal)
@@ -279,6 +285,11 @@ struct WeeklyWorkoutView: View {
                     WorkoutView()
                         .environmentObject(workoutGenerator)
                         .navigationBarTitleDisplayMode(.inline)
+                }
+            }
+            .fullScreenCover(isPresented: $showingChat) {
+                NavigationView {
+                    ChatView(workout: workoutToEdit)
                 }
             }
         }

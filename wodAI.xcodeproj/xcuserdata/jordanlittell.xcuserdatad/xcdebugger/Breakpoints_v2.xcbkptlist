@@ -8,15 +8,15 @@
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
             uuid = "67EF68F7-24BE-45FC-B575-672FBBB6353F"
-            shouldBeEnabled = "Yes"
+            shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "wodAI/Core/Workout/WorkoutView.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "206"
-            endingLineNumber = "206"
-            landmarkName = "workoutMetadata(workout:)"
+            startingLineNumber = "195"
+            endingLineNumber = "195"
+            landmarkName = "completeWorkout(_:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

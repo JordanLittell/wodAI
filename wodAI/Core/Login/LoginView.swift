@@ -166,6 +166,28 @@ struct LoginView: View {
                     }
                     .padding(.horizontal, 40)
                     
+                    // Apple Sign In Button - Using Official Apple Button
+                    SignInWithAppleButton(
+                        onRequest: { request in
+                            request.requestedScopes = [.fullName, .email]
+                        },
+                        onCompletion: { result in
+                            switch result {
+                            case .success(let authResults):
+                                if let appleIDCredential = authResults.credential as? ASAuthorizationAppleIDCredential {
+                                    handleAppleSignInSuccess(credential: appleIDCredential)
+                                }
+                            case .failure(let error):
+                                handleAppleSignInError(error: error)
+                            }
+                        }
+                    )
+                    .signInWithAppleButtonStyle(.white)
+                    .frame(height: 54)
+                    .padding(.horizontal)
+                    .disabled(isAppleLoading || isLoading || isGoogleLoading)
+                    .opacity(isAppleLoading || isLoading || isGoogleLoading ? 0.6 : 1.0)
+                    
                     // Google Sign In Button - Modern & Minimal
                     Button(action: noOp) {
                         HStack(spacing: 12) {
@@ -213,38 +235,7 @@ struct LoginView: View {
                     .disabled(isGoogleLoading || isLoading)
                     .opacity(isGoogleLoading || isLoading ? 0.6 : 1.0)
                     
-                    // Apple Sign In Button - Modern & Minimal
-                    Button(action: handleAppleSignIn) {
-                        HStack(spacing: 12) {
-                            if isAppleLoading {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: Color("PrimaryText")))
-                                    .scaleEffect(0.8)
-                            } else {
-                                // Apple Logo
-                                Image(systemName: "apple.logo")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundColor(Color("PrimaryText"))
-                                
-                                Text("Continue with Apple")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(Color("PrimaryText"))
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 54)
-                        .background(Color("Surface"))
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color("Border"), lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .padding(.horizontal)
-                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-                    .disabled(isAppleLoading || isLoading || isGoogleLoading)
-                    .opacity(isAppleLoading || isLoading || isGoogleLoading ? 0.6 : 1.0)
+                    
                     
                     // Sign Up Link
                     VStack(spacing: 4) {
@@ -388,80 +379,104 @@ struct LoginView: View {
         return root
     }
     
-    private func handleAppleSignIn() {
-        #if targetEnvironment(simulator)
-        // Show alert for simulator limitations
-        self.errorMessage = "Sign in with Apple requires configuration in Xcode.\n\nTo test:\n1. Add 'Sign in with Apple' capability in Xcode\n2. Use a real device for full testing\n\nFor now, you can use email/password login."
-        self.showError = true
-        return
-        #else
-        
+    private func handleAppleSignInSuccess(credential: ASAuthorizationAppleIDCredential) {
         isAppleLoading = true
         
-        appleSignInCoordinator.startSignInWithAppleFlow { result in
-            switch result {
-            case .success(let appleSignInResult):
-                // Create account immediately upon successful authentication
-                self.createAppleAccount(with: appleSignInResult)
-                
-            case .failure(let error):
-                self.isAppleLoading = false
-                
-                if case ASAuthorizationError.canceled = error {
-                    // User canceled, don't show error
-                    return
-                }
-                
-                // Check for specific error codes
-                if let authError = error as? ASAuthorizationError {
-                    switch authError.code {
-                    case .unknown:
-                        self.errorMessage = "Sign in with Apple is not configured. Please enable it in Xcode's Signing & Capabilities."
-                    case .invalidResponse:
-                        self.errorMessage = "Invalid response from Apple. Please try again."
-                    case .notHandled:
-                        self.errorMessage = "Sign in with Apple is not available."
-                    case .failed:
-                        self.errorMessage = "Sign in with Apple failed. Please try again."
-                    default:
-                        self.errorMessage = error.localizedDescription
-                    }
-                } else {
-                    self.errorMessage = error.localizedDescription
-                }
-                
-                self.showError = true
+        guard let identityToken = credential.identityToken,
+              let tokenString = String(data: identityToken, encoding: .utf8) else {
+            self.errorMessage = "Failed to get Apple ID token"
+            self.showError = true
+            self.isAppleLoading = false
+            return
+        }
+        
+        // Extract user information (only available on first sign-in)
+        let userId = credential.user
+        let email = credential.email
+        let fullName = credential.fullName
+        var fullNameString: String? = nil
+        
+        if let fullName = fullName {
+            var nameComponents = [String]()
+            if let givenName = fullName.givenName {
+                nameComponents.append(givenName)
+            }
+            if let familyName = fullName.familyName {
+                nameComponents.append(familyName)
+            }
+            if !nameComponents.isEmpty {
+                fullNameString = nameComponents.joined(separator: " ")
             }
         }
-        #endif
+        
+        // Create Apple Sign In result
+        let result = AppleSignInResult(
+            identityToken: tokenString,
+            userId: userId,
+            email: email,
+            fullName: fullNameString,
+            authorizationCode: credential.authorizationCode.flatMap { String(data: $0, encoding: .utf8) }
+        )
+        
+        createAppleAccount(with: result)
+    }
+    
+    private func handleAppleSignInError(error: Error) {
+        isAppleLoading = false
+        
+        if case ASAuthorizationError.canceled = error {
+            // User canceled, don't show error
+            return
+        }
+        
+        // Check for specific error codes
+        if let authError = error as? ASAuthorizationError {
+            switch authError.code {
+            case .unknown:
+                self.errorMessage = "Sign in with Apple is not configured. Please enable it in Xcode's Signing & Capabilities."
+            case .invalidResponse:
+                self.errorMessage = "Invalid response from Apple. Please try again."
+            case .notHandled:
+                self.errorMessage = "Sign in with Apple is not available."
+            case .failed:
+                self.errorMessage = "Sign in with Apple failed. Please try again."
+            default:
+                self.errorMessage = error.localizedDescription
+            }
+        } else {
+            self.errorMessage = error.localizedDescription
+        }
+        
+        self.showError = true
     }
     
     private func createAppleAccount(with result: AppleSignInResult) {
         print("identity token is: \(result.identityToken)")
-        // TODO: Replace with your actual mutation when available
-        /*
+        
         let mutation = AppleLoginMutation(
             identityToken: result.identityToken,
-            fullName: result.fullName,
-            email: result.email,
+            fullName: result.fullName != nil ? .some(result.fullName!) : .none,
+            email: result.email != nil ? .some(result.email!) : .none,
             user: result.userId
         )
         
-        Network.shared.client.perform(mutation: mutation) { [weak self] gqlResult in
+        Network.shared.client.perform(mutation: mutation) { gqlResult in
             DispatchQueue.main.async {
-                guard let self = self else { return }
-                
                 self.isAppleLoading = false
                 
                 switch gqlResult {
                 case .success(let graphqlResult):
-                    if let token = graphqlResult.data?.loginWithApple.token {
+                    if let token = graphqlResult.data?.loginWithApple.token,
+                       let userId = graphqlResult.data?.loginWithApple.user.id {
                         // Store the Apple user ID for future credential checks
                         UserDefaults.standard.set(result.userId, forKey: "currentAppleUserId")
                         
                         // Authenticate the user
-                        self.authManager.authenticate(token: token)
+                        self.authManager.authenticate(token: token, userId: userId)
                         print("✅ Apple account created/logged in successfully")
+                        print("- User ID: \(result.userId)")
+                        print("- Email: \(result.email ?? "Not provided")")
+                        print("- Name: \(result.fullName ?? "Not provided")")
                         
                         // Schedule credential check on app launch
                         self.scheduleCredentialCheck()
@@ -469,30 +484,17 @@ struct LoginView: View {
                     } else if let errors = graphqlResult.errors {
                         self.errorMessage = errors.first?.message ?? "Apple login failed"
                         self.showError = true
+                    } else {
+                        self.errorMessage = "Invalid response from server"
+                        self.showError = true
                     }
                     
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                     self.showError = true
+                    print("❌ Apple login error: \(error.localizedDescription)")
                 }
             }
-        }
-        */
-        
-        // Temporary implementation - simulate account creation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            self.isAppleLoading = false
-            
-            // Store credentials
-            UserDefaults.standard.set(result.userId, forKey: "currentAppleUserId")
-            
-            print("✅ Apple Sign-In successful (simulation)")
-            print("- User ID: \(result.userId)")
-            print("- Email: \(result.email ?? "Not provided")")
-            print("- Name: \(result.fullName ?? "Not provided")")
-            
-            self.errorMessage = "Apple Sign-In ready - Backend integration pending"
-            self.showError = true
         }
     }
     

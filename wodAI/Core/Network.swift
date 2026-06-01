@@ -2,12 +2,13 @@
 //  Network.swift
 //  wodAI
 //
-//  Enhanced Network layer with automatic logout on unauthorized responses
-//  and environment-specific GraphQL endpoints
+//  Enhanced Network layer with WebSocket support for subscriptions,
+//  automatic logout on unauthorized responses, and environment-specific endpoints
 //
 
 import Foundation
 import Apollo
+import ApolloWebSocket
 import WodAiAPI
 import SwiftUI
 import Combine
@@ -15,40 +16,77 @@ import Combine
 class Network {
     static let shared = Network()
     
-    // Use AppConfig for environment-specific endpoint
+    // MARK: - Configuration
     private var graphQLEndpoint: String {
         return AppConfig.graphQLEndpoint
     }
     
-    // Use a custom initializer for Apollo client with authorization header
+    private var webSocketEndpoint: String {
+        return graphQLEndpoint
+            .replacingOccurrences(of: "http://", with: "ws://")
+            .replacingOccurrences(of: "https://", with: "wss://")
+    }
+    
+    // MARK: - Apollo Client with WebSocket Support
     private(set) lazy var client: ApolloClient = {
         let url = URL(string: graphQLEndpoint)!
+        let wsURL = URL(string: webSocketEndpoint)!
         
-        // Print configuration in debug builds
         if AppConfig.enableLogging {
             print("🔧 WodAI GraphQL Endpoint: \(graphQLEndpoint)")
+            print("🔧 WodAI WebSocket Endpoint: \(webSocketEndpoint)")
         }
         
-        // Create a custom transport with authorization header
-        let transport = RequestChainNetworkTransport(
+        // HTTP transport for queries and mutations
+        let httpTransport = RequestChainNetworkTransport(
             interceptorProvider: NetworkInterceptorProvider(),
             endpointURL: url
         )
         
-        return ApolloClient(networkTransport: transport, store: ApolloStore())
+        // WebSocket transport for subscriptions
+        let webSocket = WebSocket(
+            url: wsURL,
+            protocol: .graphql_transport_ws
+        )
+        
+        let webSocketTransport = WebSocketTransport(
+            websocket: webSocket
+        )
+        
+        // Split transport: HTTP for queries/mutations, WebSocket for subscriptions
+        let splitTransport = SplitNetworkTransport(
+            uploadingNetworkTransport: httpTransport,
+            webSocketNetworkTransport: webSocketTransport
+        )
+        
+        return ApolloClient(networkTransport: splitTransport, store: ApolloStore())
     }()
+    
+    // MARK: - Auth Payload for WebSocket
+    private var authPayload: [String: Any]? {
+        guard let token = AuthState.shared.currentToken else { return nil }
+        return ["Authorization": "Bearer \(token)"]
+    }
+    
+    // MARK: - Reconnect WebSocket (e.g., after token refresh)
+    func reconnectWebSocket() {
+        // In Apollo iOS, we'd need to recreate the client to update the auth payload
+        // For now, this is a placeholder - full implementation would require
+        // managing the WebSocketTransport lifecycle
+        if AppConfig.enableLogging {
+            print("🔄 WebSocket reconnection requested")
+        }
+    }
 }
 
-// Updated authorization interceptor using dependency injection
+// MARK: - Authorization Interceptor
 class AuthorizationInterceptor: ApolloInterceptor {
     var id: String = "AuthorizationInterceptor"
     
-    // MARK: - Dependencies
     private let tokenProvider: TokenProvider
     private let authProvider: AuthenticationProvider
     private var cancellables = Set<AnyCancellable>()
     
-    // MARK: - Initialization
     init(tokenProvider: TokenProvider = AuthState.shared, 
          authProvider: AuthenticationProvider = AuthState.shared) {
         self.tokenProvider = tokenProvider
@@ -71,7 +109,7 @@ class AuthorizationInterceptor: ApolloInterceptor {
         chain.proceedAsync(request: request, response: response, interceptor: self, completion: { [weak self] result in
             switch result {
             case .success(let graphqlResult):
-                // ONLY check for GraphQL authentication errors
+                // Check for GraphQL authentication errors
                 if let errors = graphqlResult.errors {
                     for error in errors {
                         if self?.isUnauthorizedGraphQLError(error) == true {
@@ -84,19 +122,16 @@ class AuthorizationInterceptor: ApolloInterceptor {
                 completion(result)
                 
             case .failure(let error):
-                // Log network errors in debug mode
                 if AppConfig.enableLogging {
                     print("🌐 Network Error: \(error.localizedDescription)")
                     print("   Endpoint: \(AppConfig.graphQLEndpoint)")
                 }
-                // Pass through all network errors without auth handling
                 completion(result)
             }
         })
     }
     
     private func isUnauthorizedGraphQLError(_ error: GraphQLError) -> Bool {
-        // Check for various unauthorized patterns
         let message = error.message?.lowercased() ?? ""
         return message.contains("unauthorized") || 
                message.contains("auth") || 
@@ -115,7 +150,7 @@ class AuthorizationInterceptor: ApolloInterceptor {
     }
 }
 
-// Updated interceptor provider using dependency injection
+// MARK: - Interceptor Provider
 class NetworkInterceptorProvider: InterceptorProvider {
     private let authorizationInterceptor: AuthorizationInterceptor
     
@@ -127,7 +162,7 @@ class NetworkInterceptorProvider: InterceptorProvider {
         return [
             authorizationInterceptor,
             NetworkFetchInterceptor(client: URLSessionClient()),
-            ResponseCodeInterceptor(),  // Standard Apollo interceptor
+            ResponseCodeInterceptor(),
             JSONResponseParsingInterceptor(),
             AutomaticPersistedQueryInterceptor()
         ]

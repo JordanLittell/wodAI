@@ -14,6 +14,7 @@ struct WeeklyWorkoutCard: View {
     let workout: Workout
     let date: Date
     let onStartWorkout: () -> Void
+    var onEditWorkout: (() -> Void)? = nil
     
     @State private var isIntentionExpanded = false
     private let calendar = Calendar.current
@@ -52,17 +53,38 @@ struct WeeklyWorkoutCard: View {
                 }
                 
                 Spacer()
-                
+
                 if canStart {
-                    Button(action: onStartWorkout) {
-                        Text("Start")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 8)
-                            .background(Color("BrandPrimary"))
-                            .cornerRadius(20)
+                    HStack(spacing: 8) {
+                        // Edit button
+                        if let onEdit = onEditWorkout {
+                            Button(action: onEdit) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "pencil")
+                                        .font(.subheadline)
+                                    Text("Edit")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                }
+                                .foregroundColor(Color("BrandPrimary"))
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(Color("BrandPrimary").opacity(0.1))
+                                .cornerRadius(20)
+                            }
+                        }
+
+                        // Start button
+                        Button(action: onStartWorkout) {
+                            Text("Start")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 8)
+                                .background(Color("BrandPrimary"))
+                                .cornerRadius(20)
+                        }
                     }
                 }
             }

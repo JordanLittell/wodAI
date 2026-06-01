@@ -1,0 +1,20 @@
+mutation ApproveWorkoutModification($wodId: String!, $conversationId: String!) {
+  approveWorkoutModification(wodId: $wodId, conversationId: $conversationId) {
+    id
+    name
+    description
+    stimulus
+    coaching
+    components {
+      id
+      name
+      order
+      definition
+      description
+      targetFitnessDomains
+      energySystems
+      muscles
+      movements
+    }
+  }
+}
