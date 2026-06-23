@@ -1,6 +1,0 @@
-mutation SendAgentMessage($wodId: String!, $message: String!) {
-  sendAgentMessage(wodId: $wodId, message: $message) {
-    conversationId
-    messageId
-  }
-}

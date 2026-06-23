@@ -332,19 +332,21 @@ struct SignUpView: View {
                         if let errors = graphqlResult.errors, !errors.isEmpty {
                             self.viewModel.errorMessage = errors.first?.message ?? "Google sign-up failed"
                             self.showError = true
+                            TelemetryService.captureMessage("auth.signup_failure", level: .error, tags: ["provider": "google", "error": self.viewModel.errorMessage])
                         } else if let token = graphqlResult.data?.loginWithGoogle.token {
                             // Success - authenticate user which will trigger navigation
                             self.authManager.authenticate(token: token)
-                            print("✅ Google sign-up successful, token set")
+                            TelemetryService.captureMessage("auth.signup_success", tags: ["provider": "google"])
                         } else {
                             self.viewModel.errorMessage = "Invalid response from server"
                             self.showError = true
+                            TelemetryService.captureMessage("auth.signup_failure", level: .error, tags: ["provider": "google", "error": "invalid_response"])
                         }
-                        
+
                     case .failure(let error):
                         self.viewModel.errorMessage = error.localizedDescription
                         self.showError = true
-                        print("❌ Google sign-up error: \(error.localizedDescription)")
+                        TelemetryService.captureError(error, tags: ["provider": "google"])
                     }
                 }
             }
@@ -450,29 +452,28 @@ struct SignUpView: View {
                        let userId = graphqlResult.data?.loginWithApple.user.id {
                         // Store the Apple user ID for future credential checks
                         UserDefaults.standard.set(result.userId, forKey: "currentAppleUserId")
-                        
+
                         // Authenticate the user
                         self.authManager.authenticate(token: token, userId: userId)
-                        print("✅ Apple account created successfully")
-                        print("- User ID: \(result.userId)")
-                        print("- Email: \(result.email ?? "Not provided")")
-                        print("- Name: \(result.fullName ?? "Not provided")")
-                        
+                        TelemetryService.captureMessage("auth.signup_success", tags: ["provider": "apple"])
+
                         // Schedule credential check on app launch
                         self.appleSignInCoordinator.checkExistingAppleSignIn()
-                        
+
                     } else if let errors = graphqlResult.errors {
                         self.viewModel.errorMessage = errors.first?.message ?? "Apple sign-up failed"
                         self.showError = true
+                        TelemetryService.captureMessage("auth.signup_failure", level: .error, tags: ["provider": "apple", "error": self.viewModel.errorMessage])
                     } else {
                         self.viewModel.errorMessage = "Invalid response from server"
                         self.showError = true
+                        TelemetryService.captureMessage("auth.signup_failure", level: .error, tags: ["provider": "apple", "error": "invalid_response"])
                     }
-                    
+
                 case .failure(let error):
                     self.viewModel.errorMessage = error.localizedDescription
                     self.showError = true
-                    print("❌ Apple sign-up error: \(error.localizedDescription)")
+                    TelemetryService.captureError(error, tags: ["provider": "apple"])
                 }
             }
         }

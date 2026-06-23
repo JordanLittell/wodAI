@@ -1,0 +1,13 @@
+query CompletedHiitWorkoutsQuery {
+  completedHiitWorkouts {
+    id
+    completedAt
+    workout {
+      id
+      displayText
+      stimulus
+      constraintType
+      constraintMagnitude
+    }
+  }
+}

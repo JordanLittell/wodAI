@@ -6,7 +6,7 @@
 //
 
 // GraphQL endpoint for production
-GRAPHQL_ENDPOINT = https://move-adapt.com/graphql
+GRAPHQL_ENDPOINT = https://api.wodai.run
 
 // Pass to Info.plist
 INFOPLIST_KEY_GRAPHQL_ENDPOINT = $(GRAPHQL_ENDPOINT)

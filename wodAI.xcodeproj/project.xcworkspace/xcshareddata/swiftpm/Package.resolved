@@ -1,5 +1,5 @@
 {
-  "originHash" : "03faba51791917c57cf40a03d70c3009c140f5800efe7e5a7f561effa670138f",
+  "originHash" : "f86429d4f4007a51c1d0f86271d90494316a933243681b055be90781aa6fc6f8",
   "pins" : [
     {
       "identity" : "apollo-ios",
@@ -71,6 +71,15 @@
       "state" : {
         "revision" : "540318ecedd63d883069ae7f1ed811a2df00b6ac",
         "version" : "2.4.0"
+      }
+    },
+    {
+      "identity" : "sentry-cocoa",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/getsentry/sentry-cocoa",
+      "state" : {
+        "revision" : "43abfbf9a26089ad34604c718ad0935440caf1d4",
+        "version" : "9.18.0"
       }
     },
     {

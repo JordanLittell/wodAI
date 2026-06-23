@@ -2,81 +2,34 @@
 //  Network.swift
 //  wodAI
 //
-//  Enhanced Network layer with WebSocket support for subscriptions,
-//  automatic logout on unauthorized responses, and environment-specific endpoints
-//
 
 import Foundation
 import Apollo
-import ApolloWebSocket
 import WodAiAPI
 import SwiftUI
 import Combine
 
 class Network {
     static let shared = Network()
-    
-    // MARK: - Configuration
+
     private var graphQLEndpoint: String {
         return AppConfig.graphQLEndpoint
     }
-    
-    private var webSocketEndpoint: String {
-        return graphQLEndpoint
-            .replacingOccurrences(of: "http://", with: "ws://")
-            .replacingOccurrences(of: "https://", with: "wss://")
-    }
-    
-    // MARK: - Apollo Client with WebSocket Support
+
     private(set) lazy var client: ApolloClient = {
         let url = URL(string: graphQLEndpoint)!
-        let wsURL = URL(string: webSocketEndpoint)!
-        
+
         if AppConfig.enableLogging {
             print("🔧 WodAI GraphQL Endpoint: \(graphQLEndpoint)")
-            print("🔧 WodAI WebSocket Endpoint: \(webSocketEndpoint)")
         }
-        
-        // HTTP transport for queries and mutations
+
         let httpTransport = RequestChainNetworkTransport(
             interceptorProvider: NetworkInterceptorProvider(),
             endpointURL: url
         )
-        
-        // WebSocket transport for subscriptions
-        let webSocket = WebSocket(
-            url: wsURL,
-            protocol: .graphql_transport_ws
-        )
-        
-        let webSocketTransport = WebSocketTransport(
-            websocket: webSocket
-        )
-        
-        // Split transport: HTTP for queries/mutations, WebSocket for subscriptions
-        let splitTransport = SplitNetworkTransport(
-            uploadingNetworkTransport: httpTransport,
-            webSocketNetworkTransport: webSocketTransport
-        )
-        
-        return ApolloClient(networkTransport: splitTransport, store: ApolloStore())
+
+        return ApolloClient(networkTransport: httpTransport, store: ApolloStore())
     }()
-    
-    // MARK: - Auth Payload for WebSocket
-    private var authPayload: [String: Any]? {
-        guard let token = AuthState.shared.currentToken else { return nil }
-        return ["Authorization": "Bearer \(token)"]
-    }
-    
-    // MARK: - Reconnect WebSocket (e.g., after token refresh)
-    func reconnectWebSocket() {
-        // In Apollo iOS, we'd need to recreate the client to update the auth payload
-        // For now, this is a placeholder - full implementation would require
-        // managing the WebSocketTransport lifecycle
-        if AppConfig.enableLogging {
-            print("🔄 WebSocket reconnection requested")
-        }
-    }
 }
 
 // MARK: - Authorization Interceptor
@@ -99,12 +52,14 @@ class AuthorizationInterceptor: ApolloInterceptor {
         response: HTTPResponse<Operation>?,
         completion: @escaping (Result<GraphQLResult<Operation.Data>, Error>) -> Void
     ) where Operation: GraphQLOperation {
-        
+
         // Add authorization header if token exists
         if let token = tokenProvider.currentToken {
             request.addHeader(name: "Authorization", value: "Bearer \(token)")
         }
-        
+
+        TelemetryService.addBreadcrumb(category: "graphql", message: "operation: \(Operation.operationName)")
+
         // Continue with the request
         chain.proceedAsync(request: request, response: response, interceptor: self, completion: { [weak self] result in
             switch result {
@@ -120,12 +75,13 @@ class AuthorizationInterceptor: ApolloInterceptor {
                     }
                 }
                 completion(result)
-                
+
             case .failure(let error):
                 if AppConfig.enableLogging {
                     print("🌐 Network Error: \(error.localizedDescription)")
                     print("   Endpoint: \(AppConfig.graphQLEndpoint)")
                 }
+                TelemetryService.captureError(error, tags: ["layer": "network", "operation": Operation.operationName])
                 completion(result)
             }
         })
@@ -142,7 +98,8 @@ class AuthorizationInterceptor: ApolloInterceptor {
     
     private func handleUnauthorizedAccess() {
         print("⚠️ Session expired. Redirecting to login...")
-        
+        TelemetryService.captureMessage("session_expired", level: .warning, tags: ["trigger": "graphql_unauthorized"])
+
         DispatchQueue.main.async { [weak self] in
             self?.authProvider.handleSessionExpired()
             NotificationCenter.default.post(name: .userDidLogout, object: nil)

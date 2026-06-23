@@ -95,12 +95,6 @@ class GymProfileManager: ObservableObject {
             profiles[index].isSelected = true
             selectedProfile = profiles[index]
             userDefaults.set(profile.id.uuidString, forKey: selectedProfileKey)
-            
-            // Post notification that gym profile changed for workout generation
-            NotificationCenter.default.post(
-                name: .gymProfileChanged,
-                object: profiles[index]
-            )
         }
         
         saveProfiles()

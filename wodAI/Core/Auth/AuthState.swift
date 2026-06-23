@@ -123,20 +123,24 @@ class AuthState: ObservableObject {
     func authenticate(token: String, userId: Int? = nil) {
         currentToken = token
         currentUserId = userId
-        
+        if let userId {
+            TelemetryService.identify(userId: String(userId))
+        }
+
         // Check provisioning status after authentication
         Task {
             await checkProvisioningStatus()
         }
     }
-    
+
     func signOut() {
         currentToken = nil
         currentUserId = nil
         sessionExpiredMessage = nil
         isProvisioned = false
         needsProvisioning = false
-        
+        TelemetryService.clearIdentity()
+
         // Clear UserDefaults
         UserDefaults.standard.removeObject(forKey: tokenKey)
         UserDefaults.standard.removeObject(forKey: userIdKey)

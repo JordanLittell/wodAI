@@ -20,6 +20,10 @@ SWIFT_VERSION = 5.0
 DEVELOPMENT_TEAM = 7SH9PCQBLP
 CODE_SIGN_STYLE = Automatic
 
+// Sentry error monitoring — get your DSN from sentry.io → Project Settings → Client Keys
+SENTRY_DSN =
+INFOPLIST_KEY_SENTRY_DSN = $(SENTRY_DSN)
+
 // Build Settings
 ENABLE_BITCODE = NO
 SKIP_INSTALL = NO

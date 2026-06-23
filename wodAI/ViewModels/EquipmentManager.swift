@@ -52,16 +52,17 @@ class EquipmentManager: ObservableObject {
                     }
                     
                     if let errors = graphQLResult.errors {
-                        print("GraphQL errors: \(errors)")
+                        let messages = errors.compactMap { $0.message }.joined(separator: "; ")
+                        TelemetryService.captureGraphQLErrors(messages: messages, operation: "EquipmentQuery")
                         self?.error = NSError(
                             domain: "EquipmentManager",
                             code: 0,
                             userInfo: [NSLocalizedDescriptionKey: "Failed to fetch equipment"]
                         )
                     }
-                    
+
                 case .failure(let error):
-                    print("Network error fetching equipment: \(error)")
+                    TelemetryService.captureError(error, tags: ["operation": "EquipmentQuery"])
                     self?.error = error
                 }
             }

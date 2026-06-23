@@ -76,11 +76,6 @@ struct QuickGymProfilePicker: View {
                         // Add New Profile Option
                         Button(action: {
                             dismiss()
-                            // Navigate to setup tab
-                            NotificationCenter.default.post(
-                                name: .navigateToTab,
-                                object: AppTab.setup
-                            )
                         }) {
                             HStack(spacing: 16) {
                                 ZStack {

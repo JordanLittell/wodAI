@@ -1,0 +1,3 @@
+mutation CompleteHiitWorkoutMutation($id: Int!) {
+  completeHiitWorkout(id: $id)
+}

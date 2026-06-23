@@ -19,8 +19,6 @@ struct ContentView: View {
                     ProvisioningView()
                 } else {
                     RootAppView()
-                        .environmentObject(EnhancedWorkoutGeneratorViewModel())
-                        .environmentObject(WODSessionManager.shared)
                 }
             } else {
                 AuthenticationView()
@@ -50,30 +48,17 @@ struct ContentView: View {
                 print("✅ Apple credentials are valid")
                 // You might want to refresh the session here
             } else {
-                print("❌ Apple credentials are invalid or not found")
+                print("Apple credentials are invalid or not found")
                 // Clear any Apple-related session data if needed
             }
         }
     }
 }
 
-// MARK: - Root App View with WOD Session Overlay
+// MARK: - Root App View
 struct RootAppView: View {
-    @ObservedObject private var sessionManager = WODSessionManager.shared
-    
     var body: some View {
-        VStack(spacing: 0) {
-            // Main content
-            MainTabView()
-            
-            // Mini-player above tab bar when active
-            if sessionManager.isActive {
-                WODMiniPlayer()
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .zIndex(1)
-            }
-        }
-        .animation(.easeInOut(duration: 0.3), value: sessionManager.isActive)
+        AppNavigationView()
     }
 }
 

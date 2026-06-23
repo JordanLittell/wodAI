@@ -256,6 +256,10 @@ type Query {
   equipmentById(id: Int!): Equipment
   isUserProvisioned: Boolean!
   getConversation(wodId: String!): Conversation
+  hiitWorkouts(page: Int, limit: Int): HIITPaginatedResponse!
+  hiitWorkout(id: Int!): HIITWorkout
+  similarHiitWorkouts(id: Int!): [HIITSimilarResult!]!
+  completedHiitWorkouts: [CompletedHIITWorkout!]!
 }
 
 type Mutation {
@@ -281,6 +285,10 @@ type Mutation {
   provisionUser(input: ProvisionUserInput!): ProvisionUserResponse!
   sendAgentMessage(wodId: String!, message: String!): SendAgentMessageResponse!
   approveWorkoutModification(wodId: String!, conversationId: String!): Workout!
+  generateHiitWorkout(userId: Int!): HIITWorkout
+  createHiitWorkout(input: CreateHIITWorkoutInput!): HIITWorkout!
+  deleteHiitWorkout(id: Int!): Boolean!
+  completeHiitWorkout(id: Int!): Boolean!
 }
 
 type Subscription {
@@ -418,4 +426,76 @@ type AgentResponse {
 type SendAgentMessageResponse {
   conversationId: String!
   messageId: String!
+}
+
+type HIITExercise {
+  id: Int!
+  name: String!
+  description: String!
+  patterns: String!
+  equipment: String
+  muscleGroups: String!
+}
+
+type HIITComponent {
+  id: Int!
+  order: Int!
+  volumeMagnitude: Int!
+  volumeUnit: String!
+  weight: Float
+  exerciseId: Int!
+  exercise: HIITExercise!
+}
+
+type HIITWorkout {
+  id: Int!
+  constraintType: String!
+  constraintMagnitude: Int!
+  patternVector: String
+  rawText: String!
+  displayText: String!
+  stimulus: String!
+  components: [HIITComponent!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type HIITSimilarResult {
+  workout: HIITWorkout!
+  similarity: Float!
+}
+
+type CompletedHIITWorkout {
+  id: Int!
+  completedAt: DateTime!
+  workout: HIITWorkout!
+}
+
+type HIITPaginatedResponse {
+  data: [HIITWorkout!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+input HIITVolumeInput {
+  magnitude: Int!
+  unit: String!
+}
+
+input CreateHIITComponentInput {
+  order: Int!
+  volume: HIITVolumeInput!
+  weight: Float
+  exerciseId: Int!
+}
+
+input CreateHIITWorkoutInput {
+  constraintType: String!
+  constraintMagnitude: Int!
+  components: [CreateHIITComponentInput!]!
+  rawText: String!
+  displayText: String!
+  stimulus: String!
 }

@@ -4,8 +4,8 @@
 import ApolloAPI
 
 public extension Objects {
-  static let Conversation = ApolloAPI.Object(
-    typename: "Conversation",
+  static let HIITPaginatedResponse = ApolloAPI.Object(
+    typename: "HIITPaginatedResponse",
     implementedInterfaces: [],
     keyFields: nil
   )

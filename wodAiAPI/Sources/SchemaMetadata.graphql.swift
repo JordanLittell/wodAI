@@ -20,22 +20,19 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
 
   public static func objectType(forTypename typename: String) -> ApolloAPI.Object? {
     switch typename {
-    case "AgentMessage": return WodAiAPI.Objects.AgentMessage
-    case "AgentResponse": return WodAiAPI.Objects.AgentResponse
     case "AuthPayload": return WodAiAPI.Objects.AuthPayload
+    case "CompletedHIITWorkout": return WodAiAPI.Objects.CompletedHIITWorkout
     case "CompletedWodsResponse": return WodAiAPI.Objects.CompletedWodsResponse
     case "Component": return WodAiAPI.Objects.Component
-    case "Conversation": return WodAiAPI.Objects.Conversation
     case "Equipment": return WodAiAPI.Objects.Equipment
     case "GymProfile": return WodAiAPI.Objects.GymProfile
+    case "HIITPaginatedResponse": return WodAiAPI.Objects.HIITPaginatedResponse
+    case "HIITWorkout": return WodAiAPI.Objects.HIITWorkout
     case "Mutation": return WodAiAPI.Objects.Mutation
     case "ProvisionUserResponse": return WodAiAPI.Objects.ProvisionUserResponse
     case "Query": return WodAiAPI.Objects.Query
-    case "SendAgentMessageResponse": return WodAiAPI.Objects.SendAgentMessageResponse
-    case "Subscription": return WodAiAPI.Objects.Subscription
     case "User": return WodAiAPI.Objects.User
     case "Workout": return WodAiAPI.Objects.Workout
-    case "WorkoutScheduleResponse": return WodAiAPI.Objects.WorkoutScheduleResponse
     default: return nil
     }
   }

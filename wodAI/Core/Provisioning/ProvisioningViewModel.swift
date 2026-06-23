@@ -7,10 +7,11 @@
 
 import Foundation
 import SwiftUI
+import Combine
 import WodAiAPI
 
 class ProvisioningViewModel: ObservableObject {
-    @Published var currentStep: ProvisioningStep = .age
+    @Published var currentStep: ProvisioningStep = .equipment
     @Published var provisioningData = ConsolidatedProvisioningData()
     @Published var isLoading = false
     @Published var errorMessage = ""
@@ -21,65 +22,49 @@ class ProvisioningViewModel: ObservableObject {
     private let provisioningProvider: ProvisioningProvider
     private let provisioningService: ProvisioningService
     private let equipmentManager: EquipmentManager
-    
+    private var cancellables = Set<AnyCancellable>()
+
     init(provisioningProvider: ProvisioningProvider = AuthState.shared,
          provisioningService: ProvisioningService = ProvisioningService.shared,
          equipmentManager: EquipmentManager = EquipmentManager.shared) {
         self.provisioningProvider = provisioningProvider
         self.provisioningService = provisioningService
         self.equipmentManager = equipmentManager
+
+        equipmentManager.$equipment
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] equipment in
+                self?.availableEquipment = equipment
+            }
+            .store(in: &cancellables)
     }
     
     enum ProvisioningStep: Int, CaseIterable {
-        case age = 0
-        case height = 1
-        case weight = 2
-        case gender = 3
-        case fitnessLevel = 4
-        case restDays = 5
-        case gymFrequency = 6
-        case injuries = 7
-        case equipment = 8
-        
+        case equipment = 0
+        case gender = 1
+        case fitnessLevel = 2
+
         var title: String {
             switch self {
-            case .age: return "What is your age?"
-            case .height: return "What is your height?"
-            case .weight: return "What is your weight?"
+            case .equipment: return "What equipment do you have?"
             case .gender: return "What is your gender?"
             case .fitnessLevel: return "What is your fitness level?"
-            case .restDays: return "How many rest days?"
-            case .gymFrequency: return "How often are you at the gym?"
-            case .injuries: return "Any injuries?"
-            case .equipment: return "Equipment available?"
             }
         }
-        
+
         var subtitle: String {
             switch self {
-            case .age: return "Help us personalize your workouts based on your age"
-            case .height: return "We'll use this to calculate proper scaling"
-            case .weight: return "This helps us determine appropriate loads"
+            case .equipment: return "We'll only show workouts with equipment you have access to"
             case .gender: return "This helps us tailor your workout programming"
             case .fitnessLevel: return "Where are you in your fitness journey?"
-            case .restDays: return "Rest days are crucial for recovery and progress"
-            case .gymFrequency: return "This helps us understand your training schedule"
-            case .injuries: return "We'll modify workouts to work around any limitations"
-            case .equipment: return "We'll only suggest workouts with equipment you have"
             }
         }
-        
+
         var icon: String {
             switch self {
-            case .age: return "calendar"
-            case .height: return "ruler"
-            case .weight: return "scalemass"
+            case .equipment: return "dumbbell"
             case .gender: return "person.2"
             case .fitnessLevel: return "trophy"
-            case .restDays: return "bed.double"
-            case .gymFrequency: return "calendar.badge.clock"
-            case .injuries: return "cross.case"
-            case .equipment: return "dumbbell"
             }
         }
     }
@@ -92,29 +77,17 @@ class ProvisioningViewModel: ObservableObject {
     
     var canProceed: Bool {
         switch currentStep {
-        case .age:
-            return provisioningData.age >= 16 && provisioningData.age <= 100
-        case .height:
-            return provisioningData.heightFeet >= 3 && provisioningData.heightFeet <= 8
-        case .weight:
-            return provisioningData.weight >= 100 && provisioningData.weight <= 400
+        case .equipment:
+            return !provisioningData.availableEquipment.isEmpty
         case .gender:
             return provisioningData.gender != nil
         case .fitnessLevel:
             return provisioningData.fitnessLevel != nil
-        case .restDays:
-            return provisioningData.restDays.count <= 3
-        case .gymFrequency:
-            return provisioningData.gymFrequency != nil
-        case .injuries:
-            return true // Injuries are optional
-        case .equipment:
-            return !provisioningData.availableEquipment.isEmpty
         }
     }
-    
+
     var isLastStep: Bool {
-        return currentStep == .equipment
+        return currentStep == .fitnessLevel
     }
     
     func nextStep() {
@@ -175,7 +148,6 @@ class ProvisioningViewModel: ObservableObject {
     
     func loadEquipment() {
         equipmentManager.fetchEquipment()
-        availableEquipment = equipmentManager.equipment
     }
     
     func addInjury(_ injury: Injury) {
@@ -201,17 +173,17 @@ class ProvisioningViewModel: ObservableObject {
         isLoading = true
         
         let request = ProvisionUserInput(
-            age: provisioningData.age,
-            heightInches: provisioningData.totalHeightInches,
-            weight: provisioningData.weight,
+            age: 25,
+            heightInches: 67,
+            weight: 150,
             gender: GraphQLEnum(provisioningData.gender!.toGraphQL),
             fitnessLevel: GraphQLEnum(provisioningData.fitnessLevel!.toGraphQL),
-            workoutDuration: provisioningData.gymFrequency?.sessionDurationMinutes ?? 60,
-            benchmarks: [], // Can be added later if needed
-            injuries: GraphQLNullable.some(provisioningData.getInjuries()),
+            workoutDuration: 60,
+            benchmarks: [],
+            injuries: GraphQLNullable.none,
             availableEquipment: provisioningData.graphQLEquipment(),
-            sessionDurationMinutes: provisioningData.gymFrequency?.sessionDurationMinutes ?? 60,
-            restDays: provisioningData.graphQLRestDays()
+            sessionDurationMinutes: 60,
+            restDays: []
         )
         
         Task {
@@ -220,14 +192,15 @@ class ProvisioningViewModel: ObservableObject {
                 
                 await MainActor.run {
                     self.isLoading = false
-                    
+
                     if response.success {
-                        print("✅ User provisioned successfully")
                         self.provisioningProvider.completeProvisioning()
+                        TelemetryService.captureMessage("provisioning.completed")
                         NotificationCenter.default.post(name: .userDidCompleteProvisioning, object: nil)
                     } else {
                         self.errorMessage = response.message ?? "Provisioning failed"
                         self.showError = true
+                        TelemetryService.captureMessage("provisioning.failed", level: .error, tags: ["error": self.errorMessage])
                     }
                 }
             } catch {
@@ -235,6 +208,7 @@ class ProvisioningViewModel: ObservableObject {
                     self.isLoading = false
                     self.errorMessage = error.localizedDescription
                     self.showError = true
+                    TelemetryService.captureError(error)
                 }
             }
         }
@@ -283,8 +257,6 @@ struct ConsolidatedProvisioningData: Codable {
     var isComplete: Bool {
         return gender != nil &&
                fitnessLevel != nil &&
-               gymFrequency != nil &&
-               restDays.count <= 3 &&
                !availableEquipment.isEmpty
     }
     

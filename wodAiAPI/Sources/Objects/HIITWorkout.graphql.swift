@@ -4,8 +4,8 @@
 import ApolloAPI
 
 public extension Objects {
-  static let AgentMessage = ApolloAPI.Object(
-    typename: "AgentMessage",
+  static let HIITWorkout = ApolloAPI.Object(
+    typename: "HIITWorkout",
     implementedInterfaces: [],
     keyFields: nil
   )

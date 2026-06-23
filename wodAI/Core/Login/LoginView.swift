@@ -288,20 +288,22 @@ struct LoginView: View {
                     if let errors = graphqlResult.errors, !errors.isEmpty {
                         self.errorMessage = errors.first?.message ?? "Login failed"
                         self.showError = true
+                        TelemetryService.captureMessage("auth.login_failure", level: .error, tags: ["provider": "email", "error": self.errorMessage])
                     } else if let token = graphqlResult.data?.loginWithCredentials.token,
                               let userId = graphqlResult.data?.loginWithCredentials.user.id {
                         // Success - authenticate user which will trigger navigation
                         self.authManager.authenticate(token: token, userId: userId)
-                        print("✅ Login successful, token set, user ID: \(userId)")
+                        TelemetryService.captureMessage("auth.login_success", tags: ["provider": "email"])
                     } else {
                         self.errorMessage = "Invalid response from server"
                         self.showError = true
+                        TelemetryService.captureMessage("auth.login_failure", level: .error, tags: ["provider": "email", "error": "invalid_response"])
                     }
-                    
+
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                     self.showError = true
-                    print("❌ Login error: \(error.localizedDescription)")
+                    TelemetryService.captureError(error, tags: ["provider": "email"])
                 }
             }
         }
@@ -341,26 +343,28 @@ struct LoginView: View {
                         if let errors = graphqlResult.errors, !errors.isEmpty {
                             self.errorMessage = errors.first?.message ?? "Google login failed"
                             self.showError = true
+                            TelemetryService.captureMessage("auth.login_failure", level: .error, tags: ["provider": "google", "error": self.errorMessage])
                         } else if let token = graphqlResult.data?.loginWithGoogle.token {
                             // Success - authenticate user which will trigger navigation
                             let userId = graphqlResult.data?.loginWithGoogle.user.id
                             self.authManager.authenticate(token: token, userId: userId)
-                            print("✅ Google login successful, token set" + (userId != nil ? ", user ID: \(userId!)" : ""))
+                            TelemetryService.captureMessage("auth.login_success", tags: ["provider": "google"])
                         } else {
                             self.errorMessage = "Invalid response from server"
                             self.showError = true
+                            TelemetryService.captureMessage("auth.login_failure", level: .error, tags: ["provider": "google", "error": "invalid_response"])
                         }
-                        
+
                     case .failure(let error):
                         self.errorMessage = error.localizedDescription
                         self.showError = true
-                        print("❌ Google login error: \(error.localizedDescription)")
+                        TelemetryService.captureError(error, tags: ["provider": "google"])
                     }
                 }
             }
-            
+
             return false
-            
+
         } catch {
             await MainActor.run {
                 self.errorMessage = error.localizedDescription
@@ -370,7 +374,7 @@ struct LoginView: View {
             throw error
         }
     }
-    
+
     private func getRootViewController() -> UIViewController {
         guard let screen = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let root = screen.windows.first?.rootViewController else {
@@ -470,29 +474,28 @@ struct LoginView: View {
                        let userId = graphqlResult.data?.loginWithApple.user.id {
                         // Store the Apple user ID for future credential checks
                         UserDefaults.standard.set(result.userId, forKey: "currentAppleUserId")
-                        
+
                         // Authenticate the user
                         self.authManager.authenticate(token: token, userId: userId)
-                        print("✅ Apple account created/logged in successfully")
-                        print("- User ID: \(result.userId)")
-                        print("- Email: \(result.email ?? "Not provided")")
-                        print("- Name: \(result.fullName ?? "Not provided")")
-                        
+                        TelemetryService.captureMessage("auth.login_success", tags: ["provider": "apple"])
+
                         // Schedule credential check on app launch
                         self.scheduleCredentialCheck()
-                        
+
                     } else if let errors = graphqlResult.errors {
                         self.errorMessage = errors.first?.message ?? "Apple login failed"
                         self.showError = true
+                        TelemetryService.captureMessage("auth.login_failure", level: .error, tags: ["provider": "apple", "error": self.errorMessage])
                     } else {
                         self.errorMessage = "Invalid response from server"
                         self.showError = true
+                        TelemetryService.captureMessage("auth.login_failure", level: .error, tags: ["provider": "apple", "error": "invalid_response"])
                     }
-                    
+
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                     self.showError = true
-                    print("❌ Apple login error: \(error.localizedDescription)")
+                    TelemetryService.captureError(error, tags: ["provider": "apple"])
                 }
             }
         }

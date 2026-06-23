@@ -18,12 +18,17 @@ struct AppConfig {
         
         // Fallback based on build configuration
         #if DEBUG
-        return "http://localhost:3000/graphql"
+        return "http://localhost:3000"
         #else
-        return "https://move-adapt.com/graphql"
+        return "https://api.wodai.run"
         #endif
     }
     
+    // MARK: - Sentry DSN
+    static var sentryDSN: String {
+        Bundle.main.object(forInfoDictionaryKey: "SENTRY_DSN") as? String ?? "https://5741d0c7fcb30adbe2e019fb37a1f972@o4511588501749760.ingest.us.sentry.io/4511588506468352"
+    }
+
     // MARK: - Environment Detection
     static var isProduction: Bool {
         #if DEBUG
