@@ -2,10 +2,15 @@ query HIITWorkoutsQuery($page: Int, $limit: Int) {
   hiitWorkouts(page: $page, limit: $limit) {
     data {
       id
+      format
       displayText
       stimulus
       constraintType
       constraintMagnitude
+      tags {
+        id
+        name
+      }
     }
     total
     page

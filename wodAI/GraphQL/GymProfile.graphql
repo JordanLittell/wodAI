@@ -2,7 +2,7 @@ query GymProfiles {
   gymProfiles {
     id
     name
-    isDefault
+    isActive
     equipment {
       id
       name

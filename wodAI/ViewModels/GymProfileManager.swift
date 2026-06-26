@@ -1,120 +1,213 @@
 //
 //  GymProfileManager.swift
 //  wodAI
-//
-//  Created by Jordan Littell on 6/9/25.
-//
 
 import Foundation
 import SwiftUI
+import WodAiAPI
 
 class GymProfileManager: ObservableObject {
     static let shared = GymProfileManager()
-    
+    static let isLoaded: Bool = false
+
     @Published private(set) var profiles: [GymProfile] = []
-    @Published private(set) var selectedProfile: GymProfile?
-    
-    private let userDefaults = UserDefaults.standard
-    private let profilesKey = "gymProfiles"
-    private let selectedProfileKey = "selectedGymProfile"
-    
+    @Published var isLoading = false
+    @Published var isSaving = false
+    @Published private(set) var togglingId: Int?
+    @Published var error: Error?
+
+    var activeProfile: GymProfile? { profiles.first { $0.isActive } }
+    var isLoaded: Bool = false
+
+    private let network = Network.shared
+
     private init() {
-        loadProfiles()
+        if (!isLoaded) {
+            loadProfiles()
+        }
     }
-    
-    // MARK: - Public Methods
-    
-    var selectedEquipment: Set<Equipment> {
-        selectedProfile?.equipment ?? []
-    }
-    
+
+    // MARK: - Load
+
     func loadProfiles() {
-        // Try to load saved profiles
-        if let data = userDefaults.data(forKey: profilesKey),
-           let savedProfiles = try? JSONDecoder().decode([GymProfile].self, from: data) {
-            profiles = savedProfiles
-        } else {
-            // Load default profiles on first launch
-            saveProfiles()
-        }
-        
-        // Load selected profile
-        if let selectedId = userDefaults.string(forKey: selectedProfileKey),
-           let uuid = UUID(uuidString: selectedId),
-           let profile = profiles.first(where: { $0.id == uuid }) {
-            selectedProfile = profile
-        } else if let firstProfile = profiles.first {
-            // Select the first profile by default
-            selectProfile(firstProfile)
-        }
-    }
-    
-    func addProfile(_ profile: GymProfile) {
-        profiles.append(profile)
-        saveProfiles()
-    }
-    
-    func updateProfile(_ profile: GymProfile) {
-        if let index = profiles.firstIndex(where: { $0.id == profile.id }) {
-            var updatedProfile = profile
-            updatedProfile.updatedAt = Date()
-            profiles[index] = updatedProfile
-            
-            // Update selected profile if it's the one being updated
-            if selectedProfile?.id == profile.id {
-                selectedProfile = updatedProfile
-            }
-            
-            saveProfiles()
-        }
-    }
-    
-    func deleteProfile(_ profile: GymProfile) {
-        profiles.removeAll { $0.id == profile.id }
-        
-        // If we deleted the selected profile, select another one
-        if selectedProfile?.id == profile.id {
-            if let firstProfile = profiles.first {
-                selectProfile(firstProfile)
-            } else {
-                selectedProfile = nil
+        guard !isLoading else { return }
+        isLoading = true
+        error = nil
+
+        network.client.fetch(
+            query: GymProfilesQuery(),
+            cachePolicy: .fetchIgnoringCacheCompletely
+        ) { [weak self] result in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.isLoading = false
+                switch result {
+                case .success(let graphQLResult):
+                    if let data = graphQLResult.data?.gymProfiles {
+                        self.profiles = data.map { Self.mapProfile($0) }
+                    }
+                    if let errors = graphQLResult.errors {
+                        let messages = errors.compactMap { $0.message }.joined(separator: "; ")
+                        TelemetryService.captureGraphQLErrors(messages: messages, operation: "GymProfiles")
+                        self.error = NSError(domain: "GymProfileManager", code: 0,
+                            userInfo: [NSLocalizedDescriptionKey: errors.first?.message ?? "Failed to load profiles"])
+                    }
+                case .failure(let networkError):
+                    TelemetryService.captureError(networkError, tags: ["operation": "GymProfiles"])
+                    self.error = networkError
+                }
             }
         }
-        
-        saveProfiles()
     }
-    
-    func selectProfile(_ profile: GymProfile) {
-        // Deselect all profiles
-        for i in profiles.indices {
-            profiles[i].isSelected = false
+
+    // MARK: - Create
+
+    func createProfile(name: String, equipmentIds: [Int], completion: @escaping (Error?) -> Void) {
+        isSaving = true
+        let input = WodAiAPI.CreateGymProfileInput(name: name, equipmentIds: equipmentIds)
+        network.client.perform(mutation: CreateGymProfileMutation(input: input)) { [weak self] result in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.isSaving = false
+                switch result {
+                case .success(let graphQLResult):
+                    if let p = graphQLResult.data?.createGymProfile {
+                        self.profiles.append(GymProfile(
+                            id: p.id, name: p.name,
+                            equipment: p.equipment.map { Equipment(id: $0.id, name: $0.name, category: nil) },
+                            isActive: p.isActive
+                        ))
+                        completion(nil)
+                    } else if let errors = graphQLResult.errors {
+                        let messages = errors.compactMap { $0.message }.joined(separator: "; ")
+                        TelemetryService.captureGraphQLErrors(messages: messages, operation: "CreateGymProfile")
+                        completion(NSError(domain: "GymProfileManager", code: 0,
+                            userInfo: [NSLocalizedDescriptionKey: errors.first?.message ?? "Failed to create profile"]))
+                    }
+                case .failure(let networkError):
+                    TelemetryService.captureError(networkError, tags: ["operation": "CreateGymProfile"])
+                    completion(networkError)
+                }
+            }
         }
-        
-        // Select the new profile
-        if let index = profiles.firstIndex(where: { $0.id == profile.id }) {
-            profiles[index].isSelected = true
-            selectedProfile = profiles[index]
-            userDefaults.set(profile.id.uuidString, forKey: selectedProfileKey)
-        }
-        
-        saveProfiles()
     }
-    
-    func duplicateProfile(_ profile: GymProfile) {
-        let newProfile = GymProfile(
-            name: "\(profile.name) Copy",
-            icon: profile.icon,
-            equipment: profile.equipment,
-            isSelected: false
+
+    // MARK: - Update
+
+    func updateProfile(id: Int, name: String?, equipmentIds: [Int]?, completion: @escaping (Error?) -> Void) {
+        isSaving = true
+        let input = WodAiAPI.UpdateGymProfileInput(
+            name: name.map { .some($0) } ?? .none,
+            equipmentIds: equipmentIds.map { .some($0) } ?? .none
         )
-        addProfile(newProfile)
-    }
-    
-    // MARK: - Private Methods
-    
-    private func saveProfiles() {
-        if let data = try? JSONEncoder().encode(profiles) {
-            userDefaults.set(data, forKey: profilesKey)
+        network.client.perform(mutation: UpdateGymProfileMutation(updateGymProfileId: id, input: input)) { [weak self] result in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.isSaving = false
+                switch result {
+                case .success(let graphQLResult):
+                    if let p = graphQLResult.data?.updateGymProfile,
+                       let idx = self.profiles.firstIndex(where: { $0.id == id }) {
+                        self.profiles[idx] = GymProfile(
+                            id: p.id, name: p.name,
+                            equipment: p.equipment.map { Equipment(id: $0.id, name: $0.name, category: nil) },
+                            isActive: p.isActive
+                        )
+                        completion(nil)
+                    } else if let errors = graphQLResult.errors {
+                        let messages = errors.compactMap { $0.message }.joined(separator: "; ")
+                        TelemetryService.captureGraphQLErrors(messages: messages, operation: "UpdateGymProfile")
+                        completion(NSError(domain: "GymProfileManager", code: 0,
+                            userInfo: [NSLocalizedDescriptionKey: errors.first?.message ?? "Failed to update profile"]))
+                    }
+                case .failure(let networkError):
+                    TelemetryService.captureError(networkError, tags: ["operation": "UpdateGymProfile"])
+                    completion(networkError)
+                }
+            }
         }
+    }
+
+    // MARK: - Delete
+
+    func deleteProfile(id: Int, completion: @escaping (Error?) -> Void) {
+        isSaving = true
+        network.client.perform(mutation: DeleteGymProfileMutation(deleteGymProfileId: id)) { [weak self] result in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.isSaving = false
+                switch result {
+                case .success(let graphQLResult):
+                    if graphQLResult.data?.deleteGymProfile == true {
+                        self.profiles.removeAll { $0.id == id }
+                        completion(nil)
+                    } else if let errors = graphQLResult.errors {
+                        let messages = errors.compactMap { $0.message }.joined(separator: "; ")
+                        TelemetryService.captureGraphQLErrors(messages: messages, operation: "DeleteGymProfile")
+                        completion(NSError(domain: "GymProfileManager", code: 0,
+                            userInfo: [NSLocalizedDescriptionKey: errors.first?.message ?? "Failed to delete profile"]))
+                    }
+                case .failure(let networkError):
+                    TelemetryService.captureError(networkError, tags: ["operation": "DeleteGymProfile"])
+                    completion(networkError)
+                }
+            }
+        }
+    }
+
+    // MARK: - Toggle Active
+
+    func toggleActive(id: Int, completion: @escaping (Error?) -> Void) {
+        print("toggling as active")
+        guard togglingId == nil else { return }
+        togglingId = id
+        
+        print("toggling as active now running")
+
+
+        network.client.perform(mutation: ToggleGymProfileMutation(id: id)) { [weak self] result in
+            print("finished mutation")
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                switch result {
+                case .success(let graphQLResult):
+                    if graphQLResult.data?.toggleGymProfile != nil {
+                        print("old profiles: \(self.profiles)")
+                        self.profiles = self.profiles.map { profile in
+                            var p = profile
+                            if p.id == self.togglingId {
+                                p.isActive = !p.isActive
+                            } else {
+                                p.isActive = false
+                            }
+                            return p
+                        }
+                        print("new profiles: \(self.profiles)")
+                        self.togglingId = nil
+                        completion(nil)
+                    } else if let errors = graphQLResult.errors {
+                        self.togglingId = nil
+                        let messages = errors.compactMap { $0.message }.joined(separator: "; ")
+                        TelemetryService.captureGraphQLErrors(messages: messages, operation: "ToggleGymProfile")
+                        completion(NSError(domain: "GymProfileManager", code: 0,
+                            userInfo: [NSLocalizedDescriptionKey: errors.first?.message ?? "Failed to toggle profile"]))
+                    }
+                case .failure(let networkError):
+                    self.togglingId = nil
+                    TelemetryService.captureError(networkError, tags: ["operation": "ToggleGymProfile"])
+                    completion(networkError)
+                }
+            }
+        }
+    }
+
+    // MARK: - Private
+
+    private static func mapProfile(_ p: GymProfilesQuery.Data.GymProfile) -> GymProfile {
+        GymProfile(
+            id: p.id, name: p.name,
+            equipment: p.equipment.map { Equipment(id: $0.id, name: $0.name, category: nil) },
+            isActive: p.isActive
+        )
     }
 }

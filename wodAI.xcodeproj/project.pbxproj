@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		C120B49D2FE4983600325F4B /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = C120B49C2FE4983600325F4B /* Sentry */; };
 		C120B4A12FE4983600325F4B /* SentrySwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = C120B4A02FE4983600325F4B /* SentrySwiftUI */; };
+		C120B8EA2FEB4B8E00325F4B /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C120B8E92FEB4B8E00325F4B /* WodAiAPI */; };
 		C1446B4F2FE457BD00D7C814 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C1446B4E2FE457BD00D7C814 /* WodAiAPI */; };
 		C181A9392E37AC770083C8C4 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C181A9382E37AC770083C8C4 /* WodAiAPI */; };
 		C18509B22E40045000DA4B14 /* WodAiAPI in Frameworks */ = {isa = PBXBuildFile; productRef = C16299432DB612C7003355D3 /* WodAiAPI */; };
@@ -155,6 +156,7 @@
 				C18509B72E40045000DA4B14 /* WodAiAPI in Frameworks */,
 				C18509B62E40045000DA4B14 /* WodAiAPI in Frameworks */,
 				C18509B52E40045000DA4B14 /* WodAiAPI in Frameworks */,
+				C120B8EA2FEB4B8E00325F4B /* WodAiAPI in Frameworks */,
 				C18509B42E40045000DA4B14 /* WodAiAPI in Frameworks */,
 				C1FD15762ED7C0B2006D8701 /* WodAiAPI in Frameworks */,
 				C18509B32E40045000DA4B14 /* ApolloAPI in Frameworks */,
@@ -275,6 +277,7 @@
 				C1446B4E2FE457BD00D7C814 /* WodAiAPI */,
 				C120B49C2FE4983600325F4B /* Sentry */,
 				C120B4A02FE4983600325F4B /* SentrySwiftUI */,
+				C120B8E92FEB4B8E00325F4B /* WodAiAPI */,
 			);
 			productName = wodAI;
 			productReference = C19950512DB0B9F800786544 /* wodAI.app */;
@@ -361,8 +364,8 @@
 			packageReferences = (
 				C16298DC2DB5AD4D003355D3 /* XCRemoteSwiftPackageReference "apollo-ios" */,
 				C1D1BA382DBED84200932818 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
-				C1446B4D2FE457BD00D7C814 /* XCLocalSwiftPackageReference "wodAiAPI" */,
 				C120B49B2FE4983600325F4B /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+				C120B8E82FEB4B8E00325F4B /* XCLocalSwiftPackageReference "wodAiAPI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C19950522DB0B9F800786544 /* Products */;
@@ -758,7 +761,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		C1446B4D2FE457BD00D7C814 /* XCLocalSwiftPackageReference "wodAiAPI" */ = {
+		C120B8E82FEB4B8E00325F4B /* XCLocalSwiftPackageReference "wodAiAPI" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = wodAiAPI;
 		};
@@ -805,6 +808,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C120B49B2FE4983600325F4B /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = SentrySwiftUI;
+		};
+		C120B8E92FEB4B8E00325F4B /* WodAiAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = WodAiAPI;
 		};
 		C12671EF2E03C3A400256993 /* WodAiAPI */ = {
 			isa = XCSwiftPackageProductDependency;

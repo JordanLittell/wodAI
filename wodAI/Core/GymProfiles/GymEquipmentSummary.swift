@@ -1,38 +1,34 @@
 //
 //  GymEquipmentSummary.swift
 //  wodAI
-//
-//  Created by Claude on 6/9/25.
-//
 
 import SwiftUI
 
 struct GymEquipmentSummary: View {
     @StateObject private var profileManager = GymProfileManager.shared
-    
+
     var body: some View {
-        if let selectedProfile = profileManager.selectedProfile {
+        if let activeProfile = profileManager.activeProfile {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Image(systemName: selectedProfile.icon)
+                    Image(systemName: "building.2.fill")
                         .foregroundColor(Color("BrandPrimary"))
-                    
-                    Text("Equipment at \(selectedProfile.name)")
+
+                    Text("Equipment at \(activeProfile.name)")
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(Color("PrimaryText"))
-                    
+
                     Spacer()
-                    
-                    Text("\(selectedProfile.equipment.count) types")
+
+                    Text("\(activeProfile.equipment.count) types")
                         .font(.caption)
                         .foregroundColor(Color("SecondaryText"))
                 }
-                
-                // Equipment names preview
+
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(Array(selectedProfile.equipment).sorted(by: { $0.name < $1.name })) { equipment in
+                        ForEach(activeProfile.equipment.sorted(by: { $0.name < $1.name })) { equipment in
                             Text(equipment.name)
                                 .font(.caption)
                                 .foregroundColor(Color("SecondaryText"))
@@ -56,27 +52,26 @@ struct GymEquipmentSummary: View {
     }
 }
 
-// Compact version for small spaces
 struct CompactGymEquipmentSummary: View {
     @StateObject private var profileManager = GymProfileManager.shared
-    
+
     var body: some View {
-        if let selectedProfile = profileManager.selectedProfile {
+        if let activeProfile = profileManager.activeProfile {
             HStack(spacing: 8) {
-                Image(systemName: selectedProfile.icon)
+                Image(systemName: "building.2.fill")
                     .font(.caption)
                     .foregroundColor(Color("BrandPrimary"))
-                
-                Text(selectedProfile.name)
+
+                Text(activeProfile.name)
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundColor(Color("PrimaryText"))
-                
+
                 Text("•")
                     .font(.caption)
                     .foregroundColor(Color("TertiaryText"))
-                
-                Text("\(selectedProfile.equipment.count) equipment")
+
+                Text("\(activeProfile.equipment.count) equipment")
                     .font(.caption)
                     .foregroundColor(Color("SecondaryText"))
             }
@@ -88,7 +83,6 @@ struct CompactGymEquipmentSummary: View {
     }
 }
 
-// Preview
 struct GymEquipmentSummary_Previews: PreviewProvider {
     static var previews: some View {
         VStack(spacing: 20) {

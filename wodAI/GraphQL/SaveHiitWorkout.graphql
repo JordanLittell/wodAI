@@ -1,0 +1,3 @@
+mutation SaveHiitWorkoutMutation($id: Int!) {
+  saveHiitWorkout(id: $id)
+}

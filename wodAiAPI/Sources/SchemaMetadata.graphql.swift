@@ -31,6 +31,9 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "Mutation": return WodAiAPI.Objects.Mutation
     case "ProvisionUserResponse": return WodAiAPI.Objects.ProvisionUserResponse
     case "Query": return WodAiAPI.Objects.Query
+    case "SavedHIITWorkout": return WodAiAPI.Objects.SavedHIITWorkout
+    case "Tag": return WodAiAPI.Objects.Tag
+    case "TagFacet": return WodAiAPI.Objects.TagFacet
     case "User": return WodAiAPI.Objects.User
     case "Workout": return WodAiAPI.Objects.Workout
     default: return nil

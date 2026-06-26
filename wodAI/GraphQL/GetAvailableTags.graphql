@@ -1,0 +1,9 @@
+query GetAvailableTagsQuery($selectedTagIds: [Int!]) {
+  availableTags(selectedTagIds: $selectedTagIds) {
+    id
+    name
+    description
+    category
+    count
+  }
+}

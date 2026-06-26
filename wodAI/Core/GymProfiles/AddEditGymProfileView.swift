@@ -1,9 +1,6 @@
 //
 //  AddEditGymProfileView.swift
 //  wodAI
-//
-//  Created by Jordan Littell on 6/9/25.
-//
 
 import SwiftUI
 
@@ -11,31 +8,30 @@ struct AddEditGymProfileView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var profileManager = GymProfileManager.shared
     @StateObject private var equipmentManager = EquipmentManager.shared
-    
+
     @State private var name: String = ""
-    @State private var selectedIcon: String = "building.2.fill"
     @State private var selectedEquipment: Set<Equipment> = []
     @State private var showingDeleteAlert = false
-    
+    @State private var profileEquipmentApplied = false
+
     let profile: GymProfile?
-    
+
     init(profile: GymProfile? = nil) {
         self.profile = profile
     }
-    
+
     var body: some View {
         NavigationView {
             ZStack {
                 Color("Background")
                     .ignoresSafeArea()
-                
+
                 if equipmentManager.isLoading && equipmentManager.equipment.isEmpty {
-                    // Loading state
                     VStack(spacing: 20) {
                         ProgressView()
                             .scaleEffect(1.5)
                             .tint(Color("BrandPrimary"))
-                        
+
                         Text("Loading equipment...")
                             .font(.headline)
                             .foregroundColor(Color("SecondaryText"))
@@ -43,14 +39,12 @@ struct AddEditGymProfileView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 24) {
-                            // Profile Info Section
                             VStack(spacing: 20) {
-                                // Name Input
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("Profile Name")
                                         .font(.headline)
                                         .foregroundColor(Color("PrimaryText"))
-                                    
+
                                     TextField("e.g., Home Gym", text: $name)
                                         .textFieldStyle(CustomTextFieldStyle())
                                 }
@@ -58,22 +52,20 @@ struct AddEditGymProfileView: View {
                             .padding()
                             .background(Color("Surface"))
                             .cornerRadius(16)
-                            
-                            // Equipment Selection
+
                             VStack(alignment: .leading, spacing: 16) {
                                 HStack {
                                     Text("Available Equipment")
                                         .font(.headline)
                                         .foregroundColor(Color("PrimaryText"))
-                                    
+
                                     Spacer()
-                                    
+
                                     Text("\(selectedEquipment.count) selected")
                                         .font(.subheadline)
                                         .foregroundColor(Color("SecondaryText"))
                                 }
-                                
-                                // Quick Actions
+
                                 HStack(spacing: 12) {
                                     Button(action: selectAll) {
                                         Text("Select All")
@@ -81,20 +73,19 @@ struct AddEditGymProfileView: View {
                                             .fontWeight(.medium)
                                             .foregroundColor(Color("BrandPrimary"))
                                     }
-                                    
+
                                     Text("•")
                                         .foregroundColor(Color("TertiaryText"))
-                                    
+
                                     Button(action: deselectAll) {
                                         Text("Clear All")
                                             .font(.subheadline)
                                             .fontWeight(.medium)
                                             .foregroundColor(Color("BrandPrimary"))
                                     }
-                                    
+
                                     Spacer()
-                                    
-                                    // Refresh button
+
                                     Button(action: refreshEquipment) {
                                         Image(systemName: "arrow.clockwise")
                                             .font(.subheadline)
@@ -102,32 +93,27 @@ struct AddEditGymProfileView: View {
                                     }
                                     .disabled(equipmentManager.isLoading)
                                 }
-                                
+
                                 if equipmentManager.error != nil && equipmentManager.equipment.isEmpty {
-                                    // Error state
-                                    VStack(spacing: 12) {
-                                        HStack {
-                                            Image(systemName: "exclamationmark.triangle")
-                                                .foregroundColor(Color("Warning"))
-                                            
-                                            Text("Unable to load equipment from server.")
-                                                .font(.caption)
-                                                .foregroundColor(Color("SecondaryText"))
-                                        }
-                                        .padding(.horizontal)
-                                        .padding(.vertical, 8)
-                                        .background(Color("Warning").opacity(0.1))
-                                        .cornerRadius(8)
+                                    HStack {
+                                        Image(systemName: "exclamationmark.triangle")
+                                            .foregroundColor(Color("Warning"))
+
+                                        Text("Unable to load equipment from server.")
+                                            .font(.caption)
+                                            .foregroundColor(Color("SecondaryText"))
                                     }
+                                    .padding(.horizontal)
+                                    .padding(.vertical, 8)
+                                    .background(Color("Warning").opacity(0.1))
+                                    .cornerRadius(8)
                                 } else if equipmentManager.equipment.isEmpty {
-                                    // Empty state
                                     Text("No equipment available")
                                         .font(.subheadline)
                                         .foregroundColor(Color("SecondaryText"))
                                         .frame(maxWidth: .infinity)
                                         .padding()
                                 } else {
-                                    // Equipment Grid
                                     LazyVGrid(columns: [
                                         GridItem(.flexible()),
                                         GridItem(.flexible())
@@ -145,8 +131,7 @@ struct AddEditGymProfileView: View {
                             .padding()
                             .background(Color("Surface"))
                             .cornerRadius(16)
-                            
-                            // Delete Button (only for editing)
+
                             if profile != nil {
                                 Button(action: { showingDeleteAlert = true }) {
                                     HStack {
@@ -172,37 +157,38 @@ struct AddEditGymProfileView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .foregroundColor(Color("BrandPrimary"))
+                    Button("Cancel") { dismiss() }
+                        .foregroundColor(Color("BrandPrimary"))
                 }
-                
+
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        saveProfile()
+                    if profileManager.isSaving {
+                        ProgressView()
+                            .tint(Color("BrandPrimary"))
+                    } else {
+                        Button("Save") { saveProfile() }
+                            .foregroundColor(Color("BrandPrimary"))
+                            .fontWeight(.semibold)
+                            .disabled(name.isEmpty)
                     }
-                    .foregroundColor(Color("BrandPrimary"))
-                    .fontWeight(.semibold)
-                    .disabled(name.isEmpty)
                 }
             }
         }
         .onAppear {
             if let profile = profile {
                 name = profile.name
-                selectedIcon = profile.icon
-                selectedEquipment = profile.equipment
             }
-            
-            // Fetch equipment from database
             equipmentManager.fetchEquipment()
+            applyProfileEquipment()
+        }
+        .onChange(of: equipmentManager.equipment) { _ in
+            applyProfileEquipment()
         }
         .alert("Delete Profile", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
-                if let profile = profile {
-                    profileManager.deleteProfile(profile)
+                guard let id = profile?.id else { return }
+                profileManager.deleteProfile(id: id) { _ in
                     dismiss()
                 }
             }
@@ -210,7 +196,14 @@ struct AddEditGymProfileView: View {
             Text("Are you sure you want to delete this profile? This action cannot be undone.")
         }
     }
-    
+
+    private func applyProfileEquipment() {
+        guard !profileEquipmentApplied, let profile = profile, !equipmentManager.equipment.isEmpty else { return }
+        let profileIds = Set(profile.equipment.map { $0.id })
+        selectedEquipment = Set(equipmentManager.equipment.filter { profileIds.contains($0.id) })
+        profileEquipmentApplied = true
+    }
+
     private func toggleEquipment(_ equipment: Equipment) {
         if selectedEquipment.contains(equipment) {
             selectedEquipment.remove(equipment)
@@ -218,35 +211,22 @@ struct AddEditGymProfileView: View {
             selectedEquipment.insert(equipment)
         }
     }
-    
-    private func selectAll() {
-        selectedEquipment = Set(equipmentManager.equipment)
-    }
-    
-    private func deselectAll() {
-        selectedEquipment.removeAll()
-    }
-    
-    private func refreshEquipment() {
-        equipmentManager.fetchEquipment(forceRefresh: true)
-    }
-    
+
+    private func selectAll() { selectedEquipment = Set(equipmentManager.equipment) }
+    private func deselectAll() { selectedEquipment.removeAll() }
+    private func refreshEquipment() { equipmentManager.fetchEquipment(forceRefresh: true) }
+
     private func saveProfile() {
+        let equipmentIds = selectedEquipment.map { $0.id }
         if let existingProfile = profile {
-            var updatedProfile = existingProfile
-            updatedProfile.name = name
-            updatedProfile.icon = selectedIcon
-            updatedProfile.equipment = selectedEquipment
-            profileManager.updateProfile(updatedProfile)
+            profileManager.updateProfile(id: existingProfile.id, name: name, equipmentIds: equipmentIds) { _ in
+                dismiss()
+            }
         } else {
-            let newProfile = GymProfile(
-                name: name,
-                icon: selectedIcon,
-                equipment: selectedEquipment
-            )
-            profileManager.addProfile(newProfile)
+            profileManager.createProfile(name: name, equipmentIds: equipmentIds) { _ in
+                dismiss()
+            }
         }
-        dismiss()
     }
 }
 
@@ -254,7 +234,7 @@ struct IconOption: View {
     let icon: String
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             ZStack {
@@ -265,7 +245,7 @@ struct IconOption: View {
                         Circle()
                             .stroke(isSelected ? Color("BrandPrimary") : Color("Border"), lineWidth: isSelected ? 2 : 1)
                     )
-                
+
                 Image(systemName: icon)
                     .font(.title2)
                     .foregroundColor(isSelected ? Color("BrandPrimary") : Color("SecondaryText"))
@@ -278,7 +258,7 @@ struct EquipmentItemView: View {
     let equipment: Equipment
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
@@ -288,9 +268,9 @@ struct EquipmentItemView: View {
                     .foregroundColor(isSelected ? Color("PrimaryText") : Color("SecondaryText"))
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
-                
+
                 Spacer()
-                
+
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
                     .foregroundColor(isSelected ? Color("Success") : Color("TertiaryText"))
@@ -321,7 +301,6 @@ struct CustomTextFieldStyle: TextFieldStyle {
     }
 }
 
-// Preview
 struct AddEditGymProfileView_Previews: PreviewProvider {
     static var previews: some View {
         AddEditGymProfileView()

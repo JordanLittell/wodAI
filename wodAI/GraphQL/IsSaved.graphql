@@ -1,0 +1,3 @@
+query IsSavedQuery($workoutId: Int!) {
+  isSaved(workoutId: $workoutId)
+}

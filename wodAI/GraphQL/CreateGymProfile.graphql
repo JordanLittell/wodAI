@@ -1,9 +1,11 @@
 mutation CreateGymProfileMutation($input: CreateGymProfileInput!) {
   createGymProfile(input: $input) {
+    id
+    name
+    isActive
     equipment {
       id
       name
     }
-    name
   }
 }

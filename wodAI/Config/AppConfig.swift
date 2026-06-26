@@ -17,11 +17,8 @@ struct AppConfig {
         }
         
         // Fallback based on build configuration
-        #if DEBUG
-        return "http://localhost:3000"
-        #else
         return "https://api.wodai.run"
-        #endif
+        
     }
     
     // MARK: - Sentry DSN

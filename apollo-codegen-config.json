@@ -11,7 +11,7 @@
     "schemaDownload": {
         "downloadMethod": {
             "introspection": {
-                "endpointURL": "http://localhost:3000/graphql",
+                "endpointURL": "http://localhost:3000",
                 "httpMethod": {
                     "POST": {}
                 },

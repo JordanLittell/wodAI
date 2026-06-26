@@ -1,36 +1,33 @@
 //
 //  GymProfileSelector.swift
 //  wodAI
-//
-//  Created by Jordan Littell on 6/9/25.
-//
 
 import SwiftUI
 
 struct GymProfileSelector: View {
     @StateObject private var profileManager = GymProfileManager.shared
     @State private var showingProfiles = false
-    
+
     var body: some View {
         Button(action: { showingProfiles = true }) {
             HStack(spacing: 12) {
-                Image(systemName: profileManager.selectedProfile?.icon ?? "building.2")
+                Image(systemName: "building.2.fill")
                     .font(.body)
                     .foregroundColor(Color("BrandPrimary"))
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Location")
                         .font(.caption)
                         .foregroundColor(Color("TertiaryText"))
-                    
-                    Text(profileManager.selectedProfile?.name ?? "Select Location")
+
+                    Text(profileManager.activeProfile?.name ?? "Select Location")
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(Color("PrimaryText"))
                 }
-                
+
                 Spacer()
-                
+
                 Image(systemName: "chevron.down")
                     .font(.caption)
                     .foregroundColor(Color("SecondaryText"))
@@ -53,46 +50,43 @@ struct GymProfileSelector: View {
 struct QuickGymProfilePicker: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var profileManager = GymProfileManager.shared
-    
+
     var body: some View {
         NavigationView {
             ZStack {
                 Color("Background")
                     .ignoresSafeArea()
-                
+
                 ScrollView {
                     VStack(spacing: 12) {
                         ForEach(profileManager.profiles) { profile in
                             ProfilePickerRow(
                                 profile: profile,
-                                isSelected: profile.id == profileManager.selectedProfile?.id,
+                                isSelected: profile.isActive,
+                                isToggling: profileManager.togglingId == profile.id,
                                 action: {
-                                    profileManager.selectProfile(profile)
-                                    dismiss()
+                                    profileManager.toggleActive(id: profile.id) { _ in dismiss() }
                                 }
                             )
                         }
-                        
-                        // Add New Profile Option
-                        Button(action: {
-                            dismiss()
-                        }) {
+
+                        Button(action: { dismiss() }) {
                             HStack(spacing: 16) {
                                 ZStack {
                                     Circle()
                                         .fill(Color("Surface2"))
                                         .frame(width: 50, height: 50)
-                                    
+
                                     Image(systemName: "plus")
                                         .font(.title3)
                                         .foregroundColor(Color("BrandPrimary"))
                                 }
-                                
+
                                 Text("Add New Profile")
                                     .font(.body)
                                     .fontWeight(.medium)
                                     .foregroundColor(Color("BrandPrimary"))
-                                
+
                                 Spacer()
                             }
                             .padding()
@@ -111,11 +105,9 @@ struct QuickGymProfilePicker: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .foregroundColor(Color("BrandPrimary"))
-                    .fontWeight(.medium)
+                    Button("Done") { dismiss() }
+                        .foregroundColor(Color("BrandPrimary"))
+                        .fontWeight(.medium)
                 }
             }
         }
@@ -125,8 +117,9 @@ struct QuickGymProfilePicker: View {
 struct ProfilePickerRow: View {
     let profile: GymProfile
     let isSelected: Bool
+    let isToggling: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 16) {
@@ -134,26 +127,29 @@ struct ProfilePickerRow: View {
                     Circle()
                         .fill(isSelected ? Color("BrandPrimary").opacity(0.15) : Color("Surface2"))
                         .frame(width: 50, height: 50)
-                    
-                    Image(systemName: profile.icon)
+
+                    Image(systemName: "building.2.fill")
                         .font(.title2)
                         .foregroundColor(isSelected ? Color("BrandPrimary") : Color("SecondaryText"))
                 }
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text(profile.name)
                         .font(.body)
                         .fontWeight(.medium)
                         .foregroundColor(Color("PrimaryText"))
-                    
+
                     Text("\(profile.equipment.count) equipment types")
                         .font(.caption)
                         .foregroundColor(Color("SecondaryText"))
                 }
-                
+
                 Spacer()
-                
-                if isSelected {
+
+                if isToggling {
+                    ProgressView()
+                        .tint(Color("BrandPrimary"))
+                } else if isSelected {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.title2)
                         .foregroundColor(Color("Success"))
@@ -167,24 +163,24 @@ struct ProfilePickerRow: View {
                     .stroke(isSelected ? Color("BrandPrimary") : Color("Border"), lineWidth: isSelected ? 2 : 1)
             )
         }
+        .disabled(isToggling)
     }
 }
 
-// Mini selector for compact spaces
 struct CompactGymProfileSelector: View {
     @StateObject private var profileManager = GymProfileManager.shared
     @State private var showingProfiles = false
-    
+
     var body: some View {
         Button(action: { showingProfiles = true }) {
             HStack(spacing: 8) {
-                Image(systemName: profileManager.selectedProfile?.icon ?? "building.2")
+                Image(systemName: "building.2.fill")
                     .font(.subheadline)
-                
-                Text(profileManager.selectedProfile?.name ?? "Select Location")
+
+                Text(profileManager.activeProfile?.name ?? "Select Location")
                     .font(.subheadline)
                     .fontWeight(.medium)
-                
+
                 Image(systemName: "chevron.down")
                     .font(.caption2)
             }
@@ -200,7 +196,6 @@ struct CompactGymProfileSelector: View {
     }
 }
 
-// Preview
 struct GymProfileSelector_Previews: PreviewProvider {
     static var previews: some View {
         VStack(spacing: 20) {

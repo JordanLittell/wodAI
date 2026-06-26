@@ -2,7 +2,7 @@ mutation UpdateGymProfile($updateGymProfileId: Int!, $input: UpdateGymProfileInp
   updateGymProfile(id: $updateGymProfileId, input: $input) {
     id
     name
-    updatedAt
+    isActive
     equipment {
       id
       name

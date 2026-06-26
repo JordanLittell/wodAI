@@ -7,9 +7,9 @@ import WodAiAPI
 public class GymProfilesQuery: GraphQLQuery {
   public static let operationName: String = "GymProfiles"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "1f9b909987dc134eb18ef7de3f59fa039b1ce62973d3300a7619e24b28fb1f7d",
+    operationIdentifier: "c3c010b7ed1649c27db7322eecab2d93aa72af8cc8aeaae711de6df0cd8e69c4",
     definition: .init(
-      #"query GymProfiles { gymProfiles { __typename id name isDefault equipment { __typename id name } } }"#
+      #"query GymProfiles { gymProfiles { __typename id name isActive equipment { __typename id name } } }"#
     ))
 
   public init() {}
@@ -37,13 +37,13 @@ public class GymProfilesQuery: GraphQLQuery {
         .field("__typename", String.self),
         .field("id", Int.self),
         .field("name", String.self),
-        .field("isDefault", Bool.self),
+        .field("isActive", Bool.self),
         .field("equipment", [Equipment].self),
       ] }
 
       public var id: Int { __data["id"] }
       public var name: String { __data["name"] }
-      public var isDefault: Bool { __data["isDefault"] }
+      public var isActive: Bool { __data["isActive"] }
       public var equipment: [Equipment] { __data["equipment"] }
 
       /// GymProfile.Equipment

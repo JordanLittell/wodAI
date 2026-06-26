@@ -7,9 +7,9 @@ import WodAiAPI
 public class UpdateGymProfileMutation: GraphQLMutation {
   public static let operationName: String = "UpdateGymProfile"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "f2e5724369a928a7e79dae5ba65592ee0b65888efaf0d4c65f422e2cbab7270f",
+    operationIdentifier: "250cc3059aa894a6681f592d0767a184dc03a54a06247cb2d936115cc2910b96",
     definition: .init(
-      #"mutation UpdateGymProfile($updateGymProfileId: Int!, $input: UpdateGymProfileInput!) { updateGymProfile(id: $updateGymProfileId, input: $input) { __typename id name updatedAt equipment { __typename id name } } }"#
+      #"mutation UpdateGymProfile($updateGymProfileId: Int!, $input: UpdateGymProfileInput!) { updateGymProfile(id: $updateGymProfileId, input: $input) { __typename id name isActive equipment { __typename id name } } }"#
     ))
 
   public var updateGymProfileId: Int
@@ -54,13 +54,13 @@ public class UpdateGymProfileMutation: GraphQLMutation {
         .field("__typename", String.self),
         .field("id", Int.self),
         .field("name", String.self),
-        .field("updatedAt", WodAiAPI.DateTime.self),
+        .field("isActive", Bool.self),
         .field("equipment", [Equipment].self),
       ] }
 
       public var id: Int { __data["id"] }
       public var name: String { __data["name"] }
-      public var updatedAt: WodAiAPI.DateTime { __data["updatedAt"] }
+      public var isActive: Bool { __data["isActive"] }
       public var equipment: [Equipment] { __data["equipment"] }
 
       /// UpdateGymProfile.Equipment

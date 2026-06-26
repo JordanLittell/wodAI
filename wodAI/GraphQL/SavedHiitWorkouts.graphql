@@ -1,0 +1,14 @@
+query SavedHiitWorkoutsQuery {
+  savedHiitWorkouts {
+    id
+    savedAt
+    workout {
+      id
+      format
+      displayText
+      stimulus
+      constraintType
+      constraintMagnitude
+    }
+  }
+}

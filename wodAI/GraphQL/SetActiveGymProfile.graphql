@@ -1,6 +1,11 @@
-
-mutation SetActiveGymProfile($setActiveGymProfileId: Int!) {
-  setActiveGymProfile(id: $setActiveGymProfileId) {
+mutation ToggleGymProfileMutation($id: Int!) {
+  toggleGymProfile(id: $id) {
+    id
     name
+    isActive
+    equipment {
+      id
+      name
+    }
   }
 }

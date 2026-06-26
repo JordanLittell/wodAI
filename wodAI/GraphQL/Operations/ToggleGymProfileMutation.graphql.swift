@@ -4,21 +4,21 @@
 @_exported import ApolloAPI
 import WodAiAPI
 
-public class CreateGymProfileMutation: GraphQLMutation {
-  public static let operationName: String = "CreateGymProfileMutation"
+public class ToggleGymProfileMutation: GraphQLMutation {
+  public static let operationName: String = "ToggleGymProfileMutation"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "18c0d273e315b47abc07f208855479bba431970e9612ca030c26020006eefd99",
+    operationIdentifier: "6621e66a56384edc243a8cf3a23d3e564b6bfb8802765f62c2c2fd3595afdd97",
     definition: .init(
-      #"mutation CreateGymProfileMutation($input: CreateGymProfileInput!) { createGymProfile(input: $input) { __typename id name isActive equipment { __typename id name } } }"#
+      #"mutation ToggleGymProfileMutation($id: Int!) { toggleGymProfile(id: $id) { __typename id name isActive equipment { __typename id name } } }"#
     ))
 
-  public var input: WodAiAPI.CreateGymProfileInput
+  public var id: Int
 
-  public init(input: WodAiAPI.CreateGymProfileInput) {
-    self.input = input
+  public init(id: Int) {
+    self.id = id
   }
 
-  public var __variables: Variables? { ["input": input] }
+  public var __variables: Variables? { ["id": id] }
 
   public struct Data: WodAiAPI.SelectionSet {
     public let __data: DataDict
@@ -26,15 +26,15 @@ public class CreateGymProfileMutation: GraphQLMutation {
 
     public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.Mutation }
     public static var __selections: [ApolloAPI.Selection] { [
-      .field("createGymProfile", CreateGymProfile.self, arguments: ["input": .variable("input")]),
+      .field("toggleGymProfile", ToggleGymProfile.self, arguments: ["id": .variable("id")]),
     ] }
 
-    public var createGymProfile: CreateGymProfile { __data["createGymProfile"] }
+    public var toggleGymProfile: ToggleGymProfile { __data["toggleGymProfile"] }
 
-    /// CreateGymProfile
+    /// ToggleGymProfile
     ///
     /// Parent Type: `GymProfile`
-    public struct CreateGymProfile: WodAiAPI.SelectionSet {
+    public struct ToggleGymProfile: WodAiAPI.SelectionSet {
       public let __data: DataDict
       public init(_dataDict: DataDict) { __data = _dataDict }
 
@@ -52,7 +52,7 @@ public class CreateGymProfileMutation: GraphQLMutation {
       public var isActive: Bool { __data["isActive"] }
       public var equipment: [Equipment] { __data["equipment"] }
 
-      /// CreateGymProfile.Equipment
+      /// ToggleGymProfile.Equipment
       ///
       /// Parent Type: `Equipment`
       public struct Equipment: WodAiAPI.SelectionSet {
