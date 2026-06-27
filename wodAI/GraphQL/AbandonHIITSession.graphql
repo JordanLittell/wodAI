@@ -1,0 +1,3 @@
+mutation AbandonHIITSession($sessionId: ID!) {
+  abandonHIITSession(sessionId: $sessionId)
+}

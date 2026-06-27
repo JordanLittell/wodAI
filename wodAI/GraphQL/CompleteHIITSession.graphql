@@ -1,0 +1,7 @@
+mutation CompleteHIITSession($sessionId: ID!, $endedAt: DateTime!, $movementIntervals: [MovementIntervalInput!]!) {
+  completeHIITSession(sessionId: $sessionId, endedAt: $endedAt, movementIntervals: $movementIntervals) {
+    id
+    status
+    durationSeconds
+  }
+}

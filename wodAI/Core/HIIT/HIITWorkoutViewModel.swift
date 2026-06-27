@@ -281,6 +281,11 @@ class HIITWorkoutViewModel: ObservableObject {
     func startExecution() {
         executionState = .running(startTime: Date(), priorElapsed: 0)
         startTimer()
+        // Hand the workout to the watch (creates the backend session + streams sensors).
+        // The local timer above remains the watch-less fallback.
+        if let workout = currentWorkout {
+            Task { await HIITSessionManager.shared.start(workout: workout) }
+        }
     }
 
     func pauseExecution() {
@@ -298,11 +303,15 @@ class HIITWorkoutViewModel: ObservableObject {
     func exitExecution() {
         timerCancellable?.cancel()
         executionState = .idle
+        // Left early — abandon the live session (stops the watch, marks the record abandoned).
+        Task { await HIITSessionManager.shared.abandon() }
     }
 
     func finishExecution() {
         timerCancellable?.cancel()
         executionState = .idle
+        // Finalize the live session: stop the watch, flush remaining sensor frames, complete.
+        Task { await HIITSessionManager.shared.finish() }
         guard let id = currentWorkout?.id else { return }
         Task { await completeWorkout(id: id) }
     }

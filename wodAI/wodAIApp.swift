@@ -22,6 +22,8 @@ struct wodAIApp: App {
             ContentView()
                 .environmentObject(authState)
                 .environmentObject(authManager)
+                // Bring up WatchConnectivity so the phone can hand live workouts to the watch.
+                .task { HIITSessionManager.shared.activate() }
         }
     }
 }

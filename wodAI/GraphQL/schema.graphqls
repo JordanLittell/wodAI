@@ -296,6 +296,10 @@ type Mutation {
   completeHiitWorkout(id: Int!): Boolean!
   saveHiitWorkout(id: Int!): Boolean!
   unsaveHiitWorkout(id: Int!): Boolean!
+  createHIITSession(wodId: ID!, startedAt: DateTime!): HIITSession!
+  appendSensorFrames(sessionId: ID!, frames: [SensorFrameInput!]!): Boolean!
+  completeHIITSession(sessionId: ID!, endedAt: DateTime!, movementIntervals: [MovementIntervalInput!]!): HIITSession!
+  abandonHIITSession(sessionId: ID!): Boolean!
   createTag(name: String!, description: String!, category: String): Tag!
   setTagDisabled(id: Int!, disabled: Boolean!): Tag!
   setTagCategory(id: Int!, category: String!): Tag!
@@ -544,4 +548,46 @@ input CreateHIITWorkoutInput {
   displayText: String!
   stimulus: String!
   equipmentIds: [Int!]
+}
+
+enum HIITSessionStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+}
+
+type HIITSession {
+  id: ID!
+  wodId: ID!
+  userId: ID!
+  startedAt: DateTime!
+  endedAt: DateTime
+  status: HIITSessionStatus!
+  durationSeconds: Float
+  totalFrames: Int
+}
+
+input SensorFrameInput {
+  timestamp: Float!
+  accelX: Float
+  accelY: Float
+  accelZ: Float
+  gyroX: Float
+  gyroY: Float
+  gyroZ: Float
+  heartRate: Float
+  relativeAltitude: Float
+  lat: Float
+  lng: Float
+  horizontalAccuracy: Float
+}
+
+input MovementIntervalInput {
+  movement: String!
+  startTimestamp: Float!
+  endTimestamp: Float!
+  repCount: Int
+  avgHeartRate: Float
+  peakAcceleration: Float
+  confidence: Float
 }

@@ -7,6 +7,7 @@ import UIKit
 
 struct HIITWorkoutView: View {
     @StateObject private var viewModel: HIITWorkoutViewModel
+    @ObservedObject private var watch = HIITSessionManager.shared.bridge
     @State private var showingAvailableTags = false
 
     init() {
@@ -243,25 +244,64 @@ struct HIITWorkoutView: View {
         .animation(.easeInOut(duration: 0.4), value: viewModel.isPaused)
     }
 
+    // MARK: - Watch status
+
+    // WatchConnectivity has no pairing prompt — pairing is done once in the system Watch app.
+    // This surfaces the connection state (the closest thing to a "pair your watch" affordance).
+    @ViewBuilder
+    private var watchStatusBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: watch.isWatchAppInstalled ? "applewatch" : "applewatch.slash")
+                .foregroundColor(watch.isWatchAppInstalled ? .green : .secondary)
+            Text(watchStatusText)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(2)
+            Spacer(minLength: 0)
+            if watch.isWatchAppInstalled && watch.isReachable {
+                PulsingDot(color: .green)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color("BrandPrimary").opacity(0.08))
+        .cornerRadius(10)
+    }
+
+    private var watchStatusText: String {
+        if !watch.isPaired {
+            return "No Apple Watch paired — set one up in the Watch app to track sensors"
+        }
+        if !watch.isWatchAppInstalled {
+            return "Install wodAI on your Apple Watch to track heart rate & motion"
+        }
+        return watch.isReachable ? "Apple Watch connected" : "Apple Watch paired — waking…"
+    }
+
     // MARK: - Bottom bar
 
     private var bottomBar: some View {
-        Group {
-            if viewModel.isExecuting {
-                HStack(spacing: 12) {
-                    pauseButton
-                    finishButton
-                }
-            } else if viewModel.isPaused {
-                HStack(spacing: 12) {
-                    exitButton
-                    resumeButton
-                    finishButton
-                }
-            } else {
-                VStack(spacing: 12) {
-                    newWorkoutButton
-                    startButton
+        VStack(spacing: 12) {
+            watchStatusBanner
+
+            Group {
+                if viewModel.isExecuting {
+                    HStack(spacing: 12) {
+                        pauseButton
+                        finishButton
+                    }
+                } else if viewModel.isPaused {
+                    HStack(spacing: 12) {
+                        exitButton
+                        resumeButton
+                        finishButton
+                    }
+                } else {
+                    VStack(spacing: 12) {
+                        newWorkoutButton
+                        startButton
+                    }
                 }
             }
         }

@@ -27,6 +27,7 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "Equipment": return WodAiAPI.Objects.Equipment
     case "GymProfile": return WodAiAPI.Objects.GymProfile
     case "HIITPaginatedResponse": return WodAiAPI.Objects.HIITPaginatedResponse
+    case "HIITSession": return WodAiAPI.Objects.HIITSession
     case "HIITWorkout": return WodAiAPI.Objects.HIITWorkout
     case "Mutation": return WodAiAPI.Objects.Mutation
     case "ProvisionUserResponse": return WodAiAPI.Objects.ProvisionUserResponse

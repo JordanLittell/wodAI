@@ -39,6 +39,7 @@
 		C1A201CA2E16D9200094E759 /* Base.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C1A201C92E16D9200094E759 /* Base.xcconfig */; };
 		C1A201CC2E16D92E0094E759 /* Debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C1A201CB2E16D92E0094E759 /* Debug.xcconfig */; };
 		C1A201CE2E16D9370094E759 /* Release.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C1A201CD2E16D9370094E759 /* Release.xcconfig */; };
+		C1B814B82FEEE90100BE428B /* wodAIWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = C1B814982FEEE90000BE428B /* wodAIWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C1C1F7832DB8A3E6006A7BA4 /* Apollo in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F7822DB8A3E6006A7BA4 /* Apollo */; };
 		C1C1F78F2DB8A71A006A7BA4 /* ApolloSQLite in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F78E2DB8A71A006A7BA4 /* ApolloSQLite */; };
 		C1C1F7912DB8A71A006A7BA4 /* ApolloTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F7902DB8A71A006A7BA4 /* ApolloTestSupport */; };
@@ -63,7 +64,42 @@
 			remoteGlobalIDString = C19950502DB0B9F800786544;
 			remoteInfo = wodAI;
 		};
+		C1B814A52FEEE90100BE428B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C19950492DB0B9F800786544 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C1B814972FEEE90000BE428B;
+			remoteInfo = "wodAIWatch Watch App";
+		};
+		C1B814AF2FEEE90100BE428B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C19950492DB0B9F800786544 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C1B814972FEEE90000BE428B;
+			remoteInfo = "wodAIWatch Watch App";
+		};
+		C1B814B62FEEE90100BE428B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C19950492DB0B9F800786544 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C1B814972FEEE90000BE428B;
+			remoteInfo = "wodAIWatch Watch App";
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C1B814BC2FEEE90100BE428B /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				C1B814B82FEEE90100BE428B /* wodAIWatch Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		C19950512DB0B9F800786544 /* wodAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = wodAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -72,9 +108,24 @@
 		C1A201C92E16D9200094E759 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		C1A201CB2E16D92E0094E759 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		C1A201CD2E16D9370094E759 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		C1B814982FEEE90000BE428B /* wodAIWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "wodAIWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C1B814A42FEEE90100BE428B /* wodAIWatch Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "wodAIWatch Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C1B814AE2FEEE90100BE428B /* wodAIWatch Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "wodAIWatch Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C1B814D52FEEEC3200BE428B /* wodAIWatch Watch App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "wodAIWatch Watch App.entitlements"; sourceTree = "<group>"; };
+		C1B814DE2FEEF08C00BE428B /* wodAIWatch-Watch-App-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "wodAIWatch-Watch-App-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C1B814CA2FEEEB4000BE428B /* Exceptions for "wodAI" folder in "wodAIWatch Watch App" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Core/HIITSession/Shared/ExecutionEngine.swift,
+				Core/HIITSession/Shared/SensorFrame.swift,
+				Core/HIITSession/Shared/WatchConnectivityProtocol.swift,
+				Core/HIITSession/Shared/WorkoutExecutionPayload.swift,
+			);
+			target = C1B814972FEEE90000BE428B /* wodAIWatch Watch App */;
+		};
 		C1D1BA402DBEDAC300932818 /* Exceptions for "wodAI" folder in "wodAI" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -113,6 +164,7 @@
 			exceptions = (
 				C1D1BA402DBEDAC300932818 /* Exceptions for "wodAI" folder in "wodAI" target */,
 				C1D1BA412DBEDAC300932818 /* Exceptions for "wodAI" folder in "Compile Sources" phase from "wodAI" target */,
+				C1B814CA2FEEEB4000BE428B /* Exceptions for "wodAI" folder in "wodAIWatch Watch App" target */,
 			);
 			path = wodAI;
 			sourceTree = "<group>";
@@ -125,6 +177,21 @@
 		C19950702DB0B9FA00786544 /* wodAIUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = wodAIUITests;
+			sourceTree = "<group>";
+		};
+		C1B814992FEEE90000BE428B /* wodAIWatch */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = wodAIWatch;
+			sourceTree = "<group>";
+		};
+		C1B814A72FEEE90100BE428B /* wodAIWatch Watch AppTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "wodAIWatch Watch AppTests";
+			sourceTree = "<group>";
+		};
+		C1B814B12FEEE90100BE428B /* wodAIWatch Watch AppUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "wodAIWatch Watch AppUITests";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -187,18 +254,44 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C1B814952FEEE90000BE428B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C1B814A12FEEE90100BE428B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C1B814AB2FEEE90100BE428B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		C19950482DB0B9F800786544 = {
 			isa = PBXGroup;
 			children = (
+				C1B814DE2FEEF08C00BE428B /* wodAIWatch-Watch-App-Info.plist */,
+				C1B814D52FEEEC3200BE428B /* wodAIWatch Watch App.entitlements */,
 				C1A201CD2E16D9370094E759 /* Release.xcconfig */,
 				C1A201CB2E16D92E0094E759 /* Debug.xcconfig */,
 				C1A201C92E16D9200094E759 /* Base.xcconfig */,
 				C19950532DB0B9F800786544 /* wodAI */,
 				C19950662DB0B9FA00786544 /* wodAITests */,
 				C19950702DB0B9FA00786544 /* wodAIUITests */,
+				C1B814992FEEE90000BE428B /* wodAIWatch */,
+				C1B814A72FEEE90100BE428B /* wodAIWatch Watch AppTests */,
+				C1B814B12FEEE90100BE428B /* wodAIWatch Watch AppUITests */,
 				C19950522DB0B9F800786544 /* Products */,
 				C1C1F7AD2DB8A926006A7BA4 /* Frameworks */,
 			);
@@ -210,6 +303,9 @@
 				C19950512DB0B9F800786544 /* wodAI.app */,
 				C19950632DB0B9FA00786544 /* wodAITests.xctest */,
 				C199506D2DB0B9FA00786544 /* wodAIUITests.xctest */,
+				C1B814982FEEE90000BE428B /* wodAIWatch Watch App.app */,
+				C1B814A42FEEE90100BE428B /* wodAIWatch Watch AppTests.xctest */,
+				C1B814AE2FEEE90100BE428B /* wodAIWatch Watch AppUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -232,10 +328,12 @@
 				C199504E2DB0B9F800786544 /* Frameworks */,
 				C199504D2DB0B9F800786544 /* Sources */,
 				C199504F2DB0B9F800786544 /* Resources */,
+				C1B814BC2FEEE90100BE428B /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				C1B814B72FEEE90100BE428B /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				C19950532DB0B9F800786544 /* wodAI */,
@@ -329,6 +427,74 @@
 			productReference = C199506D2DB0B9FA00786544 /* wodAIUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		C1B814972FEEE90000BE428B /* wodAIWatch Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C1B814B92FEEE90100BE428B /* Build configuration list for PBXNativeTarget "wodAIWatch Watch App" */;
+			buildPhases = (
+				C1B814942FEEE90000BE428B /* Sources */,
+				C1B814952FEEE90000BE428B /* Frameworks */,
+				C1B814962FEEE90000BE428B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				C1B814992FEEE90000BE428B /* wodAIWatch */,
+			);
+			name = "wodAIWatch Watch App";
+			packageProductDependencies = (
+			);
+			productName = "wodAIWatch Watch App";
+			productReference = C1B814982FEEE90000BE428B /* wodAIWatch Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
+		C1B814A32FEEE90100BE428B /* wodAIWatch Watch AppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C1B814BD2FEEE90100BE428B /* Build configuration list for PBXNativeTarget "wodAIWatch Watch AppTests" */;
+			buildPhases = (
+				C1B814A02FEEE90100BE428B /* Sources */,
+				C1B814A12FEEE90100BE428B /* Frameworks */,
+				C1B814A22FEEE90100BE428B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C1B814A62FEEE90100BE428B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				C1B814A72FEEE90100BE428B /* wodAIWatch Watch AppTests */,
+			);
+			name = "wodAIWatch Watch AppTests";
+			packageProductDependencies = (
+			);
+			productName = "wodAIWatch Watch AppTests";
+			productReference = C1B814A42FEEE90100BE428B /* wodAIWatch Watch AppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		C1B814AD2FEEE90100BE428B /* wodAIWatch Watch AppUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C1B814C02FEEE90100BE428B /* Build configuration list for PBXNativeTarget "wodAIWatch Watch AppUITests" */;
+			buildPhases = (
+				C1B814AA2FEEE90100BE428B /* Sources */,
+				C1B814AB2FEEE90100BE428B /* Frameworks */,
+				C1B814AC2FEEE90100BE428B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C1B814B02FEEE90100BE428B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				C1B814B12FEEE90100BE428B /* wodAIWatch Watch AppUITests */,
+			);
+			name = "wodAIWatch Watch AppUITests";
+			packageProductDependencies = (
+			);
+			productName = "wodAIWatch Watch AppUITests";
+			productReference = C1B814AE2FEEE90100BE428B /* wodAIWatch Watch AppUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -336,7 +502,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1600;
+				LastSwiftUpdateCheck = 2650;
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					C19950502DB0B9F800786544 = {
@@ -349,6 +515,17 @@
 					C199506C2DB0B9FA00786544 = {
 						CreatedOnToolsVersion = 16.0;
 						TestTargetID = C19950502DB0B9F800786544;
+					};
+					C1B814972FEEE90000BE428B = {
+						CreatedOnToolsVersion = 26.5;
+					};
+					C1B814A32FEEE90100BE428B = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = C1B814972FEEE90000BE428B;
+					};
+					C1B814AD2FEEE90100BE428B = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = C1B814972FEEE90000BE428B;
 					};
 				};
 			};
@@ -375,6 +552,9 @@
 				C19950502DB0B9F800786544 /* wodAI */,
 				C19950622DB0B9FA00786544 /* wodAITests */,
 				C199506C2DB0B9FA00786544 /* wodAIUITests */,
+				C1B814972FEEE90000BE428B /* wodAIWatch Watch App */,
+				C1B814A32FEEE90100BE428B /* wodAIWatch Watch AppTests */,
+				C1B814AD2FEEE90100BE428B /* wodAIWatch Watch AppUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -398,6 +578,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		C199506B2DB0B9FA00786544 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C1B814962FEEE90000BE428B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C1B814A22FEEE90100BE428B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C1B814AC2FEEE90100BE428B /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -448,6 +649,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C1B814942FEEE90000BE428B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C1B814A02FEEE90100BE428B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C1B814AA2FEEE90100BE428B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -460,6 +682,21 @@
 			isa = PBXTargetDependency;
 			target = C19950502DB0B9F800786544 /* wodAI */;
 			targetProxy = C199506E2DB0B9FA00786544 /* PBXContainerItemProxy */;
+		};
+		C1B814A62FEEE90100BE428B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C1B814972FEEE90000BE428B /* wodAIWatch Watch App */;
+			targetProxy = C1B814A52FEEE90100BE428B /* PBXContainerItemProxy */;
+		};
+		C1B814B02FEEE90100BE428B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C1B814972FEEE90000BE428B /* wodAIWatch Watch App */;
+			targetProxy = C1B814AF2FEEE90100BE428B /* PBXContainerItemProxy */;
+		};
+		C1B814B72FEEE90100BE428B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C1B814972FEEE90000BE428B /* wodAIWatch Watch App */;
+			targetProxy = C1B814B62FEEE90100BE428B /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -719,6 +956,172 @@
 			};
 			name = Release;
 		};
+		C1B814BA2FEEE90100BE428B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "wodAIWatch Watch App.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7SH9PCQBLP;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "wodAIWatch-Watch-App-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = wodAIWatch;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Reads your heart rate during workouts.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Records your workout.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "Uses motion to track how you move during a workout.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.adapt.wodAI;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.adapt.wodAI.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.5;
+			};
+			name = Debug;
+		};
+		C1B814BB2FEEE90100BE428B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "wodAIWatch Watch App.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7SH9PCQBLP;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "wodAIWatch-Watch-App-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = wodAIWatch;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Reads your heart rate during workouts.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Records your workout.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "Uses motion to track how you move during a workout.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.adapt.wodAI;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.adapt.wodAI.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.5;
+			};
+			name = Release;
+		};
+		C1B814BE2FEEE90100BE428B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7SH9PCQBLP;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "hvt.wodAIWatch-Watch-AppTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/wodAIWatch Watch App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/wodAIWatch Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 26.5;
+			};
+			name = Debug;
+		};
+		C1B814BF2FEEE90100BE428B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7SH9PCQBLP;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "hvt.wodAIWatch-Watch-AppTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/wodAIWatch Watch App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/wodAIWatch Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 26.5;
+			};
+			name = Release;
+		};
+		C1B814C12FEEE90100BE428B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7SH9PCQBLP;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "hvt.wodAIWatch-Watch-AppUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = "wodAIWatch Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 26.5;
+			};
+			name = Debug;
+		};
+		C1B814C22FEEE90100BE428B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7SH9PCQBLP;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "hvt.wodAIWatch-Watch-AppUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = "wodAIWatch Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 26.5;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -754,6 +1157,33 @@
 			buildConfigurations = (
 				C199507E2DB0B9FA00786544 /* Debug */,
 				C199507F2DB0B9FA00786544 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C1B814B92FEEE90100BE428B /* Build configuration list for PBXNativeTarget "wodAIWatch Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C1B814BA2FEEE90100BE428B /* Debug */,
+				C1B814BB2FEEE90100BE428B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C1B814BD2FEEE90100BE428B /* Build configuration list for PBXNativeTarget "wodAIWatch Watch AppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C1B814BE2FEEE90100BE428B /* Debug */,
+				C1B814BF2FEEE90100BE428B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C1B814C02FEEE90100BE428B /* Build configuration list for PBXNativeTarget "wodAIWatch Watch AppUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C1B814C12FEEE90100BE428B /* Debug */,
+				C1B814C22FEEE90100BE428B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -1,0 +1,7 @@
+mutation CreateHIITSession($wodId: ID!, $startedAt: DateTime!) {
+  createHIITSession(wodId: $wodId, startedAt: $startedAt) {
+    id
+    status
+    startedAt
+  }
+}
