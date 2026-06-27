@@ -6,6 +6,9 @@
 //  motion collector, and creates an `ExecutionEngine` when the phone sends a workout.
 //  Bridges the engine's pure boundary events to haptics, and motion frames to the relay.
 //
+//  Timing is anchored to the shared `payload.startedAt` (t0) so the watch and phone count
+//  down and run off the exact same clock. Lifecycle actions sync in BOTH directions.
+//
 
 import Foundation
 import Combine
@@ -14,6 +17,8 @@ import Combine
 final class WatchSessionCoordinator: ObservableObject {
     /// Non-nil while a workout is loaded/running; drives the root view.
     @Published private(set) var engine: ExecutionEngine?
+    /// True once Health + Motion permissions are granted (drives the setup screen).
+    @Published private(set) var isSetUp = false
 
     let workout = WatchWorkoutSession()
     let motion = MotionCollector()
@@ -21,10 +26,12 @@ final class WatchSessionCoordinator: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
     private var engineCancellables = Set<AnyCancellable>()
+    /// Set while applying a phone-initiated end, so we don't echo `.finish` back to the phone.
+    private var suppressFinishNotify = false
 
     init() {
         relay.onStart = { [weak self] payload in self?.begin(payload) }
-        relay.onStop = { [weak self] in self?.engine?.finish() }
+        relay.onControl = { [weak self] control in self?.applyRemoteControl(control) }
         // Captured directly (not via self): this fires on the motion queue, off the main
         // actor. `relay.enqueue` is internally lock-guarded and safe to call from there.
         let relay = self.relay
@@ -39,8 +46,51 @@ final class WatchSessionCoordinator: ObservableObject {
     /// Call once on launch.
     func activate() {
         relay.activate()
-        Task { await workout.requestAuthorization() }
+        refreshSetupState()
+        reportDeviceStatus()        // let the phone's Devices page know our current state
     }
+
+    // MARK: - Setup (permissions granted once, off the workout hot path)
+
+    func requestSetupAuthorization() async {
+        await workout.requestAuthorization()
+        _ = await motion.requestAuthorization()
+        refreshSetupState()
+        reportDeviceStatus()
+    }
+
+    private func refreshSetupState() {
+        isSetUp = workout.shareAuthorized && MotionCollector.isAuthorized
+    }
+
+    private func reportDeviceStatus() {
+        relay.sendDeviceStatus(health: workout.shareAuthorized, motion: MotionCollector.isAuthorized)
+    }
+
+    // MARK: - Lifecycle initiated ON THE WATCH (apply locally + notify the phone)
+
+    func pause()  { engine?.pause();  relay.sendControl(.pause) }
+    func resume() { engine?.resume(); relay.sendControl(.resume) }
+    /// User tapped Stop on the watch. `didFinish` notifies the phone (suppress flag is off).
+    func finish() { engine?.finish() }
+
+    // MARK: - Lifecycle initiated ON THE PHONE (apply locally, do NOT echo back)
+
+    private func applyRemoteControl(_ control: WatchMessage.ControlAction) {
+        switch control {
+        case .pause:  engine?.pause()
+        case .resume: engine?.resume()
+        case .finish, .abandon: endFromRemote()
+        }
+    }
+
+    private func endFromRemote() {
+        suppressFinishNotify = true
+        engine?.finish()
+        suppressFinishNotify = false
+    }
+
+    // MARK: - Session
 
     private func begin(_ payload: WorkoutExecutionPayload) {
         // Replace any prior session.
@@ -56,7 +106,7 @@ final class WatchSessionCoordinator: ObservableObject {
             .store(in: &engineCancellables)
 
         engine.didFinish
-            .sink { [weak self] _ in self?.endSession() }
+            .sink { [weak self] _ in self?.handleFinish() }
             .store(in: &engineCancellables)
 
         engine.boundary
@@ -69,8 +119,15 @@ final class WatchSessionCoordinator: ObservableObject {
             .store(in: &engineCancellables)
 
         self.engine = engine
-        workout.start()        // warm HR during the pre-roll
-        engine.beginCountdown()
+        workout.start()                       // warm HR during the pre-roll
+        engine.begin(mainStart: payload.startedAt)   // anchor to the SHARED t0
+    }
+
+    private func handleFinish() {
+        endSession()
+        if !suppressFinishNotify {
+            relay.sendControl(.finish)        // tell the phone we finished (watch- or cap-driven)
+        }
     }
 
     private func endSession() {

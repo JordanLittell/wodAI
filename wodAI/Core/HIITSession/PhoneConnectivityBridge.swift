@@ -18,11 +18,25 @@ final class PhoneConnectivityBridge: NSObject, ObservableObject {
     @Published private(set) var isWatchAppInstalled = false
     @Published private(set) var isReachable = false
 
+    /// Permission state the watch reported during Devices setup (persisted).
+    @Published private(set) var watchHealthAuthorized = false
+    @Published private(set) var watchMotionAuthorized = false
+    /// True once the watch has reported BOTH permissions granted at least once.
+    @Published private(set) var isWatchConfigured = false
+
+    /// Watch → phone lifecycle control (pause/resume/finish/abandon initiated on the watch).
+    var onControl: ((WatchMessage.ControlAction) -> Void)?
+    /// Watch → phone permission report (from setup).
+    var onDeviceStatus: ((_ health: Bool, _ motion: Bool) -> Void)?
+
+    private static let configuredKey = "watchDeviceConfigured"
+
     private let buffer: SensorFrameBuffer
 
     init(buffer: SensorFrameBuffer) {
         self.buffer = buffer
         super.init()
+        isWatchConfigured = UserDefaults.standard.bool(forKey: Self.configuredKey)
     }
 
     func activate() {
@@ -43,8 +57,9 @@ final class PhoneConnectivityBridge: NSObject, ObservableObject {
         }
     }
 
-    func sendStop() {
-        let command = WatchMessage.stopCommand()
+    /// Send a lifecycle action (pause/resume/finish/abandon) to the watch.
+    func sendControl(_ control: WatchMessage.ControlAction) {
+        let command = WatchMessage.controlCommand(control)
         let session = WCSession.default
         try? session.updateApplicationContext(command)
         if session.isReachable {
@@ -52,9 +67,34 @@ final class PhoneConnectivityBridge: NSObject, ObservableObject {
         }
     }
 
-    private func ingest(_ message: [String: Any]) {
-        guard let batch = WatchMessage.decodeBatch(message) else { return }
-        buffer.append(batch.frames())
+    /// Route an inbound message: lifecycle control / device status, else a sensor batch.
+    private func handleIncoming(_ message: [String: Any]) {
+        if let incoming = WatchMessage.decode(message) {
+            DispatchQueue.main.async {
+                switch incoming {
+                case .control(let control):
+                    self.onControl?(control)
+                case .deviceStatus(let health, let motion):
+                    self.applyDeviceStatus(health: health, motion: motion)
+                case .start:
+                    break // phone never receives start
+                }
+            }
+            return
+        }
+        if let batch = WatchMessage.decodeBatch(message) {
+            buffer.append(batch.frames())
+        }
+    }
+
+    private func applyDeviceStatus(health: Bool, motion: Bool) {
+        watchHealthAuthorized = health
+        watchMotionAuthorized = motion
+        if health && motion && !isWatchConfigured {
+            isWatchConfigured = true
+            UserDefaults.standard.set(true, forKey: Self.configuredKey)
+        }
+        onDeviceStatus?(health, motion)
     }
 
     private func refreshState(_ session: WCSession) {
@@ -88,13 +128,18 @@ extension PhoneConnectivityBridge: WCSessionDelegate {
         refreshState(session)
     }
 
-    // Live frames (watch reachable).
+    // Live messages (watch reachable): sensor frames + lifecycle control.
     func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-        ingest(message)
+        handleIncoming(message)
     }
 
-    // Queued frames (watch was unreachable; delivered FIFO on reconnect).
+    // Queued messages (watch was unreachable; delivered FIFO on reconnect).
     func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
-        ingest(userInfo)
+        handleIncoming(userInfo)
+    }
+
+    // Control/status sent via applicationContext (survives a sleeping app).
+    func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+        handleIncoming(applicationContext)
     }
 }

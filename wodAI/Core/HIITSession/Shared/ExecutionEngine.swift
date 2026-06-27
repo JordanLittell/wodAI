@@ -147,6 +147,11 @@ final class ExecutionEngine: ObservableObject {
     private var lastMinuteIndex: Int = -1
     private var lastPhase: IntervalPhase?
 
+    /// Absolute moment the MAIN timer hits t=0 (end of pre-roll). Shared by phone + watch
+    /// so both anchor `elapsed` to the SAME instant and stay in lockstep. Set by
+    /// `begin(mainStart:)` / `beginCountdown()` and used as the `.running` start.
+    private var anchoredStart: Date?
+
     init(payload: WorkoutExecutionPayload, preRoll: TimeInterval = 10) {
         self.payload = payload
         self.timing = TimingModel(payload: payload)
@@ -173,29 +178,49 @@ final class ExecutionEngine: ObservableObject {
 
     var isRunning: Bool { if case .running = state { return true }; return false }
     var isCounting: Bool { if case .countdown = state { return true }; return false }
+    var isPaused: Bool { if case .paused = state { return true }; return false }
     var isFinished: Bool { if case .finished = state { return true }; return false }
 
     var displaySeconds: TimeInterval { timing.displaySeconds(at: elapsed) }
 
     // MARK: Lifecycle
 
-    /// Begin the pre-roll countdown. Sensor collection / HKWorkoutSession should
-    /// already be starting (to warm the HR sensor) when this is called.
-    func beginCountdown() {
+    /// Begin, anchored to an ABSOLUTE main-start instant `t0` (end of pre-roll). The phone
+    /// computes `t0` and sends it in the payload so the watch anchors to the same instant —
+    /// both then show identical countdowns and elapsed time. If `t0` is already in the past
+    /// (e.g. the watch launched late), we join the running clock mid-stream.
+    func begin(mainStart t0: Date) {
         guard case .idle = state else { return }
-        lastCountdownSecond = -1
-        lastMinuteIndex = -1
-        lastPhase = nil
-        state = .countdown(total: preRoll, startedAt: Date())
+        resetBoundaryTracking()
+        anchoredStart = t0
+        let remaining = t0.timeIntervalSinceNow
+        if remaining > 0 {
+            state = .countdown(total: remaining, startedAt: Date())
+        } else {
+            state = .running(start: t0, priorElapsed: 0)
+            didStartMainTimer.send(t0)
+        }
         startTick()
+    }
+
+    /// Begin the pre-roll countdown anchored to `now + preRoll` (watch-less / local default).
+    func beginCountdown() {
+        begin(mainStart: Date().addingTimeInterval(preRoll))
     }
 
     /// Skip straight into the running state (used when there is no pre-roll).
     func startNow() {
         let now = Date()
+        anchoredStart = now
         state = .running(start: now, priorElapsed: 0)
         didStartMainTimer.send(now)
         startTick()
+    }
+
+    private func resetBoundaryTracking() {
+        lastCountdownSecond = -1
+        lastMinuteIndex = -1
+        lastPhase = nil
     }
 
     func pause() {
@@ -225,6 +250,61 @@ final class ExecutionEngine: ObservableObject {
         didFinish.send(final)
     }
 
+    // MARK: Persistence (phone-side restore across app relaunch)
+
+    /// A compact, `Codable` description of an in-flight session, enough to rebuild the
+    /// engine after the app is killed. Running/countdown restore exactly (anchored to the
+    /// shared `mainStart`); paused restores the frozen elapsed.
+    struct Snapshot: Codable {
+        enum Phase: String, Codable { case countdown, running, paused }
+        var phase: Phase
+        var mainStart: Date            // shared t0 (== payload.startedAt)
+        var pausedElapsed: TimeInterval
+        var completedRounds: Int
+    }
+
+    /// Non-nil only while a session is in flight (idle/finished produce no snapshot).
+    var snapshot: Snapshot? {
+        switch state {
+        case .countdown:
+            guard let t0 = anchoredStart else { return nil }
+            return Snapshot(phase: .countdown, mainStart: t0, pausedElapsed: 0, completedRounds: completedRounds)
+        case .running(let start, let prior):
+            // Effective t0 (where elapsed == 0) is start shifted back by any prior segments.
+            return Snapshot(phase: .running, mainStart: start.addingTimeInterval(-prior), pausedElapsed: 0, completedRounds: completedRounds)
+        case .paused(let elapsed):
+            return Snapshot(phase: .paused, mainStart: anchoredStart ?? Date(), pausedElapsed: elapsed, completedRounds: completedRounds)
+        case .idle, .finished:
+            return nil
+        }
+    }
+
+    /// Rebuild engine state from a persisted snapshot. If the workout's time cap already
+    /// elapsed while the app was closed, it settles directly into `.finished`.
+    func restore(from snapshot: Snapshot) {
+        guard case .idle = state else { return }
+        resetBoundaryTracking()
+        anchoredStart = snapshot.mainStart
+        completedRounds = snapshot.completedRounds
+        switch snapshot.phase {
+        case .countdown:
+            let remaining = snapshot.mainStart.timeIntervalSinceNow
+            if remaining > 0 {
+                state = .countdown(total: remaining, startedAt: Date())
+            } else {
+                state = .running(start: snapshot.mainStart, priorElapsed: 0)
+                didStartMainTimer.send(snapshot.mainStart)
+            }
+        case .running:
+            state = .running(start: snapshot.mainStart, priorElapsed: 0)
+            didStartMainTimer.send(snapshot.mainStart)
+        case .paused:
+            state = .paused(elapsed: snapshot.pausedElapsed)
+        }
+        startTick()
+        if case .running = state, timing.isComplete(at: elapsed) { finish() }
+    }
+
     // MARK: Tick driver
 
     private func startTick() {
@@ -244,9 +324,11 @@ final class ExecutionEngine: ObservableObject {
                 boundary.send(.countdownTick(secondsLeft))
             }
             if countdownRemaining <= 0 {
-                let now = Date()
-                state = .running(start: now, priorElapsed: 0)
-                didStartMainTimer.send(now)
+                // Anchor the running clock to the shared t0 (not Date()), so the phone and
+                // watch — each firing its own tick — compute the exact same elapsed time.
+                let start = anchoredStart ?? Date()
+                state = .running(start: start, priorElapsed: 0)
+                didStartMainTimer.send(start)
             }
         case .running:
             emitRunningBoundaries()

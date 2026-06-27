@@ -7,12 +7,13 @@ import SwiftUI
 import Combine
 import WodAiAPI
 
-struct HIITWorkoutTag: Identifiable, Hashable {
+struct HIITWorkoutTag: Identifiable, Hashable, Codable {
     let id: Int
     let name: String
 }
 
-struct HIITWorkoutItem: Identifiable, Hashable {
+// Codable so an in-flight workout can be persisted and restored across an app relaunch.
+struct HIITWorkoutItem: Identifiable, Hashable, Codable {
     let id: Int
     let format: String?
     let displayText: String
@@ -30,12 +31,7 @@ struct HIITTagItem: Identifiable, Equatable {
     let count: Int
 }
 
-enum WorkoutExecutionState {
-    case idle
-    case running(startTime: Date, priorElapsed: TimeInterval)
-    case paused(elapsed: TimeInterval)
-}
-
+@MainActor
 class HIITWorkoutViewModel: ObservableObject {
     static let shared = HIITWorkoutViewModel()
 
@@ -44,7 +40,6 @@ class HIITWorkoutViewModel: ObservableObject {
     @Published var isFavoriteLoading: Bool = false
     @Published var isLoading = false
     @Published var error: Error?
-    @Published var executionState: WorkoutExecutionState = .idle
     @Published var showConfetti = false
 
     @Published var selectedTags: [HIITTagItem] = []
@@ -52,17 +47,18 @@ class HIITWorkoutViewModel: ObservableObject {
     @Published var isLoadingTags = false
 
     private let network = Network.shared
-    private var timerCancellable: AnyCancellable?
     private var cancellables = Set<AnyCancellable>()
 
     init() {
         setupTagSubscription()
+        observeSession()
     }
 
     init(preloaded: HIITWorkoutItem) {
         self.currentWorkout = preloaded
         self.isFavorited = true
         setupTagSubscription()
+        observeSession()
     }
 
     private func setupTagSubscription() {
@@ -70,37 +66,52 @@ class HIITWorkoutViewModel: ObservableObject {
             .dropFirst()
             .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
             .sink { [weak self] _ in
-                guard let self, !self.isExecuting, !self.isPaused else { return }
+                guard let self, !self.isExecuting, !self.isPaused, !self.isCountingDown else { return }
                 self.nextWorkout()
             }
             .store(in: &cancellables)
     }
 
-    // MARK: - Computed state
-
-    var isExecuting: Bool {
-        if case .running = executionState { return true }
-        return false
+    /// Mirror the shared session engine into this view model so the UI stays live, and run
+    /// completion UI when a session ends (whether the user finished on the phone OR the watch).
+    private func observeSession() {
+        let manager = HIITSessionManager.shared
+        manager.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+        manager.didEndSession
+            .receive(on: RunLoop.main)
+            .sink { [weak self] end in
+                guard let self else { return }
+                if end.reason == .finish {
+                    Task { await self.completeWorkout(id: end.wodId) }
+                }
+            }
+            .store(in: &cancellables)
     }
+
+    // MARK: - Computed execution state (backed by the shared ExecutionEngine)
+
+    private var engine: ExecutionEngine? { HIITSessionManager.shared.engine }
+
+    var isCountingDown: Bool { engine?.isCounting ?? false }
+    var countdownRemaining: TimeInterval { engine?.countdownRemaining ?? 0 }
+    var isExecuting: Bool { engine?.isRunning ?? false }
 
     var isPaused: Bool {
-        if case .paused = executionState { return true }
+        if case .paused = engine?.state { return true }
         return false
     }
 
-    var elapsedSeconds: TimeInterval {
-        switch executionState {
-        case .idle: return 0
-        case .running(let start, let prior): return prior + Date().timeIntervalSince(start)
-        case .paused(let elapsed): return elapsed
+    var displaySeconds: TimeInterval { engine?.displaySeconds ?? 0 }
+
+    /// Restore an in-flight session after the app was relaunched. Adopts the persisted
+    /// workout so the view shows it instead of loading the default.
+    func restoreActiveSession() {
+        if let item = HIITSessionManager.shared.restoreActiveSession() {
+            currentWorkout = item
         }
-    }
-
-    var isCountDown: Bool { currentWorkout?.constraintType == "minutes" }
-    var timerTarget: TimeInterval { TimeInterval(currentWorkout?.constraintMagnitude ?? 0) }
-
-    var displaySeconds: TimeInterval {
-        isCountDown ? max(0, timerTarget - elapsedSeconds) : elapsedSeconds
     }
 
     // MARK: - Workout loading
@@ -278,53 +289,23 @@ class HIITWorkoutViewModel: ObservableObject {
 
     // MARK: - Execution control
 
+    // Execution is driven by the shared HIITSessionManager/ExecutionEngine, which keeps the
+    // phone and watch in sync and propagates every action in both directions. Completion UI
+    // (CompleteWorkout + confetti) runs via the `didEndSession` subscription in observeSession.
+
     func startExecution() {
-        executionState = .running(startTime: Date(), priorElapsed: 0)
-        startTimer()
-        // Hand the workout to the watch (creates the backend session + streams sensors).
-        // The local timer above remains the watch-less fallback.
-        if let workout = currentWorkout {
-            Task { await HIITSessionManager.shared.start(workout: workout) }
-        }
+        guard let workout = currentWorkout else { return }
+        Task { await HIITSessionManager.shared.start(workout: workout) }
     }
 
-    func pauseExecution() {
-        let elapsed = elapsedSeconds
-        timerCancellable?.cancel()
-        executionState = .paused(elapsed: elapsed)
-    }
+    func pauseExecution() { HIITSessionManager.shared.pause() }
 
-    func resumeExecution() {
-        let prior = elapsedSeconds
-        executionState = .running(startTime: Date(), priorElapsed: prior)
-        startTimer()
-    }
+    func resumeExecution() { HIITSessionManager.shared.resume() }
 
-    func exitExecution() {
-        timerCancellable?.cancel()
-        executionState = .idle
-        // Left early — abandon the live session (stops the watch, marks the record abandoned).
-        Task { await HIITSessionManager.shared.abandon() }
-    }
+    func exitExecution() { HIITSessionManager.shared.abandon() }
 
-    func finishExecution() {
-        timerCancellable?.cancel()
-        executionState = .idle
-        // Finalize the live session: stop the watch, flush remaining sensor frames, complete.
-        Task { await HIITSessionManager.shared.finish() }
-        guard let id = currentWorkout?.id else { return }
-        Task { await completeWorkout(id: id) }
-    }
+    func finishExecution() { HIITSessionManager.shared.finish() }
 
-    private func startTimer() {
-        timerCancellable = Timer.publish(every: 1, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                self?.objectWillChange.send()
-            }
-    }
-
-    @MainActor
     private func completeWorkout(id: Int) async {
         do {
             let result = try await withCheckedThrowingContinuation { continuation in

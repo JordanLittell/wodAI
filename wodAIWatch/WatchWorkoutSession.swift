@@ -24,6 +24,12 @@ final class WatchWorkoutSession: NSObject, ObservableObject {
     private let heartRateType = HKQuantityType(.heartRate)
     private let bpmUnit = HKUnit.count().unitDivided(by: .minute())
 
+    /// Whether we may record workouts (the share permission we request). HealthKit never
+    /// reveals read-authorization, so we report share status as the device's health state.
+    var shareAuthorized: Bool {
+        healthStore.authorizationStatus(for: HKQuantityType.workoutType()) == .sharingAuthorized
+    }
+
     /// Request HealthKit permission. Safe to call on launch.
     func requestAuthorization() async {
         guard HKHealthStore.isHealthDataAvailable() else { return }

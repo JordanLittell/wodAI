@@ -9,6 +9,7 @@
 import SwiftUI
 
 struct WatchExecutionView: View {
+    @ObservedObject var coordinator: WatchSessionCoordinator
     @ObservedObject var engine: ExecutionEngine
     @ObservedObject var workout: WatchWorkoutSession
     @ObservedObject var motion: MotionCollector
@@ -20,7 +21,7 @@ struct WatchExecutionView: View {
         case .countdown:
             CountdownView(remaining: engine.countdownRemaining)
         case .running, .paused:
-            ExecutionPager(engine: engine, workout: workout, motion: motion)
+            ExecutionPager(coordinator: coordinator, engine: engine, workout: workout, motion: motion)
         case .finished(let elapsed):
             FinishedView(elapsed: elapsed, rounds: engine.completedRounds)
         }
@@ -80,13 +81,14 @@ private struct FinishedView: View {
 // MARK: - The 3-page pager
 
 private struct ExecutionPager: View {
+    @ObservedObject var coordinator: WatchSessionCoordinator
     @ObservedObject var engine: ExecutionEngine
     @ObservedObject var workout: WatchWorkoutSession
     @ObservedObject var motion: MotionCollector
 
     var body: some View {
         TabView {
-            TimerScreen(engine: engine)
+            TimerScreen(coordinator: coordinator, engine: engine)
                 .tag(0)
             WorkoutTextScreen(text: engine.payload.displayText)
                 .tag(1)
@@ -100,6 +102,7 @@ private struct ExecutionPager: View {
 // MARK: - Screen 1: Time (format-specific)
 
 private struct TimerScreen: View {
+    @ObservedObject var coordinator: WatchSessionCoordinator
     @ObservedObject var engine: ExecutionEngine
 
     var body: some View {
@@ -160,8 +163,21 @@ private struct TimerScreen: View {
                 } label: { Image(systemName: "plus") }
                     .tint(.green)
             }
+            // Pause/resume + stop sync to the phone via the coordinator.
+            if engine.isRunning {
+                Button {
+                    coordinator.pause()
+                    WKHaptics.click()
+                } label: { Image(systemName: "pause.fill") }
+            } else {
+                Button {
+                    coordinator.resume()
+                    WKHaptics.click()
+                } label: { Image(systemName: "play.fill") }
+                    .tint(.green)
+            }
             Button(role: .destructive) {
-                engine.finish()
+                coordinator.finish()
                 WKHaptics.stop()
             } label: { Image(systemName: "stop.fill") }
         }

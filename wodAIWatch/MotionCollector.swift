@@ -29,6 +29,7 @@ final class MotionCollector: ObservableObject {
 
     private let motion = CMMotionManager()
     private let altimeter = CMAltimeter()
+    private let activityManager = CMMotionActivityManager()
     private let queue = OperationQueue()
     private var t0: Date?
     private var sampleCount = 0
@@ -37,6 +38,24 @@ final class MotionCollector: ObservableObject {
         queue.maxConcurrentOperationCount = 1
         queue.qualityOfService = .userInteractive
         motion.deviceMotionUpdateInterval = 1.0 / Double(Self.sampleHz)
+    }
+
+    /// Has the user granted Motion & Fitness? Device-motion + altimeter both need it.
+    static var isAuthorized: Bool {
+        CMMotionActivityManager.authorizationStatus() == .authorized
+    }
+
+    /// Surface the Motion & Fitness prompt during Devices setup (not mid-workout). Issuing a
+    /// trivial activity query triggers the same permission that device-motion/altimeter use.
+    /// Returns whether access ended up authorized.
+    func requestAuthorization() async -> Bool {
+        guard CMMotionActivityManager.isActivityAvailable() else { return false }
+        return await withCheckedContinuation { continuation in
+            let now = Date()
+            activityManager.queryActivityStarting(from: now.addingTimeInterval(-1), to: now, to: queue) { _, _ in
+                continuation.resume(returning: Self.isAuthorized)
+            }
+        }
     }
 
     /// Begin sampling. `t0` is session zero (end of countdown); frame timestamps are relative to it.

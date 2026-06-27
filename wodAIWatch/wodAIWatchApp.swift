@@ -26,25 +26,59 @@ struct wodAIWatch_Watch_AppApp: App {
 
 struct WatchRootView: View {
     @ObservedObject var coordinator: WatchSessionCoordinator
+    @State private var requesting = false
 
     var body: some View {
         if let engine = coordinator.engine {
-            WatchExecutionView(engine: engine,
+            WatchExecutionView(coordinator: coordinator,
+                               engine: engine,
                                workout: coordinator.workout,
                                motion: coordinator.motion)
+        } else if !coordinator.isSetUp {
+            setup
         } else {
-            VStack(spacing: 8) {
-                Image(systemName: "applewatch.radiowaves.left.and.right")
-                    .font(.title2)
-                    .foregroundStyle(.green)
-                Text("Ready")
-                    .font(.headline)
-                Text("Start a workout in wodAI on your phone.")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding()
+            ready
         }
+    }
+
+    private var setup: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "heart.text.square")
+                .font(.title2)
+                .foregroundStyle(.green)
+            Text("Set Up wodAI")
+                .font(.headline)
+            Text("Grant Health & Motion access so we can track your workouts.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Button {
+                requesting = true
+                Task {
+                    await coordinator.requestSetupAuthorization()
+                    requesting = false
+                }
+            } label: {
+                Text(requesting ? "Requesting…" : "Grant Access")
+            }
+            .disabled(requesting)
+            .tint(.green)
+        }
+        .padding()
+    }
+
+    private var ready: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "applewatch.radiowaves.left.and.right")
+                .font(.title2)
+                .foregroundStyle(.green)
+            Text("Ready")
+                .font(.headline)
+            Text("Start a workout in wodAI on your phone.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding()
     }
 }

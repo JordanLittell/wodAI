@@ -85,6 +85,64 @@ struct TimingModelTests {
     }
 }
 
+struct ExecutionEngineSyncTests {
+
+    @Test func futureT0StartsCountdown() {
+        let engine = ExecutionEngine(payload: payload(format: .forTime, constraintType: "rounds", magnitude: 3))
+        engine.begin(mainStart: Date().addingTimeInterval(10))
+        #expect(engine.isCounting)
+        #expect(!engine.isRunning)
+        #expect(engine.elapsed == 0)
+        #expect(engine.countdownRemaining > 9 && engine.countdownRemaining <= 10)
+    }
+
+    @Test func pastT0JoinsRunningMidClock() {
+        // A watch that launched late anchors to the same t0 and joins the clock in progress.
+        let engine = ExecutionEngine(payload: payload(format: .forTime, constraintType: "rounds", magnitude: 3))
+        engine.begin(mainStart: Date().addingTimeInterval(-5))
+        #expect(engine.isRunning)
+        #expect(abs(engine.elapsed - 5) < 0.5)
+    }
+
+    @Test func snapshotRestoreRunningPreservesElapsed() {
+        let p = payload(format: .forTime, constraintType: "rounds", magnitude: 3)
+        let original = ExecutionEngine(payload: p)
+        original.begin(mainStart: Date().addingTimeInterval(-30))
+        guard let snap = original.snapshot else { Issue.record("expected a snapshot"); return }
+        #expect(snap.phase == .running)
+
+        let restored = ExecutionEngine(payload: p)
+        restored.restore(from: snap)
+        #expect(restored.isRunning)
+        #expect(abs(restored.elapsed - original.elapsed) < 0.5)
+    }
+
+    @Test func snapshotRestorePausedPreservesElapsed() {
+        let p = payload(format: .forTime, constraintType: "rounds", magnitude: 3)
+        let original = ExecutionEngine(payload: p)
+        original.begin(mainStart: Date().addingTimeInterval(-12))
+        original.pause()
+        guard let snap = original.snapshot else { Issue.record("expected a snapshot"); return }
+        #expect(snap.phase == .paused)
+
+        let restored = ExecutionEngine(payload: p)
+        restored.restore(from: snap)
+        #expect(restored.isPaused)
+        #expect(abs(restored.displaySeconds - original.displaySeconds) < 0.01)
+    }
+
+    @Test func restoreAfterCapElapsedFinishes() {
+        // AMRAP cap = 60s; restoring a session whose t0 was 5 minutes ago settles into finished.
+        let p = payload(format: .amrap, constraintType: "minutes", magnitude: 1)
+        let snap = ExecutionEngine.Snapshot(phase: .running,
+                                            mainStart: Date().addingTimeInterval(-300),
+                                            pausedElapsed: 0, completedRounds: 0)
+        let restored = ExecutionEngine(payload: p)
+        restored.restore(from: snap)
+        #expect(restored.isFinished)
+    }
+}
+
 struct IntervalParsingTests {
     @Test func parsesExplicitSpec() {
         let cfg = IntervalConfig.parse(from: "Tabata: 30s on / 15s off x 6")

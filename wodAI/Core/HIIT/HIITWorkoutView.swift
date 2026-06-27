@@ -62,6 +62,9 @@ struct HIITWorkoutView: View {
         .navigationTitle("WOD Generator")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
+            // Restore an in-flight workout (e.g. after the app was killed mid-session) so it
+            // is never replaced by the default workout.
+            viewModel.restoreActiveSession()
             if let id = viewModel.currentWorkout?.id {
                 viewModel.fetchIsSaved(workoutId: id)
             } else {
@@ -95,7 +98,13 @@ struct HIITWorkoutView: View {
                     }
                 }
 
-                if viewModel.isExecuting || viewModel.isPaused {
+                if viewModel.isCountingDown {
+                    // Pre-roll countdown, in lockstep with the watch (shared t0).
+                    Text("Starting in \(Int(ceil(viewModel.countdownRemaining)))")
+                        .font(.system(.body, design: .monospaced).weight(.semibold))
+                        .foregroundColor(.green)
+                        .monospacedDigit()
+                } else if viewModel.isExecuting || viewModel.isPaused {
                     Text(formatTimer(viewModel.displaySeconds))
                         .font(.system(.body, design: .monospaced).weight(.semibold))
                         .foregroundColor(viewModel.isExecuting ? .green : .orange)
@@ -236,8 +245,8 @@ struct HIITWorkoutView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(
-                    cardBorderColor(for: viewModel.executionState),
-                    lineWidth: (viewModel.isExecuting || viewModel.isPaused) ? 1.5 : 1
+                    cardBorderColor,
+                    lineWidth: (viewModel.isExecuting || viewModel.isPaused || viewModel.isCountingDown) ? 1.5 : 1
                 )
         )
         .animation(.easeInOut(duration: 0.4), value: viewModel.isExecuting)
@@ -286,7 +295,9 @@ struct HIITWorkoutView: View {
             watchStatusBanner
 
             Group {
-                if viewModel.isExecuting {
+                if viewModel.isCountingDown {
+                    exitButton            // cancel the pre-roll before the clock starts
+                } else if viewModel.isExecuting {
                     HStack(spacing: 12) {
                         pauseButton
                         finishButton
@@ -434,12 +445,10 @@ struct HIITWorkoutView: View {
 
     // MARK: - Helpers
 
-    private func cardBorderColor(for state: WorkoutExecutionState) -> Color {
-        switch state {
-        case .idle:    return Color("Border")
-        case .running: return Color.green.opacity(0.45)
-        case .paused:  return Color.red.opacity(0.3)
-        }
+    private var cardBorderColor: Color {
+        if viewModel.isPaused { return Color.red.opacity(0.3) }
+        if viewModel.isExecuting || viewModel.isCountingDown { return Color.green.opacity(0.45) }
+        return Color("Border")
     }
 
     private func formatTimer(_ seconds: TimeInterval) -> String {

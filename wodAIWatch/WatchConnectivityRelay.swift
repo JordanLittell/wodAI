@@ -18,8 +18,8 @@ final class WatchConnectivityRelay: NSObject, ObservableObject {
 
     /// Invoked when the phone sends a start command (with the workout to run).
     var onStart: ((WorkoutExecutionPayload) -> Void)?
-    /// Invoked when the phone sends a stop command.
-    var onStop: (() -> Void)?
+    /// Invoked when the phone sends a lifecycle control (pause/resume/finish/abandon).
+    var onControl: ((WatchMessage.ControlAction) -> Void)?
 
     /// Frames per batch (~1s @ 50Hz).
     private let batchSize = MotionCollector.sampleHz
@@ -31,6 +31,29 @@ final class WatchConnectivityRelay: NSObject, ObservableObject {
         let session = WCSession.default
         session.delegate = self
         session.activate()
+    }
+
+    // MARK: Watch → Phone control / status
+
+    /// Send a lifecycle action to the phone (guaranteed delivery via transferUserInfo).
+    func sendControl(_ control: WatchMessage.ControlAction) {
+        deliver(WatchMessage.controlCommand(control))
+    }
+
+    /// Report permission state to the phone after Devices setup.
+    func sendDeviceStatus(health: Bool, motion: Bool) {
+        deliver(WatchMessage.deviceStatusMessage(health: health, motion: motion))
+    }
+
+    private func deliver(_ message: [String: Any]) {
+        let session = WCSession.default
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil) { _ in
+                session.transferUserInfo(message)   // fall back to guaranteed delivery
+            }
+        } else {
+            session.transferUserInfo(message)
+        }
     }
 
     /// Buffer a frame; flush a batch once `batchSize` frames have accumulated.
@@ -94,13 +117,15 @@ extension WatchConnectivityRelay: WCSessionDelegate {
     }
 
     private func handle(_ message: [String: Any]) {
-        guard let (action, payload) = WatchMessage.decodeCommand(message) else { return }
+        guard let incoming = WatchMessage.decode(message) else { return }
         DispatchQueue.main.async {
-            switch action {
-            case .startSession:
-                if let payload { self.onStart?(payload) }
-            case .stopSession:
-                self.onStop?()
+            switch incoming {
+            case .start(let payload):
+                self.onStart?(payload)
+            case .control(let control):
+                self.onControl?(control)
+            case .deviceStatus:
+                break   // watch never receives device status
             }
         }
     }
