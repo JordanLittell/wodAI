@@ -47,7 +47,7 @@ class AuthState: ObservableObject {
     @Published var currentUserId: Int?
     @Published var currentToken: String?
     @Published var sessionExpiredMessage: String?
-    
+
     // MARK: - Constants
     private let tokenKey = "authToken"
     private let sessionExpiredKey = "sessionExpiredMessage"
@@ -78,7 +78,7 @@ class AuthState: ObservableObject {
         isProvisioned = UserDefaults.standard.bool(forKey: provisionedKey)
         currentUserId = UserDefaults.standard.object(forKey: userIdKey) as? Int
         sessionExpiredMessage = UserDefaults.standard.string(forKey: sessionExpiredKey)
-        
+
         // Set provisioning state based on authentication
         updateProvisioningState()
     }

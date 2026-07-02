@@ -73,6 +73,12 @@ struct HIITWorkoutView: View {
                     .ignoresSafeArea()
             }
         }
+        .fullScreenCover(isPresented: Binding(
+            get: { viewModel.isExecuting || viewModel.isPaused },
+            set: { _ in }
+        )) {
+            WodTimerView(viewModel: viewModel)
+        }
     }
 
     // MARK: - Tag section
@@ -81,10 +87,6 @@ struct HIITWorkoutView: View {
         VStack(alignment: .leading, spacing: 8) {
             // Row 1: selected tags + toggle button
             HStack(spacing: 8) {
-                if viewModel.isExecuting || viewModel.isPaused {
-                    PulsingDot(color: viewModel.isExecuting ? .green : .orange)
-                }
-
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
                         ForEach(viewModel.selectedTags) { tag in
@@ -92,13 +94,6 @@ struct HIITWorkoutView: View {
                         }
                         addButton
                     }
-                }
-
-                if viewModel.isExecuting || viewModel.isPaused {
-                    Text(formatTimer(viewModel.displaySeconds))
-                        .font(.system(.body, design: .monospaced).weight(.semibold))
-                        .foregroundColor(viewModel.isExecuting ? .green : .orange)
-                        .monospacedDigit()
                 }
             }
 
@@ -205,7 +200,11 @@ struct HIITWorkoutView: View {
                         .foregroundColor(Color("PrimaryText"))
                 }
                 Spacer()
-                bookmarkButton
+                HStack(spacing: 16) {
+                    likeButton
+                    dislikeButton
+                    bookmarkButton
+                }
             }
 
             Text(viewModel.currentWorkout?.displayText ?? "")
@@ -246,24 +245,12 @@ struct HIITWorkoutView: View {
     // MARK: - Bottom bar
 
     private var bottomBar: some View {
-        Group {
-            if viewModel.isExecuting {
-                HStack(spacing: 12) {
-                    pauseButton
-                    finishButton
-                }
-            } else if viewModel.isPaused {
-                HStack(spacing: 12) {
-                    exitButton
-                    resumeButton
-                    finishButton
-                }
-            } else {
-                VStack(spacing: 12) {
-                    newWorkoutButton
-                    startButton
-                }
+        VStack(spacing: 12) {
+            if viewModel.isForTime {
+                timeCapControl
             }
+            newWorkoutButton
+            startButton
         }
         .padding(.horizontal)
         .padding(.bottom, 20)
@@ -272,8 +259,51 @@ struct HIITWorkoutView: View {
             Color("Surface")
                 .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: -5)
         )
-        .animation(.easeInOut(duration: 0.25), value: viewModel.isExecuting)
-        .animation(.easeInOut(duration: 0.25), value: viewModel.isPaused)
+    }
+
+    // MARK: - Time cap control
+
+    private var timeCapControl: some View {
+        HStack(spacing: 12) {
+            Text("Time cap")
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(Color("SecondaryText"))
+            Spacer()
+            capStepButton(systemImage: "minus") { adjustCap(by: -60) }
+            Text(capLabel)
+                .font(.system(.body, design: .monospaced).weight(.semibold))
+                .monospacedDigit()
+                .foregroundColor(Color("PrimaryText"))
+                .frame(minWidth: 72)
+            capStepButton(systemImage: "plus") { adjustCap(by: 60) }
+        }
+        .padding()
+        .background(Color("Surface"))
+        .cornerRadius(14)
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color("Border"), lineWidth: 1))
+    }
+
+    private func capStepButton(systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(Color("BrandPrimary"))
+                .frame(width: 32, height: 32)
+                .background(Color("BrandPrimary").opacity(0.12))
+                .cornerRadius(8)
+        }
+    }
+
+    private var capLabel: String {
+        guard let cap = viewModel.editableTimeCap, cap >= 60 else { return "No cap" }
+        return "\(cap / 60) min"
+    }
+
+    private func adjustCap(by delta: Int) {
+        let current = viewModel.editableTimeCap ?? 0
+        let next = current + delta
+        viewModel.editableTimeCap = next < 60 ? nil : next
     }
 
     // MARK: - Action buttons
@@ -314,65 +344,36 @@ struct HIITWorkoutView: View {
         .disabled(viewModel.isLoading)
     }
 
-    private var pauseButton: some View {
-        Button(action: { viewModel.pauseExecution() }) {
-            HStack {
-                Image(systemName: "pause.fill")
-                Text("Pause").fontWeight(.medium)
-            }
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(Color("Surface"))
-            .foregroundColor(Color("PrimaryText"))
-            .cornerRadius(14)
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color("Border"), lineWidth: 1))
+    // MARK: - Like / Dislike buttons
+
+    private var likeButton: some View {
+        Button(action: {
+            let generator = UIImpactFeedbackGenerator(style: .medium)
+            generator.impactOccurred()
+            viewModel.toggleLike()
+        }) {
+            Image(systemName: viewModel.likeScore == 1 ? "hand.thumbsup.fill" : "hand.thumbsup")
+                .font(.system(size: 16, weight: .light))
+                .foregroundColor(viewModel.likeScore == 1 ? Color("BrandPrimary") : Color("SecondaryText"))
+                .scaleEffect(viewModel.likeScore == 1 ? 1.15 : 1.0)
+                .animation(.spring(response: 0.25, dampingFraction: 0.5), value: viewModel.likeScore)
         }
+        .disabled(viewModel.currentWorkout == nil || viewModel.isLikeLoading || viewModel.isExecuting || viewModel.isPaused)
     }
 
-    private var finishButton: some View {
-        Button(action: { viewModel.finishExecution() }) {
-            HStack {
-                Image(systemName: "checkmark")
-                Text("Finish").fontWeight(.semibold)
-            }
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(Color.green.opacity(0.85))
-            .foregroundColor(.white)
-            .cornerRadius(14)
-            .shadow(color: Color.green.opacity(0.3), radius: 8, x: 0, y: 4)
+    private var dislikeButton: some View {
+        Button(action: {
+            let generator = UIImpactFeedbackGenerator(style: .medium)
+            generator.impactOccurred()
+            viewModel.toggleDislike()
+        }) {
+            Image(systemName: viewModel.likeScore == -1 ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                .font(.system(size: 16, weight: .light))
+                .foregroundColor(viewModel.likeScore == -1 ? .red : Color("SecondaryText"))
+                .scaleEffect(viewModel.likeScore == -1 ? 1.15 : 1.0)
+                .animation(.spring(response: 0.25, dampingFraction: 0.5), value: viewModel.likeScore)
         }
-    }
-
-    private var resumeButton: some View {
-        Button(action: { viewModel.resumeExecution() }) {
-            Image(systemName: "play.fill")
-                .fontWeight(.semibold)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(
-                    LinearGradient(
-                        colors: [Color("BrandPrimary"), Color("BrandSecondary")],
-                        startPoint: .leading, endPoint: .trailing
-                    )
-                )
-                .foregroundColor(.white)
-                .cornerRadius(14)
-                .shadow(color: Color("BrandPrimary").opacity(0.3), radius: 8, x: 0, y: 4)
-        }
-    }
-
-    private var exitButton: some View {
-        Button(action: { viewModel.exitExecution() }) {
-            Text("Exit")
-                .fontWeight(.medium)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.red.opacity(0.85))
-                .foregroundColor(.white)
-                .cornerRadius(14)
-                .shadow(color: Color.red.opacity(0.25), radius: 6, x: 0, y: 3)
-        }
+        .disabled(viewModel.currentWorkout == nil || viewModel.isLikeLoading || viewModel.isExecuting || viewModel.isPaused)
     }
 
     // MARK: - Bookmark button
@@ -400,11 +401,6 @@ struct HIITWorkoutView: View {
         case .running: return Color.green.opacity(0.45)
         case .paused:  return Color.red.opacity(0.3)
         }
-    }
-
-    private func formatTimer(_ seconds: TimeInterval) -> String {
-        let s = Int(seconds)
-        return String(format: "%02d:%02d", s / 60, s % 60)
     }
 }
 

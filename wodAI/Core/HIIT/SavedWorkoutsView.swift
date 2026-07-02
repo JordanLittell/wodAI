@@ -100,7 +100,9 @@ struct SavedWorkoutsView: View {
                                 displayText: item.workout.displayText,
                                 stimulus: item.workout.stimulus,
                                 constraintType: item.workout.constraintType,
-                                constraintMagnitude: item.workout.constraintMagnitude
+                                constraintMagnitude: item.workout.constraintMagnitude,
+                                timeCap: item.workout.timeCap,
+                                timingScheme: item.workout.timingScheme.map { WodTimerConfig(fragment: $0) }
                             )
                         }
                         .sorted { $0.savedAt > $1.savedAt }
@@ -129,6 +131,8 @@ struct SavedHiitEntry: Identifiable {
     let stimulus: String
     let constraintType: String
     let constraintMagnitude: Int
+    let timeCap: Int?
+    let timingScheme: WodTimerConfig?
 }
 
 struct SavedHiitCard: View {
@@ -196,6 +200,8 @@ extension SavedHiitEntry {
             stimulus: stimulus,
             constraintType: constraintType,
             constraintMagnitude: constraintMagnitude,
+            timeCap: timeCap,
+            timingScheme: timingScheme,
             tags: []
         )
     }

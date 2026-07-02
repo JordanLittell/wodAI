@@ -1,0 +1,3 @@
+mutation LikeHiitWorkoutMutation($workoutId: Int!, $score: Int!) {
+  likeHiitWorkout(workoutId: $workoutId, score: $score)
+}

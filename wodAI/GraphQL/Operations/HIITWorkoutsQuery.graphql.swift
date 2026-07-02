@@ -7,9 +7,9 @@ import WodAiAPI
 public class HIITWorkoutsQuery: GraphQLQuery {
   public static let operationName: String = "HIITWorkoutsQuery"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "4bd79077cc5abdee40c9f751cd81a2af25ebf48e89c554b7f53afdf3ff4e1792",
+    operationIdentifier: "e6642b96b87c0fea647291a5b5085b812f75f529e06b53345b1ad5faf890054a",
     definition: .init(
-      #"query HIITWorkoutsQuery($page: Int, $limit: Int) { hiitWorkouts(page: $page, limit: $limit) { __typename data { __typename id format displayText stimulus constraintType constraintMagnitude tags { __typename id name } } total page limit totalPages } }"#
+      #"query HIITWorkoutsQuery($page: Int, $limit: Int) { hiitWorkouts(page: $page, limit: $limit) { __typename data { __typename id format displayText stimulus constraintType constraintMagnitude timeCap timingScheme { __typename version segments { __typename rounds phases { __typename durationSeconds direction label } } } tags { __typename id name } } total page limit totalPages } }"#
     ))
 
   public var page: GraphQLNullable<Int>
@@ -81,6 +81,8 @@ public class HIITWorkoutsQuery: GraphQLQuery {
           .field("stimulus", String.self),
           .field("constraintType", String.self),
           .field("constraintMagnitude", Int.self),
+          .field("timeCap", Int?.self),
+          .field("timingScheme", TimingScheme?.self),
           .field("tags", [Tag]?.self),
         ] }
 
@@ -90,7 +92,65 @@ public class HIITWorkoutsQuery: GraphQLQuery {
         public var stimulus: String { __data["stimulus"] }
         public var constraintType: String { __data["constraintType"] }
         public var constraintMagnitude: Int { __data["constraintMagnitude"] }
+        public var timeCap: Int? { __data["timeCap"] }
+        public var timingScheme: TimingScheme? { __data["timingScheme"] }
         public var tags: [Tag]? { __data["tags"] }
+
+        /// HiitWorkouts.Datum.TimingScheme
+        ///
+        /// Parent Type: `WodTimerConfig`
+        public struct TimingScheme: WodAiAPI.SelectionSet {
+          public let __data: DataDict
+          public init(_dataDict: DataDict) { __data = _dataDict }
+
+          public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.WodTimerConfig }
+          public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("version", Int.self),
+            .field("segments", [Segment].self),
+          ] }
+
+          public var version: Int { __data["version"] }
+          public var segments: [Segment] { __data["segments"] }
+
+          /// HiitWorkouts.Datum.TimingScheme.Segment
+          ///
+          /// Parent Type: `TimerSegment`
+          public struct Segment: WodAiAPI.SelectionSet {
+            public let __data: DataDict
+            public init(_dataDict: DataDict) { __data = _dataDict }
+
+            public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.TimerSegment }
+            public static var __selections: [ApolloAPI.Selection] { [
+              .field("__typename", String.self),
+              .field("rounds", Int.self),
+              .field("phases", [Phase].self),
+            ] }
+
+            public var rounds: Int { __data["rounds"] }
+            public var phases: [Phase] { __data["phases"] }
+
+            /// HiitWorkouts.Datum.TimingScheme.Segment.Phase
+            ///
+            /// Parent Type: `TimerPhase`
+            public struct Phase: WodAiAPI.SelectionSet {
+              public let __data: DataDict
+              public init(_dataDict: DataDict) { __data = _dataDict }
+
+              public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.TimerPhase }
+              public static var __selections: [ApolloAPI.Selection] { [
+                .field("__typename", String.self),
+                .field("durationSeconds", Int?.self),
+                .field("direction", GraphQLEnum<WodAiAPI.PhaseDirection>.self),
+                .field("label", String?.self),
+              ] }
+
+              public var durationSeconds: Int? { __data["durationSeconds"] }
+              public var direction: GraphQLEnum<WodAiAPI.PhaseDirection> { __data["direction"] }
+              public var label: String? { __data["label"] }
+            }
+          }
+        }
 
         /// HiitWorkouts.Datum.Tag
         ///

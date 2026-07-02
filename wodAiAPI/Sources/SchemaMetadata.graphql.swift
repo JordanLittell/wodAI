@@ -34,7 +34,10 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "SavedHIITWorkout": return WodAiAPI.Objects.SavedHIITWorkout
     case "Tag": return WodAiAPI.Objects.Tag
     case "TagFacet": return WodAiAPI.Objects.TagFacet
+    case "TimerPhase": return WodAiAPI.Objects.TimerPhase
+    case "TimerSegment": return WodAiAPI.Objects.TimerSegment
     case "User": return WodAiAPI.Objects.User
+    case "WodTimerConfig": return WodAiAPI.Objects.WodTimerConfig
     case "Workout": return WodAiAPI.Objects.Workout
     default: return nil
     }

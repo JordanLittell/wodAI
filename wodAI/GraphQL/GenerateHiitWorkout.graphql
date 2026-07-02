@@ -6,6 +6,18 @@ mutation GenerateHiitWorkoutMutation($skipWorkoutId: Int, $tagIds: [Int!]) {
     stimulus
     constraintType
     constraintMagnitude
+    timeCap
+    timingScheme {
+      version
+      segments {
+        rounds
+        phases {
+          durationSeconds
+          direction
+          label
+        }
+      }
+    }
     tags {
       id
       name

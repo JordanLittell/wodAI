@@ -19,7 +19,17 @@ struct HIITWorkoutItem: Identifiable, Hashable {
     let stimulus: String
     let constraintType: String
     let constraintMagnitude: Int
+    let timeCap: Int?
+    let timingScheme: WodTimerConfig?
     let tags: [HIITWorkoutTag]
+
+    static func == (lhs: HIITWorkoutItem, rhs: HIITWorkoutItem) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
 }
 
 struct HIITTagItem: Identifiable, Equatable {
@@ -42,10 +52,18 @@ class HIITWorkoutViewModel: ObservableObject {
     @Published var currentWorkout: HIITWorkoutItem?
     @Published var isFavorited: Bool = false
     @Published var isFavoriteLoading: Bool = false
+
+    /// Current user's rating for the workout: 1 = liked, -1 = disliked, 0 = none.
+    @Published var likeScore: Int = 0
+    @Published var isLikeLoading: Bool = false
     @Published var isLoading = false
     @Published var error: Error?
     @Published var executionState: WorkoutExecutionState = .idle
     @Published var showConfetti = false
+
+    /// User-editable time cap (seconds) for For-Time workouts, seeded from the
+    /// workout's `timeCap`. `nil` means no cap (count up).
+    @Published var editableTimeCap: Int?
 
     @Published var selectedTags: [HIITTagItem] = []
     @Published var availableTags: [HIITTagItem] = []
@@ -61,8 +79,10 @@ class HIITWorkoutViewModel: ObservableObject {
 
     init(preloaded: HIITWorkoutItem) {
         self.currentWorkout = preloaded
+        self.editableTimeCap = preloaded.timeCap
         self.isFavorited = true
         setupTagSubscription()
+        fetchLikeScore(workoutId: preloaded.id)
     }
 
     private func setupTagSubscription() {
@@ -96,11 +116,27 @@ class HIITWorkoutViewModel: ObservableObject {
         }
     }
 
-    var isCountDown: Bool { currentWorkout?.constraintType == "minutes" }
-    var timerTarget: TimeInterval { TimeInterval(currentWorkout?.constraintMagnitude ?? 0) }
+    /// A For-Time workout, whose cap is user-editable before starting.
+    var isForTime: Bool {
+        currentWorkout?.format?.lowercased().contains("for time") ?? false
+    }
 
-    var displaySeconds: TimeInterval {
-        isCountDown ? max(0, timerTarget - elapsedSeconds) : elapsedSeconds
+    /// The timing configuration driving the engine: the editable-cap config for
+    /// For-Time workouts, the backend `timingScheme` otherwise, or a defensive
+    /// fallback when the workout has no scheme.
+    var activeConfig: WodTimerConfig {
+        guard let workout = currentWorkout else { return .fallback(timeCap: nil) }
+        if isForTime {
+            return .forTime(timeCap: editableTimeCap)
+        }
+        if let scheme = workout.timingScheme {
+            return scheme
+        }
+        return .fallback(timeCap: workout.timeCap)
+    }
+
+    var readout: TimerReadout {
+        activeConfig.readout(atElapsed: elapsedSeconds)
     }
 
     // MARK: - Workout loading
@@ -132,9 +168,13 @@ class HIITWorkoutViewModel: ObservableObject {
                             stimulus: first.stimulus,
                             constraintType: first.constraintType,
                             constraintMagnitude: first.constraintMagnitude,
+                            timeCap: first.timeCap,
+                            timingScheme: first.timingScheme.map { WodTimerConfig(fragment: $0) },
                             tags: (first.tags ?? []).map { HIITWorkoutTag(id: $0.id, name: $0.name) }
                         )
+                        self.editableTimeCap = first.timeCap
                         self.fetchIsSaved(workoutId: first.id)
+                        self.fetchLikeScore(workoutId: first.id)
                     }
                     if let errors = graphQLResult.errors {
                         let messages = errors.compactMap { $0.message }.joined(separator: "; ")
@@ -179,9 +219,13 @@ class HIITWorkoutViewModel: ObservableObject {
                             stimulus: workout.stimulus,
                             constraintType: workout.constraintType,
                             constraintMagnitude: workout.constraintMagnitude,
+                            timeCap: workout.timeCap,
+                            timingScheme: workout.timingScheme.map { WodTimerConfig(fragment: $0) },
                             tags: (workout.tags ?? []).map { HIITWorkoutTag(id: $0.id, name: $0.name) }
                         )
+                        self.editableTimeCap = workout.timeCap
                         self.fetchIsSaved(workoutId: workout.id)
+                        self.fetchLikeScore(workoutId: workout.id)
                     }
                     if let errors = graphQLResult.errors {
                         let messages = errors.compactMap { $0.message }.joined(separator: "; ")
@@ -276,6 +320,57 @@ class HIITWorkoutViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Like / Dislike
+
+    func fetchLikeScore(workoutId: Int) {
+        network.client.fetch(
+            query: HiitWorkoutLikeQuery(workoutId: workoutId),
+            cachePolicy: .fetchIgnoringCacheCompletely
+        ) { [weak self] result in
+            Task { @MainActor [weak self] in
+                if case .success(let graphQLResult) = result {
+                    self?.likeScore = graphQLResult.data?.hiitWorkoutLike ?? 0
+                }
+            }
+        }
+    }
+
+    func toggleLike() {
+        setLikeScore(likeScore == 1 ? 0 : 1)
+    }
+
+    func toggleDislike() {
+        setLikeScore(likeScore == -1 ? 0 : -1)
+    }
+
+    private func setLikeScore(_ newScore: Int) {
+        guard let id = currentWorkout?.id, !isLikeLoading else { return }
+        let previousScore = likeScore
+        likeScore = newScore
+        isLikeLoading = true
+
+        network.client.perform(
+            mutation: LikeHiitWorkoutMutation(workoutId: id, score: newScore)
+        ) { [weak self] result in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.isLikeLoading = false
+
+                switch result {
+                case .success(let graphQLResult):
+                    if let errors = graphQLResult.errors, !errors.isEmpty {
+                        let messages = errors.compactMap { $0.message }.joined(separator: "; ")
+                        TelemetryService.captureGraphQLErrors(messages: messages, operation: "LikeHiitWorkout")
+                        self.likeScore = previousScore
+                    }
+                case .failure(let networkError):
+                    TelemetryService.captureError(networkError, tags: ["operation": "LikeHiitWorkout"])
+                    self.likeScore = previousScore
+                }
+            }
+        }
+    }
+
     // MARK: - Execution control
 
     func startExecution() {
@@ -311,7 +406,12 @@ class HIITWorkoutViewModel: ObservableObject {
         timerCancellable = Timer.publish(every: 1, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
-                self?.objectWillChange.send()
+                guard let self else { return }
+                if self.readout.isComplete {
+                    self.finishExecution()
+                    return
+                }
+                self.objectWillChange.send()
             }
     }
 
@@ -351,6 +451,8 @@ class HIITWorkoutViewModel: ObservableObject {
             stimulus: "Cardiovascular Endurance",
             constraintType: "rounds",
             constraintMagnitude: 3,
+            timeCap: nil,
+            timingScheme: nil,
             tags: [
                 HIITWorkoutTag(id: 1, name: "Strength"),
                 HIITWorkoutTag(id: 2, name: "Cardio")

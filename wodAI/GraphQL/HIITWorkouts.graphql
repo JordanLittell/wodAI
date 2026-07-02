@@ -7,6 +7,18 @@ query HIITWorkoutsQuery($page: Int, $limit: Int) {
       stimulus
       constraintType
       constraintMagnitude
+      timeCap
+      timingScheme {
+        version
+        segments {
+          rounds
+          phases {
+            durationSeconds
+            direction
+            label
+          }
+        }
+      }
       tags {
         id
         name

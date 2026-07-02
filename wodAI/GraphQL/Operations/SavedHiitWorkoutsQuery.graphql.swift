@@ -7,9 +7,9 @@ import WodAiAPI
 public class SavedHiitWorkoutsQuery: GraphQLQuery {
   public static let operationName: String = "SavedHiitWorkoutsQuery"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "c63c49e08b06b9e462603f27a5b2adf1e01202f89e10ae7c6f4d64797a0a7d6e",
+    operationIdentifier: "2446f3fee75925fa5e9dd1e27757fb35d9b94d6c3b100fefdd71a06884434822",
     definition: .init(
-      #"query SavedHiitWorkoutsQuery { savedHiitWorkouts { __typename id savedAt workout { __typename id format displayText stimulus constraintType constraintMagnitude } } }"#
+      #"query SavedHiitWorkoutsQuery { savedHiitWorkouts { __typename id savedAt workout { __typename id format displayText stimulus constraintType constraintMagnitude timeCap timingScheme { __typename version segments { __typename rounds phases { __typename durationSeconds direction label } } } } } }"#
     ))
 
   public init() {}
@@ -60,6 +60,8 @@ public class SavedHiitWorkoutsQuery: GraphQLQuery {
           .field("stimulus", String.self),
           .field("constraintType", String.self),
           .field("constraintMagnitude", Int.self),
+          .field("timeCap", Int?.self),
+          .field("timingScheme", TimingScheme?.self),
         ] }
 
         public var id: Int { __data["id"] }
@@ -68,6 +70,64 @@ public class SavedHiitWorkoutsQuery: GraphQLQuery {
         public var stimulus: String { __data["stimulus"] }
         public var constraintType: String { __data["constraintType"] }
         public var constraintMagnitude: Int { __data["constraintMagnitude"] }
+        public var timeCap: Int? { __data["timeCap"] }
+        public var timingScheme: TimingScheme? { __data["timingScheme"] }
+
+        /// SavedHiitWorkout.Workout.TimingScheme
+        ///
+        /// Parent Type: `WodTimerConfig`
+        public struct TimingScheme: WodAiAPI.SelectionSet {
+          public let __data: DataDict
+          public init(_dataDict: DataDict) { __data = _dataDict }
+
+          public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.WodTimerConfig }
+          public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("version", Int.self),
+            .field("segments", [Segment].self),
+          ] }
+
+          public var version: Int { __data["version"] }
+          public var segments: [Segment] { __data["segments"] }
+
+          /// SavedHiitWorkout.Workout.TimingScheme.Segment
+          ///
+          /// Parent Type: `TimerSegment`
+          public struct Segment: WodAiAPI.SelectionSet {
+            public let __data: DataDict
+            public init(_dataDict: DataDict) { __data = _dataDict }
+
+            public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.TimerSegment }
+            public static var __selections: [ApolloAPI.Selection] { [
+              .field("__typename", String.self),
+              .field("rounds", Int.self),
+              .field("phases", [Phase].self),
+            ] }
+
+            public var rounds: Int { __data["rounds"] }
+            public var phases: [Phase] { __data["phases"] }
+
+            /// SavedHiitWorkout.Workout.TimingScheme.Segment.Phase
+            ///
+            /// Parent Type: `TimerPhase`
+            public struct Phase: WodAiAPI.SelectionSet {
+              public let __data: DataDict
+              public init(_dataDict: DataDict) { __data = _dataDict }
+
+              public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.TimerPhase }
+              public static var __selections: [ApolloAPI.Selection] { [
+                .field("__typename", String.self),
+                .field("durationSeconds", Int?.self),
+                .field("direction", GraphQLEnum<WodAiAPI.PhaseDirection>.self),
+                .field("label", String?.self),
+              ] }
+
+              public var durationSeconds: Int? { __data["durationSeconds"] }
+              public var direction: GraphQLEnum<WodAiAPI.PhaseDirection> { __data["direction"] }
+              public var label: String? { __data["label"] }
+            }
+          }
+        }
       }
     }
   }
