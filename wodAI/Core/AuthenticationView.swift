@@ -12,7 +12,11 @@ struct AuthenticationView: View {
     var body: some View {
         NavigationStack {
             if showingLogin {
-                LoginView()
+                LoginView(onSignUpTapped: {
+                    withAnimation(.easeInOut) {
+                        showingLogin = false
+                    }
+                })
                     .toolbar {
                         ToolbarItem(placement: .navigationBarLeading) {
                             Button("Sign Up") {
@@ -23,8 +27,12 @@ struct AuthenticationView: View {
                         }
                     }
             } else {
-                SignUpView()
-                    .toolbar {
+                SignUpView(onSignInTapped: {
+                    withAnimation(.easeInOut) {
+                        showingLogin = true
+                    }
+                })
+                .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
                             Button("Sign In") {
                                 withAnimation(.easeInOut) {

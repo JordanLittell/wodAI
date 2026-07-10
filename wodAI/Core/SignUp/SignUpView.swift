@@ -8,6 +8,7 @@ struct SignUpView: View {
     @EnvironmentObject private var authManager: AuthManager
     @StateObject private var viewModel = SignUpViewModel()
     @Environment(\.dismiss) private var dismiss
+    var onSignInTapped: () -> Void = {}
     @State private var showError = false
     
     @State private var isGoogleLoading = false
@@ -258,7 +259,7 @@ struct SignUpView: View {
                                 .foregroundColor(Color("SecondaryText"))
                                 .font(.subheadline)
                             
-                            Button(action: { dismiss() }) {
+                            Button(action: { onSignInTapped() }) {
                                 Text("Sign In")
                                     .foregroundColor(Color("BrandPrimary"))
                                     .fontWeight(.semibold)

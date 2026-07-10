@@ -263,6 +263,7 @@ type Query {
   hiitWorkout(id: Int!): HIITWorkout
   similarHiitWorkouts(id: Int!): [HIITSimilarResult!]!
   completedHiitWorkouts: [CompletedHIITWorkout!]!
+  movements(search: String): [HIITExercise!]!
   savedHiitWorkouts: [SavedHIITWorkout!]!
   isSaved(workoutId: Int!): Boolean!
   hiitWorkoutLike(workoutId: Int!): Int
@@ -298,6 +299,7 @@ type Mutation {
   createHiitWorkout(input: CreateHIITWorkoutInput!): HIITWorkout!
   deleteHiitWorkout(id: Int!): Boolean!
   completeHiitWorkout(id: Int!): Boolean!
+  setMovementExcluded(exerciseId: Int!, excluded: Boolean!): HIITExercise!
   saveHiitWorkout(id: Int!): Boolean!
   unsaveHiitWorkout(id: Int!): Boolean!
   likeHiitWorkout(workoutId: Int!, score: Int!): Boolean!
@@ -458,6 +460,8 @@ type HIITExercise {
   patterns: String!
   equipment: String
   muscleGroups: String!
+  skillScore: Int
+  excluded: Boolean!
 }
 
 type HIITComponent {

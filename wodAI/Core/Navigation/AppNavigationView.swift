@@ -6,7 +6,7 @@
 import SwiftUI
 
 enum AppDestination {
-    case workout, saved, activity, equipment
+    case workout, saved, activity, equipment, skills
 }
 
 struct AppNavigationView: View {
@@ -66,6 +66,8 @@ struct AppNavigationView: View {
             ActivityView()
         case .equipment:
             GymProfilesView()
+        case .skills:
+            SkillsView()
         }
     }
 }
@@ -122,6 +124,14 @@ struct SideMenuView: View {
                     isSelected: destination == .equipment
                 ) {
                     navigate(to: .equipment)
+                }
+
+                MenuRow(
+                    icon: "figure.strengthtraining.traditional",
+                    label: "Skills",
+                    isSelected: destination == .skills
+                ) {
+                    navigate(to: .skills)
                 }
             }
             .padding(.top, 16)

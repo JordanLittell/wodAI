@@ -1,0 +1,11 @@
+query MovementsQuery($search: String) {
+  movements(search: $search) {
+    id
+    name
+    description
+    patterns
+    muscleGroups
+    skillScore
+    excluded
+  }
+}

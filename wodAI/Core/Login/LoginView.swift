@@ -16,6 +16,7 @@ struct LoginView: View {
     @State private var isGoogleLoading = false
     @State private var isAppleLoading = false
     @StateObject private var appleSignInCoordinator = AppleSignInCoordinator()
+    var onSignUpTapped: () -> Void = {}
     
     var body: some View {
         ZStack {
@@ -247,6 +248,9 @@ struct LoginView: View {
                             .foregroundColor(Color("BrandPrimary"))
                             .fontWeight(.semibold)
                             .font(.subheadline)
+                            .onTapGesture {
+                                onSignUpTapped()
+                            }
                     }
                     .padding(.top, 20)
                     .padding(.bottom, 40)

@@ -13,55 +13,91 @@ struct WodTimerView: View {
     @ObservedObject var viewModel: HIITWorkoutViewModel
 
     var body: some View {
+        ZStack {
+            Color("Background").ignoresSafeArea()
+
+            if let remaining = viewModel.countdownRemaining {
+                countdownView(remaining)
+            } else {
+                runningView
+            }
+        }
+    }
+
+    // MARK: - Get-ready countdown
+
+    private func countdownView(_ remaining: Int) -> some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 8) {
+                Text("GET READY")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .tracking(3)
+                    .foregroundColor(Color("SecondaryText"))
+
+                Text("\(remaining)")
+                    .font(.system(size: 200, weight: .bold, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundColor(Color("BrandPrimary"))
+                    .minimumScaleFactor(0.3)
+                    .lineLimit(1)
+                    .contentTransition(.numericText(countsDown: true))
+                    .animation(.snappy, value: remaining)
+                    .padding(.horizontal)
+            }
+
+            Spacer()
+
+            tapButton(title: "Cancel", systemImage: "xmark", tint: Color("Error")) {
+                viewModel.cancelCountdown()
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 24)
+        }
+    }
+
+    // MARK: - Running timer
+
+    private var runningView: some View {
         let readout = viewModel.readout
         let running = viewModel.isExecuting
         let accent = running ? Color("Success") : Color("Warning")
         let showHours = viewModel.activeConfig.hasHourLongPhase || readout.displaySeconds >= 3600
 
-        ZStack {
-            Color("Background").ignoresSafeArea()
+        return VStack(spacing: 0) {
+            Spacer()
 
-            VStack(spacing: 0) {
-                if let format = viewModel.currentWorkout?.format {
-                    Text(format.uppercased())
-                        .font(.subheadline)
+            VStack(spacing: 12) {
+                if readout.totalRounds > 1 {
+                    Text("ROUND \(readout.roundNumber) / \(readout.totalRounds)")
+                        .font(.title2)
                         .fontWeight(.bold)
-                        .tracking(2)
+                        .tracking(1)
+                        .foregroundColor(accent)
+                }
+
+                if let label = readout.phaseLabel, !label.isEmpty {
+                    Text(label.uppercased())
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .tracking(1.5)
                         .foregroundColor(Color("SecondaryText"))
-                        .padding(.top, 24)
                 }
 
-                Spacer()
-
-                VStack(spacing: 12) {
-                    if readout.totalRounds > 1 {
-                        Text("ROUND \(readout.roundNumber) / \(readout.totalRounds)")
-                            .font(.title3)
-                            .fontWeight(.bold)
-                            .tracking(1)
-                            .foregroundColor(accent)
-                    }
-
-                    if let label = readout.phaseLabel, !label.isEmpty {
-                        Text(label.uppercased())
-                            .font(.headline)
-                            .tracking(1.5)
-                            .foregroundColor(Color("SecondaryText"))
-                    }
-
-                    Text(clockString(readout.displaySeconds, showHours: showHours))
-                        .font(.system(size: 76, weight: .semibold, design: .monospaced))
-                        .monospacedDigit()
-                        .foregroundColor(Color("PrimaryText"))
-                        .minimumScaleFactor(0.5)
-                        .lineLimit(1)
-                        .padding(.horizontal)
-                }
-
-                Spacer()
-
-                controls
+                Text(clockString(readout.displaySeconds, showHours: showHours))
+                    .font(.system(size: 130, weight: .bold, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundColor(Color("PrimaryText"))
+                    .minimumScaleFactor(0.3)
+                    .lineLimit(1)
+                    .padding(.horizontal)
             }
+
+            Spacer()
+
+            controls
         }
     }
 
@@ -69,38 +105,27 @@ struct WodTimerView: View {
 
     @ViewBuilder
     private var controls: some View {
-        Group {
+        VStack(spacing: 12) {
             if viewModel.isExecuting {
-                HStack(spacing: 12) {
-                    tapButton(title: "Pause", systemImage: "pause.fill") {
-                        viewModel.pauseExecution()
-                    }
-                    HoldToConfirmButton(
-                        title: "Finish",
-                        systemImage: "checkmark",
-                        style: .solid(Color("Success")),
-                        action: { viewModel.finishExecution() }
-                    )
+                tapButton(title: "Pause", systemImage: "pause.fill") {
+                    viewModel.pauseExecution()
                 }
             } else {
                 HStack(spacing: 12) {
                     tapButton(title: "Exit", systemImage: "xmark", tint: Color("Error")) {
                         viewModel.exitExecution()
                     }
-                    HoldToConfirmButton(
-                        title: "Resume",
-                        systemImage: "play.fill",
-                        style: .gradient,
-                        action: { viewModel.resumeExecution() }
-                    )
-                    HoldToConfirmButton(
-                        title: "Finish",
-                        systemImage: "checkmark",
-                        style: .solid(Color("Success")),
-                        action: { viewModel.finishExecution() }
-                    )
+                    tapButton(title: "Resume", systemImage: "play.fill",
+                              tint: Color("BrandPrimary")) {
+                        viewModel.resumeExecution()
+                    }
                 }
             }
+
+            SwipeToConfirmButton(
+                title: "Swipe to finish",
+                action: { viewModel.finishExecution() }
+            )
         }
         .padding(.horizontal)
         .padding(.bottom, 24)

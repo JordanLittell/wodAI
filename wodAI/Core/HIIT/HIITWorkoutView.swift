@@ -74,7 +74,7 @@ struct HIITWorkoutView: View {
             }
         }
         .fullScreenCover(isPresented: Binding(
-            get: { viewModel.isExecuting || viewModel.isPaused },
+            get: { viewModel.isExecuting || viewModel.isPaused || viewModel.isCountingDown },
             set: { _ in }
         )) {
             WodTimerView(viewModel: viewModel)
@@ -246,9 +246,6 @@ struct HIITWorkoutView: View {
 
     private var bottomBar: some View {
         VStack(spacing: 12) {
-            if viewModel.isForTime {
-                timeCapControl
-            }
             newWorkoutButton
             startButton
         }
@@ -259,51 +256,6 @@ struct HIITWorkoutView: View {
             Color("Surface")
                 .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: -5)
         )
-    }
-
-    // MARK: - Time cap control
-
-    private var timeCapControl: some View {
-        HStack(spacing: 12) {
-            Text("Time cap")
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(Color("SecondaryText"))
-            Spacer()
-            capStepButton(systemImage: "minus") { adjustCap(by: -60) }
-            Text(capLabel)
-                .font(.system(.body, design: .monospaced).weight(.semibold))
-                .monospacedDigit()
-                .foregroundColor(Color("PrimaryText"))
-                .frame(minWidth: 72)
-            capStepButton(systemImage: "plus") { adjustCap(by: 60) }
-        }
-        .padding()
-        .background(Color("Surface"))
-        .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color("Border"), lineWidth: 1))
-    }
-
-    private func capStepButton(systemImage: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(Color("BrandPrimary"))
-                .frame(width: 32, height: 32)
-                .background(Color("BrandPrimary").opacity(0.12))
-                .cornerRadius(8)
-        }
-    }
-
-    private var capLabel: String {
-        guard let cap = viewModel.editableTimeCap, cap >= 60 else { return "No cap" }
-        return "\(cap / 60) min"
-    }
-
-    private func adjustCap(by delta: Int) {
-        let current = viewModel.editableTimeCap ?? 0
-        let next = current + delta
-        viewModel.editableTimeCap = next < 60 ? nil : next
     }
 
     // MARK: - Action buttons
@@ -397,9 +349,10 @@ struct HIITWorkoutView: View {
 
     private func cardBorderColor(for state: WorkoutExecutionState) -> Color {
         switch state {
-        case .idle:    return Color("Border")
-        case .running: return Color.green.opacity(0.45)
-        case .paused:  return Color.red.opacity(0.3)
+        case .idle:         return Color("Border")
+        case .countingDown: return Color("BrandPrimary").opacity(0.45)
+        case .running:      return Color.green.opacity(0.45)
+        case .paused:       return Color.red.opacity(0.3)
         }
     }
 }

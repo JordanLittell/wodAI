@@ -42,6 +42,7 @@ struct HIITTagItem: Identifiable, Equatable {
 
 enum WorkoutExecutionState {
     case idle
+    case countingDown(endTime: Date)   // pre-roll "get ready" before the clock
     case running(startTime: Date, priorElapsed: TimeInterval)
     case paused(elapsed: TimeInterval)
 }
@@ -69,9 +70,14 @@ class HIITWorkoutViewModel: ObservableObject {
     @Published var availableTags: [HIITTagItem] = []
     @Published var isLoadingTags = false
 
+    /// Length of the pre-workout "get ready" countdown, in seconds.
+    static let getReadySeconds: TimeInterval = 10
+
     private let network = Network.shared
     private var timerCancellable: AnyCancellable?
     private var cancellables = Set<AnyCancellable>()
+    private let countdownFeedback = CountdownFeedback()
+    private var lastCountdownTick: Int?
 
     init() {
         setupTagSubscription()
@@ -90,7 +96,7 @@ class HIITWorkoutViewModel: ObservableObject {
             .dropFirst()
             .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
             .sink { [weak self] _ in
-                guard let self, !self.isExecuting, !self.isPaused else { return }
+                guard let self, !self.isExecuting, !self.isPaused, !self.isCountingDown else { return }
                 self.nextWorkout()
             }
             .store(in: &cancellables)
@@ -108,9 +114,21 @@ class HIITWorkoutViewModel: ObservableObject {
         return false
     }
 
+    var isCountingDown: Bool {
+        if case .countingDown = executionState { return true }
+        return false
+    }
+
+    /// Whole seconds left in the get-ready countdown, or `nil` when not counting.
+    var countdownRemaining: Int? {
+        guard case .countingDown(let end) = executionState else { return nil }
+        return max(0, Int(ceil(end.timeIntervalSinceNow)))
+    }
+
     var elapsedSeconds: TimeInterval {
         switch executionState {
         case .idle: return 0
+        case .countingDown: return 0
         case .running(let start, let prior): return prior + Date().timeIntervalSince(start)
         case .paused(let elapsed): return elapsed
         }
@@ -144,50 +162,7 @@ class HIITWorkoutViewModel: ObservableObject {
     func loadWorkout() {
         guard currentWorkout == nil else { return }
         guard !isLoading else { return }
-        isLoading = true
-        error = nil
-
-        network.client.fetch(
-            query: HIITWorkoutsQuery(
-                page: .init(integerLiteral: 1),
-                limit: .init(integerLiteral: 1)
-            ),
-            cachePolicy: .fetchIgnoringCacheCompletely
-        ) { [weak self] result in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.isLoading = false
-
-                switch result {
-                case .success(let graphQLResult):
-                    if let first = graphQLResult.data?.hiitWorkouts.data.first {
-                        self.currentWorkout = HIITWorkoutItem(
-                            id: first.id,
-                            format: first.format,
-                            displayText: first.displayText,
-                            stimulus: first.stimulus,
-                            constraintType: first.constraintType,
-                            constraintMagnitude: first.constraintMagnitude,
-                            timeCap: first.timeCap,
-                            timingScheme: first.timingScheme.map { WodTimerConfig(fragment: $0) },
-                            tags: (first.tags ?? []).map { HIITWorkoutTag(id: $0.id, name: $0.name) }
-                        )
-                        self.editableTimeCap = first.timeCap
-                        self.fetchIsSaved(workoutId: first.id)
-                        self.fetchLikeScore(workoutId: first.id)
-                    }
-                    if let errors = graphQLResult.errors {
-                        let messages = errors.compactMap { $0.message }.joined(separator: "; ")
-                        TelemetryService.captureGraphQLErrors(messages: messages, operation: "HIITWorkouts")
-                        self.error = NSError(domain: "HIITWorkout", code: 0,
-                            userInfo: [NSLocalizedDescriptionKey: "Workouts are temporarily unavailable. Please try again."])
-                    }
-                case .failure(let networkError):
-                    TelemetryService.captureError(networkError, tags: ["operation": "HIITWorkouts"])
-                    self.error = networkError
-                }
-            }
-        }
+        nextWorkout()
     }
 
     func nextWorkout() {
@@ -374,8 +349,49 @@ class HIITWorkoutViewModel: ObservableObject {
     // MARK: - Execution control
 
     func startExecution() {
+        countdownFeedback.prepare()
+        lastCountdownTick = nil
+        executionState = .countingDown(endTime: Date().addingTimeInterval(Self.getReadySeconds))
+        startCountdownTimer()
+    }
+
+    /// Cancel the get-ready countdown and return to idle (e.g. a mis-tap).
+    func cancelCountdown() {
+        timerCancellable?.cancel()
+        countdownFeedback.reset()
+        executionState = .idle
+    }
+
+    /// Countdown fired: begin the actual workout clock.
+    private func beginRunning() {
+        timerCancellable?.cancel()
         executionState = .running(startTime: Date(), priorElapsed: 0)
         startTimer()
+    }
+
+    private func startCountdownTimer() {
+        // Fire the first tick immediately — the publisher's first tick is delayed.
+        if let remaining = countdownRemaining {
+            lastCountdownTick = remaining
+            countdownFeedback.playTick()
+        }
+        // Fine interval so "go" lands on time and each integer boundary is caught.
+        timerCancellable = Timer.publish(every: 0.1, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                guard let self, case .countingDown = self.executionState else { return }
+                let remaining = self.countdownRemaining ?? 0
+                if remaining <= 0 {
+                    self.countdownFeedback.playGo()
+                    self.beginRunning()
+                    return
+                }
+                if remaining != self.lastCountdownTick {
+                    self.lastCountdownTick = remaining
+                    self.countdownFeedback.playTick()
+                    self.objectWillChange.send()
+                }
+            }
     }
 
     func pauseExecution() {
