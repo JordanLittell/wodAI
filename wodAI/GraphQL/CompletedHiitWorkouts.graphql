@@ -2,6 +2,11 @@ query CompletedHiitWorkoutsQuery {
   completedHiitWorkouts {
     id
     completedAt
+    durationSeconds
+    roundsCompleted
+    repsCompleted
+    perceivedEffort
+    notes
     workout {
       id
       displayText

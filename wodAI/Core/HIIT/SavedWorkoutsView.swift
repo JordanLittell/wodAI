@@ -102,7 +102,7 @@ struct SavedWorkoutsView: View {
                                 constraintType: item.workout.constraintType,
                                 constraintMagnitude: item.workout.constraintMagnitude,
                                 timeCap: item.workout.timeCap,
-                                timingScheme: item.workout.timingScheme.map { WodTimerConfig(fragment: $0) }
+                                timingScheme: item.workout.timingScheme.flatMap { WodTimerConfig(fragment: $0) }
                             )
                         }
                         .sorted { $0.savedAt > $1.savedAt }

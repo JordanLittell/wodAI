@@ -150,25 +150,41 @@ protocol TimingSegmentFragment {
     var phases: [Phase] { get }
 }
 
+/// The backend config is a v1/v2 union: a v1 config carries `segments` (compact,
+/// with a `rounds` multiplier), a v2 config carries `phases` (a flat, fully
+/// expanded list where each label is the movement to perform). Exactly one is
+/// ever populated, so both are optional here.
 protocol TimingSchemeFragment {
     associatedtype Segment: TimingSegmentFragment
+    associatedtype Phase: TimingPhaseFragment
     var version: Int { get }
-    var segments: [Segment] { get }
+    var segments: [Segment]? { get }
+    var phases: [Phase]? { get }
+}
+
+private func timerPhase<P: TimingPhaseFragment>(_ phase: P) -> TimerPhase {
+    TimerPhase(
+        duration: phase.durationSeconds.map(TimeInterval.init),
+        direction: phase.direction.value == .down ? .down : .up,
+        label: phase.label
+    )
 }
 
 extension WodTimerConfig {
-    init<Scheme: TimingSchemeFragment>(fragment: Scheme) {
-        self.segments = fragment.segments.map { segment in
-            TimerSegment(
-                rounds: segment.rounds,
-                phases: segment.phases.map { phase in
-                    TimerPhase(
-                        duration: phase.durationSeconds.map(TimeInterval.init),
-                        direction: phase.direction.value == .down ? .down : .up,
-                        label: phase.label
-                    )
-                }
-            )
+    /// Builds from either shape of the backend config. Returns `nil` when neither
+    /// `segments` nor `phases` is populated (malformed blob, or a version this
+    /// client doesn't understand) so callers fall back to `.fallback(timeCap:)` —
+    /// an empty segment list would otherwise read as an already-complete workout.
+    init?<Scheme: TimingSchemeFragment>(fragment: Scheme) {
+        if let segments = fragment.segments, !segments.isEmpty {
+            self.segments = segments.map { segment in
+                TimerSegment(rounds: segment.rounds, phases: segment.phases.map(timerPhase))
+            }
+        } else if let phases = fragment.phases, !phases.isEmpty {
+            // v2 is already fully expanded: one pass through the list, no rounds.
+            self.segments = [TimerSegment(rounds: 1, phases: phases.map(timerPhase))]
+        } else {
+            return nil
         }
     }
 }

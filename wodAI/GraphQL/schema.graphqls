@@ -263,10 +263,10 @@ type Query {
   hiitWorkout(id: Int!): HIITWorkout
   similarHiitWorkouts(id: Int!): [HIITSimilarResult!]!
   completedHiitWorkouts: [CompletedHIITWorkout!]!
-  movements(search: String): [HIITExercise!]!
   savedHiitWorkouts: [SavedHIITWorkout!]!
   isSaved(workoutId: Int!): Boolean!
   hiitWorkoutLike(workoutId: Int!): Int
+  movements(search: String): [HIITExercise!]!
   tags: [Tag!]!
   availableTags(selectedTagIds: [Int!]): [TagFacet!]!
 }
@@ -298,8 +298,8 @@ type Mutation {
   generateHiitWorkouts(tagIds: [Int!], skipWorkoutId: Int, timezone: String): [HIITWorkout!]!
   createHiitWorkout(input: CreateHIITWorkoutInput!): HIITWorkout!
   deleteHiitWorkout(id: Int!): Boolean!
-  completeHiitWorkout(id: Int!): Boolean!
-  setMovementExcluded(exerciseId: Int!, excluded: Boolean!): HIITExercise!
+  completeHiitWorkout(id: Int!, durationSeconds: Int, roundsCompleted: Int, repsCompleted: Int, perceivedEffort: Int, notes: String): CompletedHIITWorkout!
+  updateHiitCompletion(id: Int!, durationSeconds: Int, roundsCompleted: Int, repsCompleted: Int, perceivedEffort: Int, notes: String): CompletedHIITWorkout!
   saveHiitWorkout(id: Int!): Boolean!
   unsaveHiitWorkout(id: Int!): Boolean!
   likeHiitWorkout(workoutId: Int!, score: Int!): Boolean!
@@ -307,6 +307,7 @@ type Mutation {
   appendSensorFrames(sessionId: ID!, frames: [SensorFrameInput!]!): Boolean!
   completeHIITSession(sessionId: ID!, endedAt: DateTime!, movementIntervals: [MovementIntervalInput!]!): HIITSession!
   abandonHIITSession(sessionId: ID!): Boolean!
+  setMovementExcluded(exerciseId: Int!, excluded: Boolean!): HIITExercise!
   createTag(name: String!, description: String!, category: String): Tag!
   setTagDisabled(id: Int!, disabled: Boolean!): Tag!
   setTagCategory(id: Int!, category: String!): Tag!
@@ -511,7 +512,8 @@ type TimerSegment {
 
 type WodTimerConfig {
   version: Int!
-  segments: [TimerSegment!]!
+  segments: [TimerSegment!]
+  phases: [TimerPhase!]
 }
 
 input TimerPhaseInput {
@@ -527,7 +529,8 @@ input TimerSegmentInput {
 
 input WodTimerConfigInput {
   version: Int!
-  segments: [TimerSegmentInput!]!
+  segments: [TimerSegmentInput!]
+  phases: [TimerPhaseInput!]
 }
 
 type Tag {
@@ -556,6 +559,11 @@ type CompletedHIITWorkout {
   id: Int!
   completedAt: DateTime!
   workout: HIITWorkout!
+  durationSeconds: Int
+  roundsCompleted: Int
+  repsCompleted: Int
+  perceivedEffort: Int
+  notes: String
 }
 
 type SavedHIITWorkout {

@@ -14,16 +14,19 @@ import WodAiAPI
 
 extension GenerateHiitWorkoutMutation.Data.GenerateHiitWorkout.TimingScheme.Segment.Phase: TimingPhaseFragment {}
 extension GenerateHiitWorkoutMutation.Data.GenerateHiitWorkout.TimingScheme.Segment: TimingSegmentFragment {}
+extension GenerateHiitWorkoutMutation.Data.GenerateHiitWorkout.TimingScheme.Phase: TimingPhaseFragment {}
 extension GenerateHiitWorkoutMutation.Data.GenerateHiitWorkout.TimingScheme: TimingSchemeFragment {}
 
 // MARK: - HIITWorkouts
 
 extension HIITWorkoutsQuery.Data.HiitWorkouts.Datum.TimingScheme.Segment.Phase: TimingPhaseFragment {}
 extension HIITWorkoutsQuery.Data.HiitWorkouts.Datum.TimingScheme.Segment: TimingSegmentFragment {}
+extension HIITWorkoutsQuery.Data.HiitWorkouts.Datum.TimingScheme.Phase: TimingPhaseFragment {}
 extension HIITWorkoutsQuery.Data.HiitWorkouts.Datum.TimingScheme: TimingSchemeFragment {}
 
 // MARK: - SavedHiitWorkouts
 
 extension SavedHiitWorkoutsQuery.Data.SavedHiitWorkout.Workout.TimingScheme.Segment.Phase: TimingPhaseFragment {}
 extension SavedHiitWorkoutsQuery.Data.SavedHiitWorkout.Workout.TimingScheme.Segment: TimingSegmentFragment {}
+extension SavedHiitWorkoutsQuery.Data.SavedHiitWorkout.Workout.TimingScheme.Phase: TimingPhaseFragment {}
 extension SavedHiitWorkoutsQuery.Data.SavedHiitWorkout.Workout.TimingScheme: TimingSchemeFragment {}

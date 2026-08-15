@@ -7,9 +7,9 @@ import WodAiAPI
 public class CompletedHiitWorkoutsQuery: GraphQLQuery {
   public static let operationName: String = "CompletedHiitWorkoutsQuery"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "29a41e9250b1f786557642f0918205d97a686a298b85535a5b190151aad3a90d",
+    operationIdentifier: "3e2839557f9084d9a0b04d60ec94def1bd21cf70ab466116d18bc2808eab6668",
     definition: .init(
-      #"query CompletedHiitWorkoutsQuery { completedHiitWorkouts { __typename id completedAt workout { __typename id displayText stimulus constraintType constraintMagnitude } } }"#
+      #"query CompletedHiitWorkoutsQuery { completedHiitWorkouts { __typename id completedAt durationSeconds roundsCompleted repsCompleted perceivedEffort notes workout { __typename id displayText stimulus constraintType constraintMagnitude } } }"#
     ))
 
   public init() {}
@@ -37,11 +37,21 @@ public class CompletedHiitWorkoutsQuery: GraphQLQuery {
         .field("__typename", String.self),
         .field("id", Int.self),
         .field("completedAt", WodAiAPI.DateTime.self),
+        .field("durationSeconds", Int?.self),
+        .field("roundsCompleted", Int?.self),
+        .field("repsCompleted", Int?.self),
+        .field("perceivedEffort", Int?.self),
+        .field("notes", String?.self),
         .field("workout", Workout.self),
       ] }
 
       public var id: Int { __data["id"] }
       public var completedAt: WodAiAPI.DateTime { __data["completedAt"] }
+      public var durationSeconds: Int? { __data["durationSeconds"] }
+      public var roundsCompleted: Int? { __data["roundsCompleted"] }
+      public var repsCompleted: Int? { __data["repsCompleted"] }
+      public var perceivedEffort: Int? { __data["perceivedEffort"] }
+      public var notes: String? { __data["notes"] }
       public var workout: Workout { __data["workout"] }
 
       /// CompletedHiitWorkout.Workout

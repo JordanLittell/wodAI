@@ -32,14 +32,6 @@ struct HIITWorkoutItem: Identifiable, Hashable {
     }
 }
 
-struct HIITTagItem: Identifiable, Equatable {
-    let id: Int
-    let name: String
-    let description: String
-    let category: String?
-    let count: Int
-}
-
 enum WorkoutExecutionState {
     case idle
     case countingDown(endTime: Date)   // pre-roll "get ready" before the clock
@@ -60,15 +52,36 @@ class HIITWorkoutViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: Error?
     @Published var executionState: WorkoutExecutionState = .idle
-    @Published var showConfetti = false
+
+    /// Set when a workout is finished — drives presentation of the completion
+    /// screen. Cleared once the result is submitted (or skipped) and the feed
+    /// advances to the next workout.
+    @Published var completionDraft: WorkoutCompletionDraft?
+
+    /// Set when submitting a completion fails. The completion screen stays up
+    /// and shows this so the user can retry — the result is theirs and must not
+    /// be silently discarded.
+    @Published var completionError: String?
+    /// True while the completion mutation is in flight (disables Done/Skip).
+    @Published var isSubmittingCompletion = false
 
     /// User-editable time cap (seconds) for For-Time workouts, seeded from the
     /// workout's `timeCap`. `nil` means no cap (count up).
     @Published var editableTimeCap: Int?
 
-    @Published var selectedTags: [HIITTagItem] = []
-    @Published var availableTags: [HIITTagItem] = []
-    @Published var isLoadingTags = false
+    // MARK: - Filters
+    // One selected value per dimension (Format / Duration / Intensity / Body).
+    @Published var filterSelection = FilterSelection()
+    /// Each dimension's options with live result counts, refreshed whenever the
+    /// selection changes. A dimension missing from this map has no usable
+    /// options and its dropdown is hidden.
+    @Published var filterOptions: [FilterDimension: [ResolvedFilterOption]] = [:]
+    @Published var isLoadingFilters = false
+
+    /// Backend tag name -> id, loaded once from the tag catalog. Lets
+    /// `WorkoutFilters` name its options in terms of the vocabulary instead of
+    /// hard-coding database ids in the client.
+    private var tagIdsByName: [String: Int] = [:]
 
     /// Length of the pre-workout "get ready" countdown, in seconds.
     static let getReadySeconds: TimeInterval = 10
@@ -80,23 +93,29 @@ class HIITWorkoutViewModel: ObservableObject {
     private var lastCountdownTick: Int?
 
     init() {
-        setupTagSubscription()
+        setupFilterSubscription()
     }
 
     init(preloaded: HIITWorkoutItem) {
         self.currentWorkout = preloaded
         self.editableTimeCap = preloaded.timeCap
         self.isFavorited = true
-        setupTagSubscription()
+        setupFilterSubscription()
         fetchLikeScore(workoutId: preloaded.id)
     }
 
-    private func setupTagSubscription() {
-        $selectedTags
+    /// Changing any dropdown fetches a matching workout and re-counts every
+    /// dimension's options. Debounced only enough to coalesce a burst (e.g.
+    /// "Clear all" clearing several at once) into a single round of requests.
+    private func setupFilterSubscription() {
+        $filterSelection
             .dropFirst()
-            .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
+            .removeDuplicates()
+            .debounce(for: .milliseconds(250), scheduler: RunLoop.main)
             .sink { [weak self] _ in
-                guard let self, !self.isExecuting, !self.isPaused, !self.isCountingDown else { return }
+                guard let self else { return }
+                self.refreshFilterOptions()
+                guard !self.isExecuting, !self.isPaused, !self.isCountingDown else { return }
                 self.nextWorkout()
             }
             .store(in: &cancellables)
@@ -170,9 +189,8 @@ class HIITWorkoutViewModel: ObservableObject {
         isLoading = true
         error = nil
 
-        let tagIds: GraphQLNullable<[Int]> = selectedTags.isEmpty
-            ? .none
-            : .some(selectedTags.map { $0.id })
+        let selectedTagIds = filterSelection.tagIds
+        let tagIds: GraphQLNullable<[Int]> = selectedTagIds.isEmpty ? .none : .some(selectedTagIds)
 
         let mutation = GenerateHiitWorkoutMutation(
             skipWorkoutId: skippedId.map { .some($0) } ?? .none,
@@ -195,7 +213,7 @@ class HIITWorkoutViewModel: ObservableObject {
                             constraintType: workout.constraintType,
                             constraintMagnitude: workout.constraintMagnitude,
                             timeCap: workout.timeCap,
-                            timingScheme: workout.timingScheme.map { WodTimerConfig(fragment: $0) },
+                            timingScheme: workout.timingScheme.flatMap { WodTimerConfig(fragment: $0) },
                             tags: (workout.tags ?? []).map { HIITWorkoutTag(id: $0.id, name: $0.name) }
                         )
                         self.editableTimeCap = workout.timeCap
@@ -216,44 +234,127 @@ class HIITWorkoutViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Tag management
+    // MARK: - Filters
 
-    func fetchAvailableTags() {
-        isLoadingTags = true
-        let selectedIds = selectedTags.map { $0.id }
-        let selectedTagIds: GraphQLNullable<[Int]> = selectedIds.isEmpty ? .none : .some(selectedIds)
+    /// Loads the tag catalog once, then does a first count pass. Safe to call
+    /// on every appearance — it no-ops once the catalog is in hand.
+    func loadFilterCatalog() {
+        guard tagIdsByName.isEmpty, !isLoadingFilters else { return }
+        isLoadingFilters = true
 
-        network.client.fetch(
-            query: GetAvailableTagsQuery(selectedTagIds: selectedTagIds),
-            cachePolicy: .fetchIgnoringCacheCompletely
-        ) { [weak self] result in
+        network.client.fetch(query: AllTagsQuery(), cachePolicy: .fetchIgnoringCacheCompletely) { [weak self] result in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.isLoadingTags = false
-                if case .success(let graphQLResult) = result,
-                   let tags = graphQLResult.data?.availableTags {
-                    self.availableTags = tags.map {
-                        HIITTagItem(
-                            id: $0.id,
-                            name: $0.name,
-                            description: $0.description,
-                            category: $0.category,
-                            count: $0.count
+                switch result {
+                case .success(let graphQLResult):
+                    if let tags = graphQLResult.data?.tags {
+                        // `Tag.name` is unique server-side; the uniquing closure
+                        // is only here so a duplicate can't trap.
+                        self.tagIdsByName = Dictionary(
+                            tags.map { ($0.name, $0.id) },
+                            uniquingKeysWith: { first, _ in first }
                         )
                     }
+                    if let errors = graphQLResult.errors {
+                        let messages = errors.compactMap { $0.message }.joined(separator: "; ")
+                        TelemetryService.captureGraphQLErrors(messages: messages, operation: "AllTags")
+                    }
+                case .failure(let networkError):
+                    TelemetryService.captureError(networkError, tags: ["operation": "AllTags"])
                 }
+                self.isLoadingFilters = false
+                self.refreshFilterOptions()
             }
         }
     }
 
-    func addTag(_ tag: HIITTagItem) {
-        guard !selectedTags.contains(where: { $0.id == tag.id }) else { return }
-        selectedTags.append(tag)
-        availableTags.removeAll { $0.id == tag.id }
+    /// Select (or clear, with `nil`) one dimension's value. The Combine
+    /// subscription picks the change up and refetches.
+    func setFilter(_ dimension: FilterDimension, to option: ResolvedFilterOption?) {
+        guard filterSelection[dimension] != option else { return }
+        filterSelection[dimension] = option
     }
 
-    func removeTag(id: Int) {
-        selectedTags.removeAll { $0.id == id }
+    func clearFilters() {
+        guard !filterSelection.isEmpty else { return }
+        filterSelection.clear()
+    }
+
+    /// Recomputes which options each dimension can currently offer.
+    ///
+    /// One request per dimension, run concurrently: each dimension is counted
+    /// against the *other* dimensions' selections only. Counting a dimension
+    /// against its own current value would report 0 for all of its siblings
+    /// (no workout is both AMRAP and EMOM) and make switching look impossible.
+    ///
+    /// Counts are fetched but never surfaced — they decide only what to *omit*.
+    /// Showing "Tabata (0)" would advertise the size of the catalog, and the app
+    /// should feel generative rather than like a finite list being enumerated.
+    func refreshFilterOptions() {
+        guard !tagIdsByName.isEmpty else { return }
+
+        let catalog = tagIdsByName
+        let contexts = FilterDimension.allCases.map { ($0, filterSelection.tagIds(excluding: $0)) }
+        let selected = filterSelection
+
+        Task { @MainActor [weak self] in
+            var resolved: [FilterDimension: [ResolvedFilterOption]] = [:]
+
+            await withTaskGroup(of: (FilterDimension, [String: Int]).self) { group in
+                for (dimension, context) in contexts {
+                    group.addTask { (dimension, await Self.fetchTagCounts(selectedTagIds: context)) }
+                }
+                for await (dimension, counts) in group {
+                    // Two reasons to drop an option: the catalog doesn't carry
+                    // the tag yet, or it would yield nothing. Either way the
+                    // user never sees a choice that leads to an empty feed.
+                    //
+                    // The exception is the dimension's own current selection,
+                    // which is kept even at zero — dropping it would erase the
+                    // active chip's label out from under the user mid-refresh.
+                    let activeTagName = selected[dimension]?.option.tagName
+                    let options: [ResolvedFilterOption] = dimension.options.compactMap { option in
+                        guard let tagId = catalog[option.tagName] else { return nil }
+                        let yields = (counts[option.tagName] ?? 0) > 0
+                        guard yields || option.tagName == activeTagName else { return nil }
+                        return ResolvedFilterOption(option: option, tagId: tagId)
+                    }
+                    if !options.isEmpty { resolved[dimension] = options }
+                }
+            }
+
+            self?.filterOptions = resolved
+        }
+    }
+
+    /// Tag name -> workouts it would yield on top of `selectedTagIds`.
+    /// `availableTags` omits any tag that would strand the user on an empty
+    /// feed, so a name absent from the result means a count of zero.
+    private static func fetchTagCounts(selectedTagIds: [Int]) async -> [String: Int] {
+        let argument: GraphQLNullable<[Int]> = selectedTagIds.isEmpty ? .none : .some(selectedTagIds)
+
+        return await withCheckedContinuation { continuation in
+            Network.shared.client.fetch(
+                query: GetAvailableTagsQuery(selectedTagIds: argument),
+                cachePolicy: .fetchIgnoringCacheCompletely
+            ) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    if let errors = graphQLResult.errors, !errors.isEmpty {
+                        let messages = errors.compactMap { $0.message }.joined(separator: "; ")
+                        TelemetryService.captureGraphQLErrors(messages: messages, operation: "GetAvailableTags")
+                    }
+                    let tags = graphQLResult.data?.availableTags ?? []
+                    continuation.resume(returning: Dictionary(
+                        tags.map { ($0.name, $0.count) },
+                        uniquingKeysWith: { first, _ in first }
+                    ))
+                case .failure(let networkError):
+                    TelemetryService.captureError(networkError, tags: ["operation": "GetAvailableTags"])
+                    continuation.resume(returning: [:])
+                }
+            }
+        }
     }
 
     // MARK: - Save
@@ -413,9 +514,26 @@ class HIITWorkoutViewModel: ObservableObject {
 
     func finishExecution() {
         timerCancellable?.cancel()
+        // Capture the finished workout + elapsed time BEFORE resetting to idle,
+        // so the completion screen can seed the recorded result.
+        let captured = elapsedSeconds
+        guard let workout = currentWorkout else {
+            executionState = .idle
+            return
+        }
         executionState = .idle
-        guard let id = currentWorkout?.id else { return }
-        Task { await completeWorkout(id: id) }
+
+        var draft = WorkoutCompletionDraft(
+            id: workout.id,
+            workout: workout,
+            capturedElapsed: captured
+        )
+        // Seed the For-Time finish time from the captured elapsed so the editor
+        // opens pre-filled; other kinds are seeded by the view.
+        if draft.kind == .forTime {
+            draft.durationSeconds = max(0, Int(captured.rounded()))
+        }
+        completionDraft = draft
     }
 
     private func startTimer() {
@@ -431,12 +549,46 @@ class HIITWorkoutViewModel: ObservableObject {
             }
     }
 
+    /// Persist the edited completion result, then advance to the next workout.
+    /// Called from the completion screen's Done button. The draft is NOT cleared
+    /// up front — the screen stays up until the mutation succeeds, so a failure
+    /// can be retried without the user re-entering anything.
+    func submitCompletion(_ draft: WorkoutCompletionDraft) {
+        Task { await performCompletion(draft) }
+    }
+
+    /// Dismiss the completion screen without recording numeric results, sending
+    /// only the perceived-effort score if the user set one, then advance.
+    func skipCompletion(_ draft: WorkoutCompletionDraft) {
+        // Preserve RPE and notes on skip; drop only the numeric result edits.
+        var effortOnly = draft
+        effortOnly.durationSeconds = nil
+        effortOnly.roundsCompleted = nil
+        effortOnly.repsCompleted = nil
+        Task { await performCompletion(effortOnly) }
+    }
+
     @MainActor
-    private func completeWorkout(id: Int) async {
+    private func performCompletion(_ draft: WorkoutCompletionDraft) async {
+        guard !isSubmittingCompletion else { return }
+        isSubmittingCompletion = true
+        completionError = nil
+        defer { isSubmittingCompletion = false }
+
+        // A blank or whitespace-only note is "no note", not an empty string.
+        let trimmedNotes = draft.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+
         do {
             let result = try await withCheckedThrowingContinuation { continuation in
                 Network.shared.client.perform(
-                    mutation: CompleteHiitWorkoutMutation(id: id)
+                    mutation: CompleteHiitWorkoutMutation(
+                        id: draft.id,
+                        durationSeconds: draft.durationSeconds.map { .some($0) } ?? .none,
+                        roundsCompleted: draft.roundsCompleted.map { .some($0) } ?? .none,
+                        repsCompleted: draft.repsCompleted.map { .some($0) } ?? .none,
+                        perceivedEffort: draft.perceivedEffort.map { .some($0) } ?? .none,
+                        notes: trimmedNotes.isEmpty ? .none : .some(trimmedNotes)
+                    )
                 ) { result in
                     continuation.resume(with: result)
                 }
@@ -444,16 +596,28 @@ class HIITWorkoutViewModel: ObservableObject {
             if let errors = result.errors, !errors.isEmpty {
                 let messages = errors.compactMap { $0.message }.joined(separator: "; ")
                 TelemetryService.captureGraphQLErrors(messages: messages, operation: "CompleteHiitWorkout")
-            } else {
-                TelemetryService.captureMessage("workout.hiit_completed")
+                completionError = "We couldn't save your result. Please try again."
+                return
             }
-            _ = result.data?.completeHiitWorkout
+            TelemetryService.captureMessage("workout.hiit_completed")
         } catch {
             print("⚠️ Failed to complete workout: \(error)")
             TelemetryService.captureError(error, tags: ["operation": "CompleteHiitWorkout"])
+            completionError = "We couldn't save your result. Check your connection and try again."
+            return
         }
+
+        // Only past this point is the result safely on the server.
+        completionDraft = nil
         nextWorkout()
-        showConfetti = true
+    }
+
+    /// Abandon an unsaved completion result after a failure. Used by the "Discard"
+    /// escape hatch so a persistent server error can't trap the user on the screen.
+    func discardCompletion() {
+        completionError = nil
+        completionDraft = nil
+        nextWorkout()
     }
 
     // MARK: - Preview factory
@@ -474,9 +638,18 @@ class HIITWorkoutViewModel: ObservableObject {
                 HIITWorkoutTag(id: 2, name: "Cardio")
             ]
         )
-        vm.selectedTags = [
-            HIITTagItem(id: 1, name: "Strength", description: "Strength-focused workouts", category: "Type", count: 12)
-        ]
+        // Seed the filter bar straight from the shipping vocabulary so previews
+        // exercise the real labels — and therefore the real chip widths — rather
+        // than a copy that can drift. Tag ids are arbitrary; nothing resolves
+        // them without a backend.
+        var nextTagId = 100
+        vm.filterOptions = Dictionary(uniqueKeysWithValues: FilterDimension.allCases.map { dimension in
+            let options = dimension.options.map { option -> ResolvedFilterOption in
+                nextTagId += 1
+                return ResolvedFilterOption(option: option, tagId: nextTagId)
+            }
+            return (dimension, options)
+        })
         return vm
     }
 }

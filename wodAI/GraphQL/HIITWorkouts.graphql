@@ -18,6 +18,11 @@ query HIITWorkoutsQuery($page: Int, $limit: Int) {
             label
           }
         }
+        phases {
+          durationSeconds
+          direction
+          label
+        }
       }
       tags {
         id

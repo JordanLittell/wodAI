@@ -7,7 +7,8 @@ import UIKit
 
 struct HIITWorkoutView: View {
     @StateObject private var viewModel: HIITWorkoutViewModel
-    @State private var showingAvailableTags = false
+    /// Drives the filter row's fallback from an even three-way split to a stack.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     init() {
         self._viewModel = StateObject(wrappedValue: HIITWorkoutViewModel.shared)
@@ -28,7 +29,7 @@ struct HIITWorkoutView: View {
                 VStack(spacing: 0) {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
-                            tagSection
+                            filterBar
                             if viewModel.isLoading {
                                 HIITSkeletonCard()
                             } else {
@@ -60,132 +61,176 @@ struct HIITWorkoutView: View {
         }
         .navigationTitle("WOD Generator")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if !viewModel.filterSelection.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    clearFiltersButton
+                }
+            }
+        }
         .onAppear {
+            viewModel.loadFilterCatalog()
             if let id = viewModel.currentWorkout?.id {
                 viewModel.fetchIsSaved(workoutId: id)
             } else {
                 viewModel.loadWorkout()
             }
         }
-        .overlay {
-            if viewModel.showConfetti {
-                ConfettiView { viewModel.showConfetti = false }
-                    .ignoresSafeArea()
-            }
-        }
+        // Single full-screen cover that swaps between the running timer and the
+        // completion screen. Using one cover (instead of two) avoids the SwiftUI
+        // race where dismissing the timer cover and presenting a completion cover
+        // in the same state update (as `finishExecution()` does) can silently drop
+        // the second presentation. When `finishExecution()` sets `executionState`
+        // to `.idle` and `completionDraft` at once, the cover stays up and its
+        // content switches from the timer to the completion screen.
         .fullScreenCover(isPresented: Binding(
-            get: { viewModel.isExecuting || viewModel.isPaused || viewModel.isCountingDown },
+            get: {
+                viewModel.isExecuting || viewModel.isPaused || viewModel.isCountingDown
+                    || viewModel.completionDraft != nil
+            },
             set: { _ in }
         )) {
-            WodTimerView(viewModel: viewModel)
+            if let draft = viewModel.completionDraft {
+                HIITWorkoutCompletionView(
+                    draft: draft,
+                    errorMessage: viewModel.completionError,
+                    isSubmitting: viewModel.isSubmittingCompletion,
+                    onDone: { viewModel.submitCompletion($0) },
+                    onSkip: { viewModel.skipCompletion($0) },
+                    onDiscard: { viewModel.discardCompletion() }
+                )
+            } else {
+                WodTimerView(viewModel: viewModel)
+            }
         }
     }
 
-    // MARK: - Tag section
+    // MARK: - Filter bar
 
-    private var tagSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Row 1: selected tags + toggle button
-            HStack(spacing: 8) {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(viewModel.selectedTags) { tag in
-                            selectedTagPill(tag)
-                        }
-                        addButton
-                    }
+    /// A row of single-select dropdowns, one per filter dimension, dividing the
+    /// full width evenly between them.
+    ///
+    /// Deliberately *not* in a horizontal ScrollView: `.frame(maxWidth:
+    /// .infinity)` resolves against content size inside one, so the even split
+    /// would silently collapse back to intrinsic widths. With three dimensions
+    /// the row fits without scrolling anyway.
+    ///
+    /// "Clear" lives in the navigation bar rather than here. A fourth element
+    /// appearing on first selection would resize all three chips mid-interaction,
+    /// which is exactly the jarring reflow this layout exists to remove.
+    private var filterBar: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                // At accessibility sizes an even three-way split can't hold a
+                // legible label, so the chips stack full-width instead.
+                VStack(spacing: 6) { filterChips }
+            } else {
+                HStack(spacing: 6) { filterChips }
+            }
+        }
+        // Room for the chips' strokes so nothing clips against the card below.
+        .padding(.vertical, 2)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.filterSelection)
+    }
+
+    @ViewBuilder
+    private var filterChips: some View {
+        ForEach(FilterDimension.allCases) { dimension in
+            if let options = viewModel.filterOptions[dimension] {
+                filterMenu(for: dimension, options: options)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private func filterMenu(for dimension: FilterDimension, options: [ResolvedFilterOption]) -> some View {
+        let selected = viewModel.filterSelection[dimension]
+
+        return Menu {
+            Button {
+                viewModel.setFilter(dimension, to: nil)
+            } label: {
+                // A checkmark on "Any" makes the unselected state explicit
+                // rather than leaving the menu looking like nothing is set.
+                menuRowLabel("Any \(dimension.title.lowercased())", isSelected: selected == nil)
+            }
+
+            Divider()
+
+            // Every option here yields at least one workout — the view model
+            // drops the rest — so there are no dead or disabled rows, and no
+            // counts to advertise how small the catalog is.
+            ForEach(options) { option in
+                Button {
+                    viewModel.setFilter(dimension, to: option)
+                } label: {
+                    menuRowLabel(option.label, isSelected: selected?.id == option.id)
                 }
             }
-
-            // Row 2: available tags (slides in inline)
-            if showingAvailableTags {
-                availableTagsRow
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-        }
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showingAvailableTags)
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.selectedTags.count)
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.availableTags.count)
-    }
-
-    private var addButton: some View {
-        Button(action: {
-            if !showingAvailableTags {
-                viewModel.fetchAvailableTags()
-            }
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                showingAvailableTags.toggle()
-            }
-        }) {
-            Image(systemName: showingAvailableTags ? "chevron.up" : "plus")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundColor(showingAvailableTags ? Color("BrandPrimary") : Color("SecondaryText"))
-                .frame(width: 26, height: 26)
-                .background(showingAvailableTags ? Color("BrandPrimary").opacity(0.12) : Color("Surface2"))
-                .cornerRadius(8)
+        } label: {
+            filterChip(dimension: dimension, selected: selected)
         }
         .disabled(viewModel.isExecuting || viewModel.isPaused)
     }
 
+    /// A menu row that shows a checkmark only when selected. `Label` with an
+    /// empty `systemImage` would still reserve an (empty) icon slot, so the
+    /// selected and unselected rows are built separately.
     @ViewBuilder
-    private var availableTagsRow: some View {
-        if viewModel.isLoadingTags {
-            HStack(spacing: 6) {
-                ProgressView().scaleEffect(0.7)
-                Text("Loading…")
-                    .font(.caption)
-                    .foregroundColor(Color("TertiaryText"))
-            }
-        } else if viewModel.availableTags.isEmpty {
-            Text("No more options")
-                .font(.caption)
-                .foregroundColor(Color("TertiaryText"))
+    private func menuRowLabel(_ text: String, isSelected: Bool) -> some View {
+        if isSelected {
+            Label(text, systemImage: "checkmark")
         } else {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(viewModel.availableTags) { tag in
-                        Button(action: {
-                            viewModel.addTag(tag)
-                            if viewModel.availableTags.isEmpty {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                    showingAvailableTags = false
-                                }
-                            }
-                        }) {
-                            Text(tag.name)
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(Color("SecondaryText"))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(Color("Surface2"))
-                                .cornerRadius(8)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(Color("Border"), lineWidth: 1)
-                                )
-                        }
-                    }
-                }
-            }
+            Text(text)
         }
     }
 
-    private func selectedTagPill(_ tag: HIITTagItem) -> some View {
-        HStack(spacing: 4) {
-            Text(tag.name)
+    /// One chip. Sized by its container (an equal third of the row), so the
+    /// content is centred and both the icon and the chevron stay put in every
+    /// state — anything that appears or disappears here shifts the label.
+    ///
+    /// The chip shows `chipLabel` (the abbreviated form) because it only has
+    /// ~100pt to work with; the menu behind it shows the full `label`.
+    private func filterChip(dimension: FilterDimension, selected: ResolvedFilterOption?) -> some View {
+        let isActive = selected != nil
+
+        return HStack(spacing: 5) {
+            Image(systemName: dimension.icon)
+                .font(.system(size: 10, weight: .semibold))
+            Text(selected?.chipLabel ?? dimension.title)
                 .font(.caption)
                 .fontWeight(.medium)
-            Button(action: { viewModel.removeTag(id: tag.id) }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .bold))
-            }
+                .lineLimit(1)
+                // A floor rather than a licence to shrink: labels are picked to
+                // fit, so this only catches a long one at larger type sizes.
+                .minimumScaleFactor(0.9)
+            Image(systemName: "chevron.down")
+                .font(.system(size: 8, weight: .bold))
+                .opacity(0.7)
         }
-        .foregroundColor(Color("BrandPrimary"))
+        .frame(maxWidth: .infinity)
+        .foregroundColor(isActive ? Color("BrandPrimary") : Color("SecondaryText"))
         .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Color("BrandPrimary").opacity(0.12))
-        .cornerRadius(8)
+        .padding(.vertical, 6)
+        .background(isActive ? Color("BrandPrimary").opacity(0.12) : Color("Surface2"))
+        .cornerRadius(9)
+        .overlay(
+            RoundedRectangle(cornerRadius: 9)
+                .stroke(isActive ? Color("BrandPrimary").opacity(0.35) : Color("Border"), lineWidth: 1)
+        )
+    }
+
+    /// Lives in the navigation bar so the filter row's geometry never depends on
+    /// whether a filter is set. Every menu also offers "Any …", so this is a
+    /// shortcut rather than the only way to clear.
+    private var clearFiltersButton: some View {
+        Button(action: { viewModel.clearFilters() }) {
+            Image(systemName: "xmark.circle.fill")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(Color("SecondaryText"))
+        }
+        .disabled(viewModel.isExecuting || viewModel.isPaused)
+        .accessibilityLabel("Clear filters")
     }
 
     // MARK: - Workout card
@@ -200,33 +245,13 @@ struct HIITWorkoutView: View {
                         .foregroundColor(Color("PrimaryText"))
                 }
                 Spacer()
-                HStack(spacing: 16) {
-                    likeButton
-                    dislikeButton
-                    bookmarkButton
-                }
+                bookmarkButton
             }
 
             Text(viewModel.currentWorkout?.displayText ?? "")
                 .font(.system(.body, design: .monospaced))
                 .foregroundColor(Color("PrimaryText"))
                 .frame(maxWidth: .infinity, alignment: .leading)
-
-            if let tags = viewModel.currentWorkout?.tags, !tags.isEmpty {
-                HStack(spacing: 6) {
-                    ForEach(tags) { tag in
-                        Text(tag.name)
-                            .font(.caption2)
-                            .fontWeight(.medium)
-                            .foregroundColor(.purple.opacity(0.7))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(.purple.opacity(0.08))
-                            .cornerRadius(6)
-                    }
-                    Spacer()
-                }
-            }
         }
         .padding()
         .background(Color("Surface"))
@@ -294,38 +319,6 @@ struct HIITWorkoutView: View {
             .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color("Border"), lineWidth: 1))
         }
         .disabled(viewModel.isLoading)
-    }
-
-    // MARK: - Like / Dislike buttons
-
-    private var likeButton: some View {
-        Button(action: {
-            let generator = UIImpactFeedbackGenerator(style: .medium)
-            generator.impactOccurred()
-            viewModel.toggleLike()
-        }) {
-            Image(systemName: viewModel.likeScore == 1 ? "hand.thumbsup.fill" : "hand.thumbsup")
-                .font(.system(size: 16, weight: .light))
-                .foregroundColor(viewModel.likeScore == 1 ? Color("BrandPrimary") : Color("SecondaryText"))
-                .scaleEffect(viewModel.likeScore == 1 ? 1.15 : 1.0)
-                .animation(.spring(response: 0.25, dampingFraction: 0.5), value: viewModel.likeScore)
-        }
-        .disabled(viewModel.currentWorkout == nil || viewModel.isLikeLoading || viewModel.isExecuting || viewModel.isPaused)
-    }
-
-    private var dislikeButton: some View {
-        Button(action: {
-            let generator = UIImpactFeedbackGenerator(style: .medium)
-            generator.impactOccurred()
-            viewModel.toggleDislike()
-        }) {
-            Image(systemName: viewModel.likeScore == -1 ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                .font(.system(size: 16, weight: .light))
-                .foregroundColor(viewModel.likeScore == -1 ? .red : Color("SecondaryText"))
-                .scaleEffect(viewModel.likeScore == -1 ? 1.15 : 1.0)
-                .animation(.spring(response: 0.25, dampingFraction: 0.5), value: viewModel.likeScore)
-        }
-        .disabled(viewModel.currentWorkout == nil || viewModel.isLikeLoading || viewModel.isExecuting || viewModel.isPaused)
     }
 
     // MARK: - Bookmark button
@@ -451,62 +444,6 @@ private struct PulsingDot: View {
                     pulsing = true
                 }
             }
-    }
-}
-
-// MARK: - Confetti
-
-private struct ConfettiView: View {
-    let onDismiss: () -> Void
-    private let pieces: [ConfettiPiece] = (0..<60).map { _ in ConfettiPiece() }
-
-    var body: some View {
-        ZStack {
-            ForEach(pieces) { piece in FallingShape(piece: piece) }
-        }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) { onDismiss() }
-        }
-        .allowsHitTesting(false)
-    }
-}
-
-private struct ConfettiPiece: Identifiable {
-    let id = UUID()
-    let x: CGFloat = CGFloat.random(in: 0...1)
-    let delay: Double = Double.random(in: 0...0.8)
-    let duration: Double = Double.random(in: 1.8...2.8)
-    let size: CGFloat = CGFloat.random(in: 6...12)
-    let rotation: Double = Double.random(in: 0...360)
-    let rotationSpeed: Double = Double.random(in: 180...540)
-    let color: Color = [Color("BrandPrimary"), Color("BrandSecondary"), .green, .yellow, .orange, .pink, .purple].randomElement()!
-    let isCircle: Bool = Bool.random()
-}
-
-private struct FallingShape: View {
-    let piece: ConfettiPiece
-    @State private var fallen = false
-
-    var body: some View {
-        GeometryReader { geo in
-            Group {
-                if piece.isCircle {
-                    Circle().fill(piece.color).frame(width: piece.size, height: piece.size)
-                } else {
-                    Rectangle()
-                        .fill(piece.color)
-                        .frame(width: piece.size, height: piece.size * 0.5)
-                        .rotationEffect(.degrees(fallen ? piece.rotation + piece.rotationSpeed : piece.rotation))
-                }
-            }
-            .position(x: geo.size.width * piece.x, y: fallen ? geo.size.height + 20 : -20)
-            .opacity(fallen ? 0 : 1)
-            .onAppear {
-                withAnimation(.easeIn(duration: piece.duration).delay(piece.delay)) {
-                    fallen = true
-                }
-            }
-        }
     }
 }
 

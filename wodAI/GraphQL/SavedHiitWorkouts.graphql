@@ -20,6 +20,11 @@ query SavedHiitWorkoutsQuery {
             label
           }
         }
+        phases {
+          durationSeconds
+          direction
+          label
+        }
       }
     }
   }

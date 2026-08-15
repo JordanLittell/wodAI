@@ -7,9 +7,9 @@ import WodAiAPI
 public class GenerateHiitWorkoutMutation: GraphQLMutation {
   public static let operationName: String = "GenerateHiitWorkoutMutation"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "242a0ae50c6a3d10fc59c90b4f461dd688cb6dcaf05d90f13925b3d1256b2f0a",
+    operationIdentifier: "2ac0de0e6209e43d172b57ada955186dbd5e459799af07566ae3dafd678af37b",
     definition: .init(
-      #"mutation GenerateHiitWorkoutMutation($skipWorkoutId: Int, $tagIds: [Int!]) { generateHiitWorkout(skipWorkoutId: $skipWorkoutId, tagIds: $tagIds) { __typename id format displayText stimulus constraintType constraintMagnitude timeCap timingScheme { __typename version segments { __typename rounds phases { __typename durationSeconds direction label } } } tags { __typename id name } } }"#
+      #"mutation GenerateHiitWorkoutMutation($skipWorkoutId: Int, $tagIds: [Int!]) { generateHiitWorkout(skipWorkoutId: $skipWorkoutId, tagIds: $tagIds) { __typename id format displayText stimulus constraintType constraintMagnitude timeCap timingScheme { __typename version segments { __typename rounds phases { __typename durationSeconds direction label } } phases { __typename durationSeconds direction label } } tags { __typename id name } } }"#
     ))
 
   public var skipWorkoutId: GraphQLNullable<Int>
@@ -84,11 +84,13 @@ public class GenerateHiitWorkoutMutation: GraphQLMutation {
         public static var __selections: [ApolloAPI.Selection] { [
           .field("__typename", String.self),
           .field("version", Int.self),
-          .field("segments", [Segment].self),
+          .field("segments", [Segment]?.self),
+          .field("phases", [Phase]?.self),
         ] }
 
         public var version: Int { __data["version"] }
-        public var segments: [Segment] { __data["segments"] }
+        public var segments: [Segment]? { __data["segments"] }
+        public var phases: [Phase]? { __data["phases"] }
 
         /// GenerateHiitWorkout.TimingScheme.Segment
         ///
@@ -126,6 +128,26 @@ public class GenerateHiitWorkoutMutation: GraphQLMutation {
             public var direction: GraphQLEnum<WodAiAPI.PhaseDirection> { __data["direction"] }
             public var label: String? { __data["label"] }
           }
+        }
+
+        /// GenerateHiitWorkout.TimingScheme.Phase
+        ///
+        /// Parent Type: `TimerPhase`
+        public struct Phase: WodAiAPI.SelectionSet {
+          public let __data: DataDict
+          public init(_dataDict: DataDict) { __data = _dataDict }
+
+          public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.TimerPhase }
+          public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("durationSeconds", Int?.self),
+            .field("direction", GraphQLEnum<WodAiAPI.PhaseDirection>.self),
+            .field("label", String?.self),
+          ] }
+
+          public var durationSeconds: Int? { __data["durationSeconds"] }
+          public var direction: GraphQLEnum<WodAiAPI.PhaseDirection> { __data["direction"] }
+          public var label: String? { __data["label"] }
         }
       }
 

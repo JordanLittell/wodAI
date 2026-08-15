@@ -17,6 +17,11 @@ mutation GenerateHiitWorkoutMutation($skipWorkoutId: Int, $tagIds: [Int!]) {
           label
         }
       }
+      phases {
+        durationSeconds
+        direction
+        label
+      }
     }
     tags {
       id
