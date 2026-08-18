@@ -8,9 +8,11 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct WodTimerView: View {
     @ObservedObject var viewModel: HIITWorkoutViewModel
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
@@ -21,6 +23,22 @@ struct WodTimerView: View {
             } else {
                 runningView
             }
+        }
+        // Keep the screen awake for as long as the timer is on screen. Scoped to
+        // the view's lifetime rather than the execution state so the flag is
+        // guaranteed to clear however the cover is dismissed — finish, exit, or
+        // a mis-tap cancel. Staying awake while paused is intentional: the
+        // athlete is still looking at the phone.
+        .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
+        .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            // iOS clears the idle-timer flag when the app resigns active, so
+            // re-assert it. The refresh resolves a time cap that expired while
+            // backgrounded (the 1s tick is suspended there) instead of letting
+            // the clock sit stale until the next tick.
+            UIApplication.shared.isIdleTimerDisabled = true
+            viewModel.refreshAfterForeground()
         }
     }
 

@@ -112,6 +112,62 @@ extension WodTimerConfig {
     }
 }
 
+// MARK: - Timeline projection
+
+/// The moment a phase begins, as an absolute offset from the workout start.
+struct PhaseBoundary {
+    let offset: TimeInterval
+    let roundNumber: Int
+    let phase: TimerPhase
+}
+
+extension WodTimerConfig {
+    /// Every phase start flattened across segments and rounds, ascending. The
+    /// first entry is always offset 0.
+    ///
+    /// Walks the same structure as `readout(atElapsed:)` and stops at the first
+    /// open-ended phase, mirroring the early return there — nothing can follow a
+    /// phase that never ends.
+    ///
+    /// This is the scheduling counterpart to `readout`: `readout` answers "where
+    /// am I now", `timeline` answers "when does everything happen", which is what
+    /// audio cues and Live Activity updates need to be planned ahead of time.
+    var timeline: [PhaseBoundary] {
+        var boundaries: [PhaseBoundary] = []
+        var cursor: TimeInterval = 0
+        var roundNumber = 0
+
+        for segment in segments {
+            for _ in 0..<max(0, segment.rounds) {
+                roundNumber += 1
+                for phase in segment.phases {
+                    boundaries.append(PhaseBoundary(offset: cursor,
+                                                    roundNumber: roundNumber,
+                                                    phase: phase))
+                    guard let duration = phase.duration else { return boundaries }
+                    cursor += duration
+                }
+            }
+        }
+        return boundaries
+    }
+
+    /// Total workout length, or `nil` when any phase is open-ended (uncapped
+    /// "For Time") and so the workout has no scheduled end.
+    var totalDuration: TimeInterval? {
+        var cursor: TimeInterval = 0
+        for segment in segments {
+            for _ in 0..<max(0, segment.rounds) {
+                for phase in segment.phases {
+                    guard let duration = phase.duration else { return nil }
+                    cursor += duration
+                }
+            }
+        }
+        return cursor
+    }
+}
+
 // MARK: - Fallback
 
 extension WodTimerConfig {

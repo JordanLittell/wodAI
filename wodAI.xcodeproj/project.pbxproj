@@ -39,6 +39,9 @@
 		C1A201CA2E16D9200094E759 /* Base.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C1A201C92E16D9200094E759 /* Base.xcconfig */; };
 		C1A201CC2E16D92E0094E759 /* Debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C1A201CB2E16D92E0094E759 /* Debug.xcconfig */; };
 		C1A201CE2E16D9370094E759 /* Release.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C1A201CD2E16D9370094E759 /* Release.xcconfig */; };
+		C1B4EC583034D2F2002AFC58 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C1B4EC573034D2F2002AFC58 /* WidgetKit.framework */; };
+		C1B4EC5A3034D2F2002AFC58 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C1B4EC593034D2F2002AFC58 /* SwiftUI.framework */; };
+		C1B4EC693034D2F4002AFC58 /* wodAIWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C1B4EC563034D2F2002AFC58 /* wodAIWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C1C1F7832DB8A3E6006A7BA4 /* Apollo in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F7822DB8A3E6006A7BA4 /* Apollo */; };
 		C1C1F78F2DB8A71A006A7BA4 /* ApolloSQLite in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F78E2DB8A71A006A7BA4 /* ApolloSQLite */; };
 		C1C1F7912DB8A71A006A7BA4 /* ApolloTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F7902DB8A71A006A7BA4 /* ApolloTestSupport */; };
@@ -63,7 +66,28 @@
 			remoteGlobalIDString = C19950502DB0B9F800786544;
 			remoteInfo = wodAI;
 		};
+		C1B4EC673034D2F4002AFC58 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C19950492DB0B9F800786544 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C1B4EC553034D2F2002AFC58;
+			remoteInfo = wodAIWidgetsExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C1B4EC6E3034D2F4002AFC58 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C1B4EC693034D2F4002AFC58 /* wodAIWidgetsExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		C19950512DB0B9F800786544 /* wodAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = wodAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -72,9 +96,26 @@
 		C1A201C92E16D9200094E759 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		C1A201CB2E16D92E0094E759 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		C1A201CD2E16D9370094E759 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		C1B4EC563034D2F2002AFC58 /* wodAIWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = wodAIWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C1B4EC573034D2F2002AFC58 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		C1B4EC593034D2F2002AFC58 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C1B4EC6D3034D2F4002AFC58 /* Exceptions for "wodAIWidgets" folder in "wodAIWidgetsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = C1B4EC553034D2F2002AFC58 /* wodAIWidgetsExtension */;
+		};
+		C1B4EC723034D32F002AFC58 /* Exceptions for "wodAI" folder in "wodAIWidgetsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Core/HIIT/WodTimerActivityAttributes.swift,
+			);
+			target = C1B4EC553034D2F2002AFC58 /* wodAIWidgetsExtension */;
+		};
 		C1D1BA402DBEDAC300932818 /* Exceptions for "wodAI" folder in "wodAI" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -113,6 +154,7 @@
 			exceptions = (
 				C1D1BA402DBEDAC300932818 /* Exceptions for "wodAI" folder in "wodAI" target */,
 				C1D1BA412DBEDAC300932818 /* Exceptions for "wodAI" folder in "Compile Sources" phase from "wodAI" target */,
+				C1B4EC723034D32F002AFC58 /* Exceptions for "wodAI" folder in "wodAIWidgetsExtension" target */,
 			);
 			path = wodAI;
 			sourceTree = "<group>";
@@ -125,6 +167,14 @@
 		C19950702DB0B9FA00786544 /* wodAIUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = wodAIUITests;
+			sourceTree = "<group>";
+		};
+		C1B4EC5B3034D2F2002AFC58 /* wodAIWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C1B4EC6D3034D2F4002AFC58 /* Exceptions for "wodAIWidgets" folder in "wodAIWidgetsExtension" target */,
+			);
+			path = wodAIWidgets;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -187,6 +237,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C1B4EC533034D2F2002AFC58 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C1B4EC5A3034D2F2002AFC58 /* SwiftUI.framework in Frameworks */,
+				C1B4EC583034D2F2002AFC58 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -199,6 +258,7 @@
 				C19950532DB0B9F800786544 /* wodAI */,
 				C19950662DB0B9FA00786544 /* wodAITests */,
 				C19950702DB0B9FA00786544 /* wodAIUITests */,
+				C1B4EC5B3034D2F2002AFC58 /* wodAIWidgets */,
 				C19950522DB0B9F800786544 /* Products */,
 				C1C1F7AD2DB8A926006A7BA4 /* Frameworks */,
 			);
@@ -210,6 +270,7 @@
 				C19950512DB0B9F800786544 /* wodAI.app */,
 				C19950632DB0B9FA00786544 /* wodAITests.xctest */,
 				C199506D2DB0B9FA00786544 /* wodAIUITests.xctest */,
+				C1B4EC563034D2F2002AFC58 /* wodAIWidgetsExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -217,6 +278,8 @@
 		C1C1F7AD2DB8A926006A7BA4 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				C1B4EC573034D2F2002AFC58 /* WidgetKit.framework */,
+				C1B4EC593034D2F2002AFC58 /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -232,10 +295,12 @@
 				C199504E2DB0B9F800786544 /* Frameworks */,
 				C199504D2DB0B9F800786544 /* Sources */,
 				C199504F2DB0B9F800786544 /* Resources */,
+				C1B4EC6E3034D2F4002AFC58 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				C1B4EC683034D2F4002AFC58 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				C19950532DB0B9F800786544 /* wodAI */,
@@ -329,6 +394,28 @@
 			productReference = C199506D2DB0B9FA00786544 /* wodAIUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		C1B4EC553034D2F2002AFC58 /* wodAIWidgetsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C1B4EC6A3034D2F4002AFC58 /* Build configuration list for PBXNativeTarget "wodAIWidgetsExtension" */;
+			buildPhases = (
+				C1B4EC523034D2F2002AFC58 /* Sources */,
+				C1B4EC533034D2F2002AFC58 /* Frameworks */,
+				C1B4EC543034D2F2002AFC58 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				C1B4EC5B3034D2F2002AFC58 /* wodAIWidgets */,
+			);
+			name = wodAIWidgetsExtension;
+			packageProductDependencies = (
+			);
+			productName = wodAIWidgetsExtension;
+			productReference = C1B4EC563034D2F2002AFC58 /* wodAIWidgetsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -336,7 +423,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1600;
+				LastSwiftUpdateCheck = 2660;
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					C19950502DB0B9F800786544 = {
@@ -349,6 +436,9 @@
 					C199506C2DB0B9FA00786544 = {
 						CreatedOnToolsVersion = 16.0;
 						TestTargetID = C19950502DB0B9F800786544;
+					};
+					C1B4EC553034D2F2002AFC58 = {
+						CreatedOnToolsVersion = 26.6;
 					};
 				};
 			};
@@ -375,6 +465,7 @@
 				C19950502DB0B9F800786544 /* wodAI */,
 				C19950622DB0B9FA00786544 /* wodAITests */,
 				C199506C2DB0B9FA00786544 /* wodAIUITests */,
+				C1B4EC553034D2F2002AFC58 /* wodAIWidgetsExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -398,6 +489,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		C199506B2DB0B9FA00786544 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C1B4EC543034D2F2002AFC58 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -448,6 +546,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C1B4EC523034D2F2002AFC58 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -460,6 +565,11 @@
 			isa = PBXTargetDependency;
 			target = C19950502DB0B9F800786544 /* wodAI */;
 			targetProxy = C199506E2DB0B9FA00786544 /* PBXContainerItemProxy */;
+		};
+		C1B4EC683034D2F4002AFC58 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C1B4EC553034D2F2002AFC58 /* wodAIWidgetsExtension */;
+			targetProxy = C1B4EC673034D2F4002AFC58 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -719,6 +829,68 @@
 			};
 			name = Release;
 		};
+		C1B4EC6B3034D2F4002AFC58 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7SH9PCQBLP;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = wodAIWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = wodAIWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.adapt.wodAI.wodAIWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		C1B4EC6C3034D2F4002AFC58 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7SH9PCQBLP;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = wodAIWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = wodAIWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.adapt.wodAI.wodAIWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -754,6 +926,15 @@
 			buildConfigurations = (
 				C199507E2DB0B9FA00786544 /* Debug */,
 				C199507F2DB0B9FA00786544 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C1B4EC6A3034D2F4002AFC58 /* Build configuration list for PBXNativeTarget "wodAIWidgetsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C1B4EC6B3034D2F4002AFC58 /* Debug */,
+				C1B4EC6C3034D2F4002AFC58 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

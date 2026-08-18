@@ -91,6 +91,17 @@ class HIITWorkoutViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let countdownFeedback = CountdownFeedback()
     private var lastCountdownTick: Int?
+    private let activityController = WorkoutActivityController()
+    private lazy var cueScheduler: WorkoutCueScheduler = {
+        let scheduler = WorkoutCueScheduler()
+        // The scheduler has no clock; after an interruption it needs the live
+        // elapsed time to rebuild the remaining cue track.
+        scheduler.onInterruptionEnded = { [weak self] config in
+            guard let self, case .running = self.executionState else { return }
+            scheduler.start(config: config, fromElapsed: self.elapsedSeconds)
+        }
+        return scheduler
+    }()
 
     init() {
         setupFilterSubscription()
@@ -142,6 +153,17 @@ class HIITWorkoutViewModel: ObservableObject {
     var countdownRemaining: Int? {
         guard case .countingDown(let end) = executionState else { return nil }
         return max(0, Int(ceil(end.timeIntervalSinceNow)))
+    }
+
+    /// The instant elapsed time 0 corresponds to, backing out any time already
+    /// banked before a pause. Live Activity phase windows are absolute dates, so
+    /// they are anchored to this rather than to the re-anchored `startTime`.
+    var workoutStartAnchor: Date? {
+        switch executionState {
+        case .running(let start, let prior): return start.addingTimeInterval(-prior)
+        case .paused(let elapsed): return Date().addingTimeInterval(-elapsed)
+        case .idle, .countingDown: return nil
+        }
     }
 
     var elapsedSeconds: TimeInterval {
@@ -460,6 +482,7 @@ class HIITWorkoutViewModel: ObservableObject {
     func cancelCountdown() {
         timerCancellable?.cancel()
         countdownFeedback.reset()
+        cueScheduler.stop()
         executionState = .idle
     }
 
@@ -467,6 +490,14 @@ class HIITWorkoutViewModel: ObservableObject {
     private func beginRunning() {
         timerCancellable?.cancel()
         executionState = .running(startTime: Date(), priorElapsed: 0)
+        // Schedule the whole workout's interval cues up front so they still
+        // sound with the screen off or the phone locked.
+        cueScheduler.start(config: activeConfig)
+        if let anchor = workoutStartAnchor {
+            activityController.start(workoutTitle: currentWorkout?.format ?? "Workout",
+                                     config: activeConfig,
+                                     workoutStart: anchor)
+        }
         startTimer()
     }
 
@@ -498,22 +529,44 @@ class HIITWorkoutViewModel: ObservableObject {
     func pauseExecution() {
         let elapsed = elapsedSeconds
         timerCancellable?.cancel()
+        cueScheduler.stop()
         executionState = .paused(elapsed: elapsed)
+        // Freeze the Lock Screen clock: a live date range would keep counting.
+        if let anchor = workoutStartAnchor {
+            activityController.update(config: activeConfig,
+                                      workoutStart: anchor,
+                                      elapsed: elapsed,
+                                      isPaused: true)
+        }
     }
 
     func resumeExecution() {
         let prior = elapsedSeconds
         executionState = .running(startTime: Date(), priorElapsed: prior)
+        // Resume re-anchors `startTime`, so the cue track must be rebuilt from
+        // the elapsed offset or every remaining cue would fire early.
+        cueScheduler.start(config: activeConfig, fromElapsed: prior)
+        // Unfreeze the Lock Screen clock now rather than waiting for the next tick.
+        if let anchor = workoutStartAnchor {
+            activityController.update(config: activeConfig,
+                                      workoutStart: anchor,
+                                      elapsed: prior,
+                                      isPaused: false)
+        }
         startTimer()
     }
 
     func exitExecution() {
         timerCancellable?.cancel()
+        cueScheduler.stop()
+        activityController.end()
         executionState = .idle
     }
 
     func finishExecution() {
         timerCancellable?.cancel()
+        cueScheduler.stop()
+        activityController.end()
         // Capture the finished workout + elapsed time BEFORE resetting to idle,
         // so the completion screen can seed the recorded result.
         let captured = elapsedSeconds
@@ -540,13 +593,36 @@ class HIITWorkoutViewModel: ObservableObject {
         timerCancellable = Timer.publish(every: 1, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
-                guard let self else { return }
-                if self.readout.isComplete {
-                    self.finishExecution()
-                    return
-                }
-                self.objectWillChange.send()
+                self?.tick()
             }
+    }
+
+    /// One step of the running clock: auto-finish at the cap, otherwise redraw.
+    /// Elapsed time is always recomputed from `Date`, so a missed tick never
+    /// loses time — it only delays this completion check.
+    private func tick() {
+        if readout.isComplete {
+            finishExecution()
+            return
+        }
+        // The Lock Screen clock counts on its own; this only pushes phase
+        // changes, and no-ops on the ticks in between.
+        if let anchor = workoutStartAnchor {
+            activityController.update(config: activeConfig,
+                                      workoutStart: anchor,
+                                      elapsed: elapsedSeconds,
+                                      isPaused: false)
+        }
+        objectWillChange.send()
+    }
+
+    /// Called when the app returns to the foreground. The 1s publisher is
+    /// suspended while backgrounded, so a time cap that expired back there has
+    /// not been noticed yet; run the check immediately rather than showing a
+    /// stale clock until the next tick.
+    func refreshAfterForeground() {
+        guard case .running = executionState else { return }
+        tick()
     }
 
     /// Persist the edited completion result, then advance to the next workout.

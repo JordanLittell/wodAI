@@ -45,10 +45,13 @@ final class CountdownFeedback {
         AudioServicesPlaySystemSound(tickSoundID)
     }
 
+    /// Plays the "go" cue and leaves the audio session **active**: the workout is
+    /// starting and `WorkoutCueScheduler` takes the session over from here for
+    /// in-workout interval cues. Tearing it down here would drop the audio route
+    /// and silence the rest of the workout.
     func playGo() {
         goHaptic.notificationOccurred(.success)
         AudioServicesPlaySystemSound(goSoundID)
-        deactivateSession()
     }
 
     /// Release the audio session (unduck background audio) when the countdown

@@ -149,4 +149,114 @@ struct WodTimerEngineTests {
         #expect(WodTimerConfig.fallback(timeCap: 900).readout(atElapsed: 0).displaySeconds == 900)
         #expect(WodTimerConfig.fallback(timeCap: nil).readout(atElapsed: 100).displaySeconds == 100)
     }
+
+    // MARK: - Timeline projection
+    //
+    // `timeline` and `totalDuration` drive audio cue scheduling and Live
+    // Activity updates. They walk the same structure as `readout(atElapsed:)`,
+    // so the risk is the two projections drifting apart — the agreement test
+    // below is what pins them together.
+
+    @Test func tabataTimelineCoversEveryPhase() {
+        let boundaries = tabata.timeline
+        // 8 rounds x (Work, Rest)
+        #expect(boundaries.count == 16)
+        #expect(boundaries[0].offset == 0)
+        #expect(boundaries[0].phase.label == "Work")
+        #expect(boundaries[0].roundNumber == 1)
+        // First Rest starts at 20s.
+        #expect(boundaries[1].offset == 20)
+        #expect(boundaries[1].phase.label == "Rest")
+        // Round 2 Work starts at 30s.
+        #expect(boundaries[2].offset == 30)
+        #expect(boundaries[2].roundNumber == 2)
+        // Last Rest starts at 7*30 + 20 = 230s.
+        #expect(boundaries[15].offset == 230)
+        #expect(boundaries[15].roundNumber == 8)
+        #expect(tabata.totalDuration == 240)
+    }
+
+    @Test func emomTimelineIsOnePerMinute() {
+        let emom = WodTimerConfig(segments: [
+            TimerSegment(rounds: 10, phases: [
+                TimerPhase(duration: 60, direction: .down, label: nil)
+            ])
+        ])
+        let boundaries = emom.timeline
+        #expect(boundaries.count == 10)
+        #expect(boundaries.map(\.offset) == (0..<10).map { TimeInterval($0 * 60) })
+        #expect(boundaries.map(\.roundNumber) == Array(1...10))
+        #expect(emom.totalDuration == 600)
+    }
+
+    @Test func openEndedTimelineTerminatesAndHasNoTotal() {
+        let config = WodTimerConfig.forTime(timeCap: nil)
+        // The open-ended phase is reported, but nothing can follow it.
+        #expect(config.timeline.count == 1)
+        #expect(config.timeline[0].offset == 0)
+        #expect(config.totalDuration == nil)
+    }
+
+    @Test func timelineStopsAtOpenEndedPhaseMidConfig() {
+        // A capped warmup followed by an uncapped effort: the timeline must stop
+        // at the uncapped phase rather than walking past it.
+        let config = WodTimerConfig(segments: [
+            TimerSegment(rounds: 1, phases: [
+                TimerPhase(duration: 60, direction: .down, label: "Warmup"),
+                TimerPhase(duration: nil, direction: .up, label: "Effort"),
+                TimerPhase(duration: 30, direction: .down, label: "Unreachable")
+            ])
+        ])
+        #expect(config.timeline.count == 2)
+        #expect(config.timeline[1].phase.label == "Effort")
+        #expect(config.totalDuration == nil)
+    }
+
+    @Test func multiAmrapTimelineIncludesRestBoundaries() {
+        let config = WodTimerConfig(segments: [
+            TimerSegment(rounds: 1, phases: [TimerPhase(duration: 300, direction: .down, label: "AMRAP 1")]),
+            TimerSegment(rounds: 1, phases: [TimerPhase(duration: 120, direction: .down, label: "Rest")]),
+            TimerSegment(rounds: 1, phases: [TimerPhase(duration: 300, direction: .down, label: "AMRAP 2")])
+        ])
+        #expect(config.timeline.map(\.offset) == [0, 300, 420])
+        #expect(config.timeline.map(\.phase.label) == ["AMRAP 1", "Rest", "AMRAP 2"])
+        #expect(config.totalDuration == 720)
+    }
+
+    /// The load-bearing invariant: each boundary is exactly where `readout`
+    /// thinks that phase begins. If `timeline` and `readout` ever disagree, cues
+    /// fire at the wrong moment relative to the on-screen clock.
+    @Test func timelineAgreesWithReadout() {
+        let configs: [WodTimerConfig] = [
+            tabata,
+            WodTimerConfig.forTime(timeCap: 1200),
+            WodTimerConfig(segments: [
+                TimerSegment(rounds: 10, phases: [TimerPhase(duration: 60, direction: .down, label: nil)])
+            ])
+        ]
+
+        for config in configs {
+            for boundary in config.timeline {
+                let atStart = config.readout(atElapsed: boundary.offset)
+                #expect(atStart.roundNumber == boundary.roundNumber)
+                #expect(atStart.phaseLabel == boundary.phase.label)
+                #expect(atStart.isComplete == false)
+
+                // A hair before a non-zero boundary we must still be in the
+                // previous phase, not the one starting here.
+                if boundary.offset > 0 {
+                    let before = config.readout(atElapsed: boundary.offset - 0.01)
+                    let sameRound = before.roundNumber == boundary.roundNumber
+                    let samePhase = before.phaseLabel == boundary.phase.label
+                    #expect(!(sameRound && samePhase))
+                }
+            }
+
+            // The config ends exactly at totalDuration.
+            if let total = config.totalDuration {
+                #expect(config.readout(atElapsed: total).isComplete == true)
+                #expect(config.readout(atElapsed: total - 0.01).isComplete == false)
+            }
+        }
+    }
 }
