@@ -6,7 +6,6 @@ query GetWorkoutByDate($date: DateTime!) {
     coaching
     stimulus
     scheduledDate
-    status
     completed
     completedAt
     components {

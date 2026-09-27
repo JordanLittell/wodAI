@@ -51,6 +51,23 @@ type User {
   activeDaysPerWeek: Int
   sessionLengthMinutes: Int
   restDays: [RestDay!]!
+  trainingNotes: String
+}
+
+type UserContext {
+  goal: String
+  activeDaysPerWeek: Int
+  sessionLengthMinutes: Int
+  restDays: [RestDay!]!
+  trainingNotes: String
+}
+
+input UpdateUserContextInput {
+  goal: String
+  activeDaysPerWeek: Int
+  sessionLengthMinutes: Int
+  restDays: [RestDay!]
+  trainingNotes: String
 }
 
 type Program {
@@ -68,7 +85,6 @@ type Workout {
   description: String!
   user: User
   program: Program
-  status: WorkoutStatus!
   order: Int
   stimulus: String
   coaching: String
@@ -76,8 +92,70 @@ type Workout {
   completed: Boolean!
   completedAt: DateTime
   components: [Component!]!
+  strengthWorkouts: [StrengthWorkout!]!
+  hiitPieces: [WorkoutHiitPiece!]!
+  blocks: [WorkoutBlock!]!
   createdAt: DateTime!
   updatedAt: DateTime!
+}
+
+interface WorkoutBlock {
+  order: Int!
+}
+
+type StrengthWorkout implements WorkoutBlock {
+  id: Int!
+  name: String
+  stimulus: String!
+  instructions: String!
+  order: Int!
+  components: [StrengthComponent!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type StrengthComponent {
+  id: Int!
+  order: Int!
+  reps: Int!
+  weight: Float
+  rpe: Int
+  exerciseId: Int!
+  exercise: HIITExercise!
+}
+
+type WorkoutHiitPiece implements WorkoutBlock {
+  id: Int!
+  order: Int!
+  hiitWorkout: HIITWorkout!
+}
+
+enum WorkoutPieceType {
+  STRENGTH
+  HIIT
+}
+
+input ImportStrengthComponentInput {
+  exerciseId: Int!
+  reps: Int!
+  weight: Float
+  rpe: Int
+}
+
+input ImportWorkoutPieceInput {
+  type: WorkoutPieceType!
+  name: String
+  stimulus: String
+  instructions: String
+  strengthComponents: [ImportStrengthComponentInput!]
+  hiit: CreateHIITWorkoutInput
+}
+
+input ImportWorkoutInput {
+  name: String!
+  scheduledDate: DateTime!
+  description: String
+  pieces: [ImportWorkoutPieceInput!]!
 }
 
 type Component {
@@ -102,6 +180,15 @@ type CompletedWodsResponse {
   hasMore: Boolean!
   currentPage: Int!
   totalPages: Int!
+}
+
+type WorkoutStats {
+  completedSessionCount: Int!
+  strengthPieceCount: Int!
+  hiitPieceCount: Int!
+  strengthVolumeLb: Float!
+  intensityMinutes: Float!
+  distanceMeters: Int!
 }
 
 enum Gender {
@@ -171,16 +258,6 @@ enum FitnessEquipment {
   SeatedLegPressMachines
 }
 
-enum WorkoutStatus {
-  GENERATED
-  SCHEDULED
-  COMPLETED
-  CANCELLED
-  PENDING
-  GENERATING
-  FAILED
-}
-
 enum RestDay {
   MONDAY
   TUESDAY
@@ -243,13 +320,15 @@ type Query {
   users: [User!]!
   workout(id: String!): Workout
   workouts: [Workout!]!
+  currentWorkout: Workout
   wod(id: String!): Workout
   wods(searchText: String): [Workout!]!
   completedWods(page: Int): CompletedWodsResponse!
   currentWod: Workout
   getWorkoutsByDateRange(startDate: DateTime!, endDate: DateTime!): [Workout!]!
   getWorkoutByDate(date: DateTime!): Workout
-  getWorkoutGenerationStatus(requestId: String!): JobStatusResponse
+  workoutStats(startDate: DateTime!, endDate: DateTime!): WorkoutStats!
+  userContext: UserContext!
   programs: [Program!]!
   program(id: String!): Program
   programSchema: ProgramSchema!
@@ -267,6 +346,7 @@ type Query {
   isSaved(workoutId: Int!): Boolean!
   hiitWorkoutLike(workoutId: Int!): Int
   movements(search: String): [HIITExercise!]!
+  listExercises(search: String): [HIITExercise!]!
   tags: [Tag!]!
   availableTags(selectedTagIds: [Int!]): [TagFacet!]!
 }
@@ -275,9 +355,12 @@ type Mutation {
   updateUser(input: UpdateUserInput!): User!
   deleteUser: User!
   generateWod(page: Int): Workout!
+  generate(page: Int): Workout!
+  completeWorkout(id: String!): Workout!
   completeWod(id: String!): Workout!
   updateWod(id: String!, instructions: String): Workout!
-  generateWorkoutSchedule: WorkoutScheduleResponse!
+  importWorkout(input: ImportWorkoutInput!): Workout!
+  updateUserContext(input: UpdateUserContextInput!): UserContext!
   updateUserRestDays(restDays: [RestDay!]!): User!
   createProgram(input: CreateProgramInput!): Program!
   deleteProgram(id: String!): Boolean!
@@ -334,21 +417,6 @@ input UpdateUserInput {
   activeDaysPerWeek: Int
   sessionLengthMinutes: Int
   restDays: [RestDay!]
-}
-
-type WorkoutScheduleResponse {
-  success: Boolean!
-  message: String!
-  scheduledDates: [DateTime!]!
-  requestId: String
-  jobStatus: String
-}
-
-type JobStatusResponse {
-  requestId: String!
-  status: String!
-  progress: Int!
-  error: String
 }
 
 type AuthPayload {
@@ -459,10 +527,11 @@ type HIITExercise {
   name: String!
   description: String!
   patterns: String!
-  equipment: String
+  equipment: String @deprecated(reason: "Legacy single-category value (barbell, dumbbell, …); exercises now link to multiple Equipment records.")
   muscleGroups: String!
   skillScore: Int
   excluded: Boolean!
+  userOwned: Boolean!
 }
 
 type HIITComponent {
