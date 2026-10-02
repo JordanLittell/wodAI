@@ -75,6 +75,9 @@ struct HIITWorkoutCompletionView: View {
     /// this screen (RPE, notes) live in the view's own @State, so a no-argument
     /// skip would silently submit the un-edited seed draft instead.
     private let onSkip: (WorkoutCompletionDraft) -> Void
+    /// The run's heart rate; arrives after the screen is up, so it's passed in
+    /// live rather than held in `draft`.
+    private let heartRate: CompletionHeartRate
     /// Non-nil when the last submit failed; shown above the bottom bar.
     private let errorMessage: String?
     /// True while a submit is in flight — disables Done/Skip.
@@ -83,6 +86,7 @@ struct HIITWorkoutCompletionView: View {
     private let onDiscard: (() -> Void)?
 
     init(draft: WorkoutCompletionDraft,
+         heartRate: CompletionHeartRate = .none,
          errorMessage: String? = nil,
          isSubmitting: Bool = false,
          onDone: @escaping (WorkoutCompletionDraft) -> Void,
@@ -106,6 +110,7 @@ struct HIITWorkoutCompletionView: View {
         // nothing while the screen reads "1".
         if seeded.perceivedEffort == nil { seeded.perceivedEffort = Self.minEffort }
         self._draft = State(initialValue: seeded)
+        self.heartRate = heartRate
         self.errorMessage = errorMessage
         self.isSubmitting = isSubmitting
         self.onDone = onDone
@@ -121,6 +126,8 @@ struct HIITWorkoutCompletionView: View {
                 VStack(spacing: 24) {
                     header
                     overviewCard
+                    HeartRateSummaryCard(state: heartRate)
+                        .animation(.easeInOut(duration: 0.3), value: heartRate)
                     resultEditor
                     effortSelector
                     notesEditor

@@ -36,10 +36,13 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "GymProfile": return WodAiAPI.Objects.GymProfile
     case "HIITExercise": return WodAiAPI.Objects.HIITExercise
     case "HIITPaginatedResponse": return WodAiAPI.Objects.HIITPaginatedResponse
+    case "HIITSession": return WodAiAPI.Objects.HIITSession
     case "HIITWorkout": return WodAiAPI.Objects.HIITWorkout
+    case "HeartRateSummary": return WodAiAPI.Objects.HeartRateSummary
     case "Mutation": return WodAiAPI.Objects.Mutation
     case "ProvisionUserResponse": return WodAiAPI.Objects.ProvisionUserResponse
     case "Query": return WodAiAPI.Objects.Query
+    case "RecoveryStatus": return WodAiAPI.Objects.RecoveryStatus
     case "SavedHIITWorkout": return WodAiAPI.Objects.SavedHIITWorkout
     case "SeriesPoint": return WodAiAPI.Objects.SeriesPoint
     case "SeriesStat": return WodAiAPI.Objects.SeriesStat

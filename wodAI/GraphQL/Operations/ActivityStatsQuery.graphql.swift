@@ -7,9 +7,9 @@ import WodAiAPI
 public class ActivityStatsQuery: GraphQLQuery {
   public static let operationName: String = "ActivityStats"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "f7be1a9cda9a6a9fd388aa908df77d07fcb6edbbb04883d8a35609baae182065",
+    operationIdentifier: "f3254fb8040b17d13cf41575115d109e75ba747088dce03ffd2a8a1ebee14b21",
     definition: .init(
-      #"query ActivityStats($start: DateTime!, $end: DateTime!, $timezone: String) { muscleLoad: stat( type: MUSCLE_LOAD startDate: $start endDate: $end timezone: $timezone ) { __typename ...StatFields } volume: stat( type: STRENGTH_VOLUME startDate: $start endDate: $end timezone: $timezone ) { __typename ...StatFields } intensity: stat( type: INTENSITY_MINUTES startDate: $start endDate: $end timezone: $timezone ) { __typename ...StatFields } }"#,
+      #"query ActivityStats($start: DateTime!, $end: DateTime!, $timezone: String) { muscleLoad: stat( type: MUSCLE_LOAD startDate: $start endDate: $end timezone: $timezone ) { __typename ...StatFields } volume: stat( type: STRENGTH_VOLUME startDate: $start endDate: $end timezone: $timezone ) { __typename ...StatFields } intensity: stat( type: INTENSITY_MINUTES startDate: $start endDate: $end timezone: $timezone ) { __typename ...StatFields } trainingLoad: stat( type: TRAINING_LOAD startDate: $start endDate: $end timezone: $timezone ) { __typename ...StatFields } }"#,
       fragments: [StatFields.self]
     ))
 
@@ -57,11 +57,18 @@ public class ActivityStatsQuery: GraphQLQuery {
         "endDate": .variable("end"),
         "timezone": .variable("timezone")
       ]),
+      .field("stat", alias: "trainingLoad", TrainingLoad.self, arguments: [
+        "type": "TRAINING_LOAD",
+        "startDate": .variable("start"),
+        "endDate": .variable("end"),
+        "timezone": .variable("timezone")
+      ]),
     ] }
 
     public var muscleLoad: MuscleLoad { __data["muscleLoad"] }
     public var volume: Volume { __data["volume"] }
     public var intensity: Intensity { __data["intensity"] }
+    public var trainingLoad: TrainingLoad { __data["trainingLoad"] }
 
     /// MuscleLoad
     ///
@@ -315,6 +322,97 @@ public class ActivityStatsQuery: GraphQLQuery {
         public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.SeriesStat }
         public static var __mergedSources: [any ApolloAPI.SelectionSet.Type] { [
           ActivityStatsQuery.Data.Intensity.self,
+          StatFields.self,
+          StatFields.AsSeriesStat.self
+        ] }
+
+        public var type: GraphQLEnum<WodAiAPI.StatType> { __data["type"] }
+        public var shape: GraphQLEnum<WodAiAPI.StatShape> { __data["shape"] }
+        public var unit: String { __data["unit"] }
+        public var total: Double? { __data["total"] }
+        public var series: [Series] { __data["series"] }
+
+        public struct Fragments: FragmentContainer {
+          public let __data: DataDict
+          public init(_dataDict: DataDict) { __data = _dataDict }
+
+          public var statFields: StatFields { _toFragment() }
+        }
+
+        public typealias Series = StatFields.AsSeriesStat.Series
+      }
+    }
+
+    /// TrainingLoad
+    ///
+    /// Parent Type: `StatResult`
+    public struct TrainingLoad: WodAiAPI.SelectionSet {
+      public let __data: DataDict
+      public init(_dataDict: DataDict) { __data = _dataDict }
+
+      public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Interfaces.StatResult }
+      public static var __selections: [ApolloAPI.Selection] { [
+        .field("__typename", String.self),
+        .fragment(StatFields.self),
+      ] }
+
+      public var type: GraphQLEnum<WodAiAPI.StatType> { __data["type"] }
+      public var shape: GraphQLEnum<WodAiAPI.StatShape> { __data["shape"] }
+      public var unit: String { __data["unit"] }
+      public var total: Double? { __data["total"] }
+
+      public var asCategoricalStat: AsCategoricalStat? { _asInlineFragment() }
+      public var asSeriesStat: AsSeriesStat? { _asInlineFragment() }
+
+      public struct Fragments: FragmentContainer {
+        public let __data: DataDict
+        public init(_dataDict: DataDict) { __data = _dataDict }
+
+        public var statFields: StatFields { _toFragment() }
+      }
+
+      /// TrainingLoad.AsCategoricalStat
+      ///
+      /// Parent Type: `CategoricalStat`
+      public struct AsCategoricalStat: WodAiAPI.InlineFragment, ApolloAPI.CompositeInlineFragment {
+        public let __data: DataDict
+        public init(_dataDict: DataDict) { __data = _dataDict }
+
+        public typealias RootEntityType = ActivityStatsQuery.Data.TrainingLoad
+        public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.CategoricalStat }
+        public static var __mergedSources: [any ApolloAPI.SelectionSet.Type] { [
+          ActivityStatsQuery.Data.TrainingLoad.self,
+          StatFields.self,
+          StatFields.AsCategoricalStat.self
+        ] }
+
+        public var type: GraphQLEnum<WodAiAPI.StatType> { __data["type"] }
+        public var shape: GraphQLEnum<WodAiAPI.StatShape> { __data["shape"] }
+        public var unit: String { __data["unit"] }
+        public var total: Double? { __data["total"] }
+        public var categories: [Category] { __data["categories"] }
+
+        public struct Fragments: FragmentContainer {
+          public let __data: DataDict
+          public init(_dataDict: DataDict) { __data = _dataDict }
+
+          public var statFields: StatFields { _toFragment() }
+        }
+
+        public typealias Category = StatFields.AsCategoricalStat.Category
+      }
+
+      /// TrainingLoad.AsSeriesStat
+      ///
+      /// Parent Type: `SeriesStat`
+      public struct AsSeriesStat: WodAiAPI.InlineFragment, ApolloAPI.CompositeInlineFragment {
+        public let __data: DataDict
+        public init(_dataDict: DataDict) { __data = _dataDict }
+
+        public typealias RootEntityType = ActivityStatsQuery.Data.TrainingLoad
+        public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.SeriesStat }
+        public static var __mergedSources: [any ApolloAPI.SelectionSet.Type] { [
+          ActivityStatsQuery.Data.TrainingLoad.self,
           StatFields.self,
           StatFields.AsSeriesStat.self
         ] }

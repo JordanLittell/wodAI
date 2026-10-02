@@ -11,6 +11,9 @@ query ActivityStats($start: DateTime!, $end: DateTime!, $timezone: String) {
   intensity: stat(type: INTENSITY_MINUTES, startDate: $start, endDate: $end, timezone: $timezone) {
     ...StatFields
   }
+  trainingLoad: stat(type: TRAINING_LOAD, startDate: $start, endDate: $end, timezone: $timezone) {
+    ...StatFields
+  }
 }
 
 fragment StatFields on StatResult {

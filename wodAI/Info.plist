@@ -15,5 +15,11 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>wodAI connects to your heart rate monitor or watch to show your live heart rate during workouts and how hard each one was.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>bluetooth-central</string>
+	</array>
 </dict>
 </plist>

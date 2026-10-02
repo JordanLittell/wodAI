@@ -52,6 +52,7 @@ type User {
   sessionLengthMinutes: Int
   restDays: [RestDay!]!
   trainingNotes: String
+  timezone: String
 }
 
 type UserContext {
@@ -353,6 +354,7 @@ type Query {
   hiitWorkout(id: Int!): HIITWorkout
   similarHiitWorkouts(id: Int!): [HIITSimilarResult!]!
   completedHiitWorkouts: [CompletedHIITWorkout!]!
+  recoveryStatus(timezone: String): RecoveryStatus!
   savedHiitWorkouts: [SavedHIITWorkout!]!
   isSaved(workoutId: Int!): Boolean!
   hiitWorkoutLike(workoutId: Int!): Int
@@ -393,14 +395,14 @@ type Mutation {
   generateHiitWorkouts(tagIds: [Int!], skipWorkoutId: Int, timezone: String): [HIITWorkout!]!
   createHiitWorkout(input: CreateHIITWorkoutInput!): HIITWorkout!
   deleteHiitWorkout(id: Int!): Boolean!
-  completeHiitWorkout(id: Int!, durationSeconds: Int, roundsCompleted: Int, repsCompleted: Int, perceivedEffort: Int, notes: String): CompletedHIITWorkout!
+  completeHiitWorkout(id: Int!, durationSeconds: Int, roundsCompleted: Int, repsCompleted: Int, perceivedEffort: Int, notes: String, sessionId: ID): CompletedHIITWorkout!
   updateHiitCompletion(id: Int!, durationSeconds: Int, roundsCompleted: Int, repsCompleted: Int, perceivedEffort: Int, notes: String): CompletedHIITWorkout!
   completeStrengthComponents(strengthWorkoutId: Int!, components: [StrengthComponentResultInput!]!): StrengthWorkout!
   uncompleteStrengthComponents(strengthWorkoutId: Int!, componentIds: [Int!]!): StrengthWorkout!
   saveHiitWorkout(id: Int!): Boolean!
   unsaveHiitWorkout(id: Int!): Boolean!
   likeHiitWorkout(workoutId: Int!, score: Int!): Boolean!
-  createHIITSession(wodId: ID!, startedAt: DateTime!): HIITSession!
+  createHIITSession(wodId: ID!, startedAt: DateTime!, source: SensorSourceInput): HIITSession!
   appendSensorFrames(sessionId: ID!, frames: [SensorFrameInput!]!): Boolean!
   completeHIITSession(sessionId: ID!, endedAt: DateTime!, movementIntervals: [MovementIntervalInput!]!): HIITSession!
   abandonHIITSession(sessionId: ID!): Boolean!
@@ -416,6 +418,7 @@ type Mutation {
 type Subscription {
   agentResponse(wodId: String!): AgentResponse!
   workoutGeneration: WorkoutGenerationEvent!
+  weeklyPlanGeneration(timezone: String!): WeeklyPlanGenerationEvent!
 }
 
 union WorkoutGenerationEvent = GenerationSession | GenerationStrengthBlock | GenerationStrengthSet | GenerationHiitBlock | GenerationComplete | GenerationFailed
@@ -454,6 +457,24 @@ type GenerationComplete {
 
 type GenerationFailed {
   message: String!
+}
+
+union WeeklyPlanGenerationEvent = GenerationScheduledSession | GenerationStrengthBlock | GenerationStrengthSet | GenerationHiitBlock | GenerationSessionSaved | WeeklyPlanComplete | GenerationFailed
+
+type GenerationScheduledSession {
+  scheduledDate: String!
+  name: String!
+  description: String!
+  stimulus: String!
+}
+
+type GenerationSessionSaved {
+  scheduledDate: String!
+  workout: Workout!
+}
+
+type WeeklyPlanComplete {
+  workouts: [Workout!]!
 }
 
 input UpdateUserInput {
@@ -686,6 +707,9 @@ type CompletedHIITWorkout {
   repsCompleted: Int
   perceivedEffort: Int
   notes: String
+  heartRate: HeartRateSummary
+  trainingLoad: Float
+  trainingLoadSource: TrainingLoadSource
 }
 
 type SavedHIITWorkout {
@@ -728,6 +752,12 @@ input CreateHIITWorkoutInput {
   timingScheme: WodTimerConfigInput
 }
 
+input SensorSourceInput {
+  kind: String!
+  deviceName: String
+  brand: String
+}
+
 enum HIITSessionStatus {
   ACTIVE
   COMPLETED
@@ -743,6 +773,40 @@ type HIITSession {
   status: HIITSessionStatus!
   durationSeconds: Float
   totalFrames: Int
+  maxHeartRateUsed: Int!
+  zoneThresholds: [Int!]!
+  heartRate: HeartRateSummary
+}
+
+type HeartRateSummary {
+  avg: Float!
+  max: Float!
+  min: Float!
+  coverage: Float!
+  zoneSeconds: [Int!]!
+  trainingLoad: Float!
+  estimatedCalories: Float
+}
+
+enum TrainingLoadSource {
+  HEART_RATE
+  PERCEIVED_EFFORT
+}
+
+enum RecoveryLevel {
+  INSUFFICIENT_DATA
+  FRESH
+  OPTIMAL
+  ELEVATED
+  HIGH_STRAIN
+}
+
+type RecoveryStatus {
+  status: RecoveryLevel!
+  acuteLoad: Float!
+  chronicLoad: Float!
+  ratio: Float
+  lastHardSessionAt: DateTime
 }
 
 input SensorFrameInput {
@@ -754,6 +818,7 @@ input SensorFrameInput {
   gyroY: Float
   gyroZ: Float
   heartRate: Float
+  rrIntervalsMs: [Float!]
   relativeAltitude: Float
   lat: Float
   lng: Float
@@ -774,6 +839,7 @@ enum StatType {
   MUSCLE_LOAD
   STRENGTH_VOLUME
   INTENSITY_MINUTES
+  TRAINING_LOAD
 }
 
 enum StatShape {

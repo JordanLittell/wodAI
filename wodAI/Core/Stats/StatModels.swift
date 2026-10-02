@@ -32,7 +32,7 @@ struct StatChart: Equatable {
         case series([DayValue])
     }
 
-    /// "lb", "min" or "%".
+    /// "lb", "min", "load" or "%".
     let unit: String
     /// Sum over the range; nil when a total isn't meaningful (muscle-load shares).
     let total: Double?
@@ -87,11 +87,12 @@ struct StatChart: Equatable {
     }
 }
 
-/// The three charts on the Activity screen for one week.
+/// The charts on the Activity screen for one week.
 struct ActivityStats: Equatable {
     let muscleLoad: StatChart?
     let volume: StatChart?
     let intensity: StatChart?
+    var trainingLoad: StatChart? = nil
 }
 
 enum StatFormatting {

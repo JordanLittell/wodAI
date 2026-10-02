@@ -3,7 +3,7 @@
 //  wodAI
 //
 //  Loads the Activity screen's charts for a week with one `ActivityStats`
-//  request (all three stats, aliased), and caches each week so flipping back
+//  request (every stat, aliased), and caches each week so flipping back
 //  to one already seen is instant.
 //
 
@@ -66,7 +66,8 @@ final class ActivityStatsStore: ObservableObject {
             let loaded = ActivityStats(
                 muscleLoad: StatChart(fragment: data.muscleLoad.fragments.statFields, timeZone: timeZone),
                 volume: StatChart(fragment: data.volume.fragments.statFields, timeZone: timeZone),
-                intensity: StatChart(fragment: data.intensity.fragments.statFields, timeZone: timeZone)
+                intensity: StatChart(fragment: data.intensity.fragments.statFields, timeZone: timeZone),
+                trainingLoad: StatChart(fragment: data.trainingLoad.fragments.statFields, timeZone: timeZone)
             )
             cache[week.start] = loaded
             stats = loaded

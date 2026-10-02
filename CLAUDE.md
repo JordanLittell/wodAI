@@ -51,6 +51,7 @@ ContentView
 - `.activity` → `ActivityView` (weekly completed-workout history)
 - `.equipment` → `GymProfilesView`
 - `.skills` → `SkillsView`
+- `.devices` → `HeartRateDevicesView` (menu label "Heart Rate Monitor")
 
 Tapping a session block pushes `BlockPagerView` (swipe between blocks, dot indicator, auto-advance on completion), which shows `StrengthWorkoutView` or `MetconView`. `MetconView` (formerly `HIITWorkoutView`) has no menu entry: it opens only from a block or a saved workout.
 
@@ -102,10 +103,18 @@ ViewModels call `Network.shared.client.fetch(query:)` / `.perform(mutation:)` di
 | `HIITWorkoutViewModel.shared` | Current workout, execution state, tags, save/like state |
 | `GymProfileManager.shared` | `[GymProfile]`, active profile, CRUD via `*GymProfileMutation` operations |
 | `EquipmentManager.shared` | `[Equipment]` catalog, 24h `UserDefaults` cache (`fetchEquipment(forceRefresh:)`) |
+| `SensorManager.shared` | Remembered heart-rate device, connection state, latest reading (see Heart rate below) |
 | `AuthState.shared` | see Authentication above |
 | `Network.shared` | Apollo client |
 
 `AuthState` and `AuthManager` are the only two injected as `@EnvironmentObject` (from `wodAIApp`/`ContentView`); everything else is reached via `.shared`.
+
+### Heart rate / wearables
+`Core/Sensors/` records heart rate during a metcon. Everything except `ApolloSessionTelemetryUploader.swift` and the views is Apollo-free and unit-tested (`wodAITests/HeartRateSensorTests.swift`, `WorkoutSensorRecorderTests.swift`).
+- **Device layer**: `SensorProvider` is one way of connecting. `BluetoothHeartRateProvider` handles the standard BLE Heart Rate Service (0x180D/0x2A37, parsed by `HeartRateMeasurementParser`): chest straps, and Garmin/Polar/etc. watches in heart-rate broadcast mode. They connect in-app, never through iPhone Settings. Its `CBCentralManager` is created lazily because creating it shows the Bluetooth prompt. Debug builds also register `SimulatedHeartRateProvider` so the flow works in the Simulator. A new device type (Apple Watch app, vendor SDK) is a new provider plus a `SensorProviderKind` case.
+- **Brand setup**: `DeviceBrand` detects the brand from the advertised name and carries a per-brand `DeviceSetupGuide` shown in `DeviceConnectSheet`. Brand-specific setup goes here.
+- **Recording**: `HIITWorkoutViewModel` starts a `WorkoutSensorRecorder` when the clock starts. It opens a backend `HIITSession`, batches frames every 15 s (retry-safe; the server dedups on timestamp), and on finish returns the server-computed `HeartRateSummary`. `completeHiitWorkout(sessionId:)` links it to the completion. Heart rate never blocks a workout: without a device, or if the session fails to open, the run just isn't recorded.
+- **Analytics are server-side** (`workout-generator/src/lib/trainingLoad.ts`): zones, Edwards TRIMP load, calories, and `recoveryStatus` (7- vs 28-day load). The client only shows the live zone from the thresholds the session returns.
 
 ### Error monitoring
 `TelemetryService` (`Core/Services/TelemetryService.swift`) wraps Sentry: `initialize()` (called once from `wodAIApp.init()`), `identify`/`clearIdentity` on login/logout, `captureError`, `captureMessage`, `captureGraphQLErrors`, and breadcrumbs per GraphQL operation from the interceptor. Prefer routing new error paths through this rather than `print()`.

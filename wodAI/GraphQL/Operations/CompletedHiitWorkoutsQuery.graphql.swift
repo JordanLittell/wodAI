@@ -7,9 +7,9 @@ import WodAiAPI
 public class CompletedHiitWorkoutsQuery: GraphQLQuery {
   public static let operationName: String = "CompletedHiitWorkoutsQuery"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "3e2839557f9084d9a0b04d60ec94def1bd21cf70ab466116d18bc2808eab6668",
+    operationIdentifier: "1b71e4e5afce7ed585e415f43e6c5917f7c05a6af7c3fe289d57d09cdd0690cb",
     definition: .init(
-      #"query CompletedHiitWorkoutsQuery { completedHiitWorkouts { __typename id completedAt durationSeconds roundsCompleted repsCompleted perceivedEffort notes workout { __typename id displayText stimulus constraintType constraintMagnitude } } }"#
+      #"query CompletedHiitWorkoutsQuery { completedHiitWorkouts { __typename id completedAt durationSeconds roundsCompleted repsCompleted perceivedEffort notes trainingLoad heartRate { __typename avg } workout { __typename id displayText stimulus constraintType constraintMagnitude } } }"#
     ))
 
   public init() {}
@@ -42,6 +42,8 @@ public class CompletedHiitWorkoutsQuery: GraphQLQuery {
         .field("repsCompleted", Int?.self),
         .field("perceivedEffort", Int?.self),
         .field("notes", String?.self),
+        .field("trainingLoad", Double?.self),
+        .field("heartRate", HeartRate?.self),
         .field("workout", Workout.self),
       ] }
 
@@ -52,7 +54,25 @@ public class CompletedHiitWorkoutsQuery: GraphQLQuery {
       public var repsCompleted: Int? { __data["repsCompleted"] }
       public var perceivedEffort: Int? { __data["perceivedEffort"] }
       public var notes: String? { __data["notes"] }
+      public var trainingLoad: Double? { __data["trainingLoad"] }
+      public var heartRate: HeartRate? { __data["heartRate"] }
       public var workout: Workout { __data["workout"] }
+
+      /// CompletedHiitWorkout.HeartRate
+      ///
+      /// Parent Type: `HeartRateSummary`
+      public struct HeartRate: WodAiAPI.SelectionSet {
+        public let __data: DataDict
+        public init(_dataDict: DataDict) { __data = _dataDict }
+
+        public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.HeartRateSummary }
+        public static var __selections: [ApolloAPI.Selection] { [
+          .field("__typename", String.self),
+          .field("avg", Double.self),
+        ] }
+
+        public var avg: Double { __data["avg"] }
+      }
 
       /// CompletedHiitWorkout.Workout
       ///

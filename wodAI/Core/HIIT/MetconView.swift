@@ -83,6 +83,7 @@ struct MetconView: View {
             if let draft = viewModel.completionDraft {
                 HIITWorkoutCompletionView(
                     draft: draft,
+                    heartRate: viewModel.completionHeartRate,
                     errorMessage: viewModel.completionError,
                     isSubmitting: viewModel.isSubmittingCompletion,
                     onDone: { viewModel.submitCompletion($0) },
@@ -117,14 +118,17 @@ struct MetconView: View {
     // MARK: - Bottom bar
 
     private var bottomBar: some View {
-        startButton
-            .padding(.horizontal)
-            .padding(.bottom, 20)
-            .padding(.top, 12)
-            .background(
-                Color("Surface")
-                    .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: -5)
-            )
+        VStack(spacing: 10) {
+            HeartRateChip()
+            startButton
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 20)
+        .padding(.top, 12)
+        .background(
+            Color("Surface")
+                .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: -5)
+        )
     }
 
     // MARK: - Action buttons

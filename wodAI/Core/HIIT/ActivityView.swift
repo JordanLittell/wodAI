@@ -13,6 +13,7 @@ struct ActivityView: View {
     @State private var isLoading = false
     @State private var error: Error?
     @StateObject private var stats: ActivityStatsStore
+    @StateObject private var recovery = RecoveryStatusStore()
 
     private let network = Network.shared
 
@@ -64,6 +65,8 @@ struct ActivityView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 20) {
+                        RecoveryStatusCard(status: recovery.status)
+
                         WeekSelectorBar(
                             week: selectedWeek,
                             canGoForward: !selectedWeek.isCurrentOrFuture(relativeTo: Date()),
@@ -86,12 +89,14 @@ struct ActivityView: View {
         // Runs on appear and again whenever the week changes, cancelling the
         // previous week's load.
         .task(id: selectedWeek) { await stats.load(week: selectedWeek) }
+        .task { await recovery.load() }
     }
 
     private var chartsSection: some View {
         VStack(spacing: 12) {
             statCard("Volume", chart: stats.stats?.volume, empty: "No strength sets logged this week")
             statCard("Intensity minutes", chart: stats.stats?.intensity, empty: "No WODs completed this week")
+            statCard("Training load", chart: stats.stats?.trainingLoad, empty: "Rate your effort or wear a heart rate monitor to see training load")
             statCard("Muscle load", chart: stats.stats?.muscleLoad, empty: "No training this week")
         }
     }
@@ -170,7 +175,9 @@ struct ActivityView: View {
                                 displayText: item.workout.displayText,
                                 stimulus: item.workout.stimulus,
                                 constraintType: item.workout.constraintType,
-                                constraintMagnitude: item.workout.constraintMagnitude
+                                constraintMagnitude: item.workout.constraintMagnitude,
+                                avgHeartRate: item.heartRate.map { Int($0.avg.rounded()) },
+                                trainingLoad: item.trainingLoad
                             )
                         }
                         .sorted { $0.completedAt > $1.completedAt }
@@ -198,6 +205,8 @@ struct CompletedHiitEntry: Identifiable {
     let stimulus: String
     let constraintType: String
     let constraintMagnitude: Int
+    var avgHeartRate: Int? = nil
+    var trainingLoad: Double? = nil
 }
 
 struct CompletedHiitCard: View {
@@ -244,6 +253,19 @@ struct CompletedHiitCard: View {
                 .foregroundColor(Color("PrimaryText"))
                 .lineLimit(4)
                 .truncationMode(.tail)
+
+            if entry.avgHeartRate != nil || entry.trainingLoad != nil {
+                HStack(spacing: 14) {
+                    if let bpm = entry.avgHeartRate {
+                        Label("\(bpm) avg bpm", systemImage: "heart.fill")
+                    }
+                    if let load = entry.trainingLoad {
+                        Label("Load \(Int(load.rounded()))", systemImage: "flame.fill")
+                    }
+                }
+                .font(.caption)
+                .foregroundColor(Color("SecondaryText"))
+            }
         }
         .padding()
         .background(Color("Surface"))
