@@ -1,0 +1,72 @@
+# Streams a new session as the agent writes it: the header, then each block in
+# order (a strength block followed by its sets, or a HIIT block), then the saved
+# session. Subscribing starts generation; GenerationComplete or GenerationFailed
+# is always the last event.
+subscription WorkoutGeneration {
+  workoutGeneration {
+    __typename
+    ... on GenerationSession {
+      name
+      description
+      stimulus
+    }
+    ... on GenerationStrengthBlock {
+      order
+      name
+      instructions
+    }
+    ... on GenerationStrengthSet {
+      order
+      setOrder
+      reps
+      weight
+      rpe
+      exercise {
+        name
+        muscleGroups
+      }
+    }
+    ... on GenerationHiitBlock {
+      order
+      hiitWorkout {
+        ...GeneratedHiitWorkout
+      }
+    }
+    ... on GenerationComplete {
+      workout {
+        ...SessionDetails
+      }
+    }
+    ... on GenerationFailed {
+      message
+    }
+  }
+}
+
+# The WOD card for a streamed HIIT block; mirrors the HIIT half of SessionDetails.
+fragment GeneratedHiitWorkout on HIITWorkout {
+  id
+  name
+  format
+  stimulus
+  displayText
+  constraintType
+  constraintMagnitude
+  timeCap
+  timingScheme {
+    version
+    segments {
+      rounds
+      phases {
+        durationSeconds
+        direction
+        label
+      }
+    }
+    phases {
+      durationSeconds
+      direction
+      label
+    }
+  }
+}

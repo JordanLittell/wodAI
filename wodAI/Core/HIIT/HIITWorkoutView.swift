@@ -7,15 +7,23 @@ import UIKit
 
 struct HIITWorkoutView: View {
     @StateObject private var viewModel: HIITWorkoutViewModel
+    /// Filters, the Generate button and the clear-filters item. Off when the
+    /// workout is a fixed piece of something else (an Assistant session block).
+    private let showsFeedControls: Bool
     /// Drives the filter row's fallback from an even three-way split to a stack.
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     init() {
         self._viewModel = StateObject(wrappedValue: HIITWorkoutViewModel.shared)
+        self.showsFeedControls = true
     }
 
-    init(preloaded: HIITWorkoutItem) {
-        self._viewModel = StateObject(wrappedValue: HIITWorkoutViewModel(preloaded: preloaded))
+    init(preloaded: HIITWorkoutItem, showsFeedControls: Bool = true) {
+        self._viewModel = StateObject(wrappedValue: HIITWorkoutViewModel(
+            preloaded: preloaded,
+            advancesAfterCompletion: showsFeedControls
+        ))
+        self.showsFeedControls = showsFeedControls
     }
 
     var body: some View {
@@ -29,7 +37,9 @@ struct HIITWorkoutView: View {
                 VStack(spacing: 0) {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
-                            filterBar
+                            if showsFeedControls {
+                                filterBar
+                            }
                             if viewModel.isLoading {
                                 HIITSkeletonCard()
                             } else {
@@ -62,14 +72,16 @@ struct HIITWorkoutView: View {
         .navigationTitle("WOD Generator")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if !viewModel.filterSelection.isEmpty {
+            if showsFeedControls && !viewModel.filterSelection.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
                     clearFiltersButton
                 }
             }
         }
         .onAppear {
-            viewModel.loadFilterCatalog()
+            if showsFeedControls {
+                viewModel.loadFilterCatalog()
+            }
             if let id = viewModel.currentWorkout?.id {
                 viewModel.fetchIsSaved(workoutId: id)
             } else {
@@ -236,33 +248,14 @@ struct HIITWorkoutView: View {
     // MARK: - Workout card
 
     private var workoutCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top) {
-                if let format = viewModel.currentWorkout?.format {
-                    Text(format)
-                        .font(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundColor(Color("PrimaryText"))
-                }
-                Spacer()
-                bookmarkButton
-            }
-
-            Text(viewModel.currentWorkout?.displayText ?? "")
-                .font(.system(.body, design: .monospaced))
-                .foregroundColor(Color("PrimaryText"))
-                .frame(maxWidth: .infinity, alignment: .leading)
+        HIITWorkoutCard(
+            format: viewModel.currentWorkout?.format,
+            displayText: viewModel.currentWorkout?.displayText ?? "",
+            borderColor: cardBorderColor(for: viewModel.executionState),
+            borderWidth: (viewModel.isExecuting || viewModel.isPaused) ? 1.5 : 1
+        ) {
+            bookmarkButton
         }
-        .padding()
-        .background(Color("Surface"))
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(
-                    cardBorderColor(for: viewModel.executionState),
-                    lineWidth: (viewModel.isExecuting || viewModel.isPaused) ? 1.5 : 1
-                )
-        )
         .animation(.easeInOut(duration: 0.4), value: viewModel.isExecuting)
         .animation(.easeInOut(duration: 0.4), value: viewModel.isPaused)
     }
@@ -271,7 +264,9 @@ struct HIITWorkoutView: View {
 
     private var bottomBar: some View {
         VStack(spacing: 12) {
-            newWorkoutButton
+            if showsFeedControls {
+                newWorkoutButton
+            }
             startButton
         }
         .padding(.horizontal)

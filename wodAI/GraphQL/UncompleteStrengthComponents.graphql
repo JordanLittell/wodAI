@@ -1,0 +1,13 @@
+# Undo for CompleteStrengthComponents: the given sets read as not done again.
+mutation UncompleteStrengthComponents($strengthWorkoutId: Int!, $componentIds: [Int!]!) {
+  uncompleteStrengthComponents(strengthWorkoutId: $strengthWorkoutId, componentIds: $componentIds) {
+    id
+    components {
+      id
+      completedAt
+      completedReps
+      completedWeight
+      completedRpe
+    }
+  }
+}

@@ -5,6 +5,7 @@
 
 import Foundation
 import Apollo
+import ApolloWebSocket
 import WodAiAPI
 import SwiftUI
 import Combine
@@ -16,6 +17,10 @@ class Network {
         return AppConfig.graphQLEndpoint
     }
 
+    private var cancellables = Set<AnyCancellable>()
+
+    /// Queries and mutations go over HTTP through the interceptor chain;
+    /// subscriptions go over the websocket.
     private(set) lazy var client: ApolloClient = {
         let url = URL(string: graphQLEndpoint)!
 
@@ -28,8 +33,84 @@ class Network {
             endpointURL: url
         )
 
-        return ApolloClient(networkTransport: httpTransport, store: ApolloStore())
+        let transport = SplitNetworkTransport(
+            uploadingNetworkTransport: httpTransport,
+            webSocketNetworkTransport: webSocketTransport
+        )
+        return ApolloClient(networkTransport: transport, store: ApolloStore())
     }()
+
+    /// The subscription socket, speaking `graphql-transport-ws` (the protocol
+    /// the backend's graphql-ws server expects) on the same path as HTTP.
+    ///
+    /// It doesn't connect on its own: call `connectSubscriptions()` ahead of
+    /// subscribing so the TCP/TLS handshake and `connection_init` round trip
+    /// are already done when the first subscription is sent. Anything sent
+    /// before the server acks the connection is queued, not dropped.
+    ///
+    /// No store: streamed events are provisional, so they aren't written to
+    /// the normalized cache.
+    private(set) lazy var webSocketTransport: WebSocketTransport = {
+        let url = Self.webSocketURL(for: URL(string: graphQLEndpoint)!)
+        let socket = WebSocket(request: URLRequest(url: url), protocol: .graphql_transport_ws)
+        let transport = WebSocketTransport(
+            websocket: socket,
+            config: WebSocketTransport.Configuration(
+                connectOnInit: false,
+                connectingPayload: Self.connectingPayload(token: AuthState.shared.currentToken)
+            )
+        )
+
+        // The server authenticates once per socket from connection_init, so a
+        // new token means a new connection; a sign-out closes it.
+        AuthState.shared.$currentToken
+            .dropFirst()
+            .removeDuplicates()
+            .sink { [weak self, weak transport] token in
+                guard let self, let transport else { return }
+                transport.updateConnectingPayload(Self.connectingPayload(token: token), reconnectIfConnected: true)
+                if token == nil {
+                    self.disconnectSubscriptions()
+                }
+            }
+            .store(in: &cancellables)
+
+        return transport
+    }()
+
+    private var subscriptionsRequested = false
+
+    /// Opens the subscription socket if it isn't already open or opening.
+    /// Cheap to call repeatedly; call it as soon as a subscription is likely
+    /// (e.g. when the screen that starts one appears) to take the connection
+    /// setup off the critical path.
+    func connectSubscriptions() {
+        guard AuthState.shared.currentToken != nil else { return }
+        guard !subscriptionsRequested || !webSocketTransport.isConnected() else { return }
+        subscriptionsRequested = true
+        webSocketTransport.resumeWebSocketConnection(autoReconnect: true)
+    }
+
+    /// Closes the subscription socket and stops it reconnecting.
+    func disconnectSubscriptions() {
+        guard subscriptionsRequested else { return }
+        subscriptionsRequested = false
+        webSocketTransport.pauseWebSocketConnection()
+    }
+
+    /// http → ws, https → wss, same host and path.
+    static func webSocketURL(for endpoint: URL) -> URL {
+        var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false)!
+        components.scheme = endpoint.scheme == "https" ? "wss" : "ws"
+        return components.url!
+    }
+
+    /// The connection_init payload; the backend reads `Authorization` the same
+    /// way it reads the HTTP header.
+    static func connectingPayload(token: String?) -> JSONEncodableDictionary {
+        guard let token else { return [:] }
+        return ["Authorization": "Bearer \(token)"]
+    }
 }
 
 // MARK: - Authorization Interceptor

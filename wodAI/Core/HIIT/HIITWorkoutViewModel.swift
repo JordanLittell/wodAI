@@ -87,17 +87,24 @@ class HIITWorkoutViewModel: ObservableObject {
     static let getReadySeconds: TimeInterval = 10
 
     private let network = Network.shared
+    /// Completing (or discarding) a feed workout serves the next one. A workout
+    /// that is a fixed part of something else (an Assistant session block)
+    /// stays put instead.
+    private let advancesAfterCompletion: Bool
+
     private var timerCancellable: AnyCancellable?
     private var cancellables = Set<AnyCancellable>()
     private let countdownFeedback = CountdownFeedback()
     private var lastCountdownTick: Int?
 
     init() {
+        self.advancesAfterCompletion = true
         setupFilterSubscription()
     }
 
-    init(preloaded: HIITWorkoutItem) {
+    init(preloaded: HIITWorkoutItem, advancesAfterCompletion: Bool = true) {
         self.currentWorkout = preloaded
+        self.advancesAfterCompletion = advancesAfterCompletion
         self.editableTimeCap = preloaded.timeCap
         self.isFavorited = true
         setupFilterSubscription()
@@ -609,7 +616,7 @@ class HIITWorkoutViewModel: ObservableObject {
 
         // Only past this point is the result safely on the server.
         completionDraft = nil
-        nextWorkout()
+        if advancesAfterCompletion { nextWorkout() }
     }
 
     /// Abandon an unsaved completion result after a failure. Used by the "Discard"
@@ -617,7 +624,7 @@ class HIITWorkoutViewModel: ObservableObject {
     func discardCompletion() {
         completionError = nil
         completionDraft = nil
-        nextWorkout()
+        if advancesAfterCompletion { nextWorkout() }
     }
 
     // MARK: - Preview factory

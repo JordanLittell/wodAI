@@ -1,0 +1,34 @@
+# Every chart on the Activity screen for one week, in one round trip. Each alias
+# is the same `stat` query for a different StatType; the result says whether to
+# draw it as categories or as a daily series.
+query ActivityStats($start: DateTime!, $end: DateTime!, $timezone: String) {
+  muscleLoad: stat(type: MUSCLE_LOAD, startDate: $start, endDate: $end, timezone: $timezone) {
+    ...StatFields
+  }
+  volume: stat(type: STRENGTH_VOLUME, startDate: $start, endDate: $end, timezone: $timezone) {
+    ...StatFields
+  }
+  intensity: stat(type: INTENSITY_MINUTES, startDate: $start, endDate: $end, timezone: $timezone) {
+    ...StatFields
+  }
+}
+
+fragment StatFields on StatResult {
+  __typename
+  type
+  shape
+  unit
+  total
+  ... on CategoricalStat {
+    categories {
+      label
+      value
+    }
+  }
+  ... on SeriesStat {
+    series {
+      x
+      y
+    }
+  }
+}

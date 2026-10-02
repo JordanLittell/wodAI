@@ -21,10 +21,18 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
   public static func objectType(forTypename typename: String) -> ApolloAPI.Object? {
     switch typename {
     case "AuthPayload": return WodAiAPI.Objects.AuthPayload
+    case "CategoricalStat": return WodAiAPI.Objects.CategoricalStat
+    case "CategoryPoint": return WodAiAPI.Objects.CategoryPoint
     case "CompletedHIITWorkout": return WodAiAPI.Objects.CompletedHIITWorkout
     case "CompletedWodsResponse": return WodAiAPI.Objects.CompletedWodsResponse
     case "Component": return WodAiAPI.Objects.Component
     case "Equipment": return WodAiAPI.Objects.Equipment
+    case "GenerationComplete": return WodAiAPI.Objects.GenerationComplete
+    case "GenerationFailed": return WodAiAPI.Objects.GenerationFailed
+    case "GenerationHiitBlock": return WodAiAPI.Objects.GenerationHiitBlock
+    case "GenerationSession": return WodAiAPI.Objects.GenerationSession
+    case "GenerationStrengthBlock": return WodAiAPI.Objects.GenerationStrengthBlock
+    case "GenerationStrengthSet": return WodAiAPI.Objects.GenerationStrengthSet
     case "GymProfile": return WodAiAPI.Objects.GymProfile
     case "HIITExercise": return WodAiAPI.Objects.HIITExercise
     case "HIITPaginatedResponse": return WodAiAPI.Objects.HIITPaginatedResponse
@@ -33,6 +41,11 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "ProvisionUserResponse": return WodAiAPI.Objects.ProvisionUserResponse
     case "Query": return WodAiAPI.Objects.Query
     case "SavedHIITWorkout": return WodAiAPI.Objects.SavedHIITWorkout
+    case "SeriesPoint": return WodAiAPI.Objects.SeriesPoint
+    case "SeriesStat": return WodAiAPI.Objects.SeriesStat
+    case "StrengthComponent": return WodAiAPI.Objects.StrengthComponent
+    case "StrengthWorkout": return WodAiAPI.Objects.StrengthWorkout
+    case "Subscription": return WodAiAPI.Objects.Subscription
     case "Tag": return WodAiAPI.Objects.Tag
     case "TagFacet": return WodAiAPI.Objects.TagFacet
     case "TimerPhase": return WodAiAPI.Objects.TimerPhase
@@ -40,6 +53,7 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "User": return WodAiAPI.Objects.User
     case "WodTimerConfig": return WodAiAPI.Objects.WodTimerConfig
     case "Workout": return WodAiAPI.Objects.Workout
+    case "WorkoutHiitPiece": return WodAiAPI.Objects.WorkoutHiitPiece
     default: return nil
     }
   }

@@ -122,6 +122,17 @@ type StrengthComponent {
   rpe: Int
   exerciseId: Int!
   exercise: HIITExercise!
+  completedAt: DateTime
+  completedReps: Int
+  completedWeight: Float
+  completedRpe: Int
+}
+
+input StrengthComponentResultInput {
+  id: Int!
+  reps: Int!
+  weight: Float
+  rpe: Int
 }
 
 type WorkoutHiitPiece implements WorkoutBlock {
@@ -349,6 +360,7 @@ type Query {
   listExercises(search: String): [HIITExercise!]!
   tags: [Tag!]!
   availableTags(selectedTagIds: [Int!]): [TagFacet!]!
+  stat(type: StatType!, startDate: DateTime!, endDate: DateTime!, timezone: String): StatResult!
 }
 
 type Mutation {
@@ -383,6 +395,8 @@ type Mutation {
   deleteHiitWorkout(id: Int!): Boolean!
   completeHiitWorkout(id: Int!, durationSeconds: Int, roundsCompleted: Int, repsCompleted: Int, perceivedEffort: Int, notes: String): CompletedHIITWorkout!
   updateHiitCompletion(id: Int!, durationSeconds: Int, roundsCompleted: Int, repsCompleted: Int, perceivedEffort: Int, notes: String): CompletedHIITWorkout!
+  completeStrengthComponents(strengthWorkoutId: Int!, components: [StrengthComponentResultInput!]!): StrengthWorkout!
+  uncompleteStrengthComponents(strengthWorkoutId: Int!, componentIds: [Int!]!): StrengthWorkout!
   saveHiitWorkout(id: Int!): Boolean!
   unsaveHiitWorkout(id: Int!): Boolean!
   likeHiitWorkout(workoutId: Int!, score: Int!): Boolean!
@@ -401,6 +415,45 @@ type Mutation {
 
 type Subscription {
   agentResponse(wodId: String!): AgentResponse!
+  workoutGeneration: WorkoutGenerationEvent!
+}
+
+union WorkoutGenerationEvent = GenerationSession | GenerationStrengthBlock | GenerationStrengthSet | GenerationHiitBlock | GenerationComplete | GenerationFailed
+
+type GenerationSession {
+  name: String!
+  description: String!
+  stimulus: String!
+}
+
+type GenerationStrengthBlock {
+  order: Int!
+  name: String!
+  stimulus: String!
+  instructions: String!
+}
+
+type GenerationStrengthSet {
+  order: Int!
+  setOrder: Int!
+  reps: Int!
+  weight: Float
+  rpe: Int
+  exerciseId: Int!
+  exercise: HIITExercise!
+}
+
+type GenerationHiitBlock {
+  order: Int!
+  hiitWorkout: HIITWorkout!
+}
+
+type GenerationComplete {
+  workout: Workout!
+}
+
+type GenerationFailed {
+  message: String!
 }
 
 input UpdateUserInput {
@@ -715,4 +768,48 @@ input MovementIntervalInput {
   avgHeartRate: Float
   peakAcceleration: Float
   confidence: Float
+}
+
+enum StatType {
+  MUSCLE_LOAD
+  STRENGTH_VOLUME
+  INTENSITY_MINUTES
+}
+
+enum StatShape {
+  CATEGORICAL
+  SERIES
+}
+
+interface StatResult {
+  type: StatType!
+  shape: StatShape!
+  unit: String!
+  total: Float
+}
+
+type CategoricalStat implements StatResult {
+  type: StatType!
+  shape: StatShape!
+  unit: String!
+  total: Float
+  categories: [CategoryPoint!]!
+}
+
+type SeriesStat implements StatResult {
+  type: StatType!
+  shape: StatShape!
+  unit: String!
+  total: Float
+  series: [SeriesPoint!]!
+}
+
+type CategoryPoint {
+  label: String!
+  value: Float!
+}
+
+type SeriesPoint {
+  x: String!
+  y: Float!
 }
