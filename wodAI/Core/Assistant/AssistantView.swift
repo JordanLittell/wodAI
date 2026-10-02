@@ -12,6 +12,12 @@ struct AssistantView: View {
     @State private var slideEdge: Edge = .trailing
     @State private var isMenuOpen = false
     @State private var isScanning = false
+    @State private var isCreating = false
+    /// The "Create with AI" text, kept so a retry starts from it.
+    @State private var createRequest = ""
+    /// The session waiting on the delete confirmation.
+    @State private var pendingDeletion: AssistantSession?
+    @State private var swipeGuard = DaySwipeGuard()
 
     init() {
         self._viewModel = StateObject(wrappedValue: AssistantViewModel())
@@ -47,6 +53,12 @@ struct AssistantView: View {
                 // Simultaneous so vertical scrolling is untouched; only a clearly
                 // horizontal drag changes the day.
                 .simultaneousGesture(daySwipe)
+                // Scrolling puts back a section left showing Delete.
+                .onScrollPhaseChange { _, phase in
+                    if phase == .interacting, viewModel.revealedSessionId != nil {
+                        withAnimation(.spring(duration: 0.3)) { viewModel.reveal(nil) }
+                    }
+                }
                 .clipped()
                 // A new import scrolls into view as it starts.
                 .onChange(of: viewModel.focusedSessionId) { _, id in
@@ -62,10 +74,33 @@ struct AssistantView: View {
         .overlay(alignment: .bottomTrailing) {
             FloatingActionMenu(
                 isOpen: $isMenuOpen,
-                isEnabled: viewModel.hasLoaded && !viewModel.isImporting,
+                isEnabled: viewModel.hasLoaded && !viewModel.isAddingSession,
                 onSelect: perform
             )
             .padding(20)
+        }
+        .sheet(isPresented: $isCreating) {
+            CreateSessionSheet(request: $createRequest) { request in
+                withAnimation(.spring(duration: 0.35)) {
+                    viewModel.createSession(request: request)
+                }
+            }
+        }
+        .confirmationDialog(
+            pendingDeletion.map { "Delete \"\($0.name)\"?" } ?? "",
+            isPresented: Binding(get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } }),
+            titleVisibility: .visible,
+            presenting: pendingDeletion
+        ) { session in
+            Button("Delete", role: .destructive) {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                withAnimation(.spring(duration: 0.35)) {
+                    viewModel.deleteSession(id: session.id)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { session in
+            Text(SessionDeletion.message(for: session))
         }
         .fullScreenCover(isPresented: $isScanning) {
             WhiteboardScannerView { capture in
@@ -111,8 +146,8 @@ struct AssistantView: View {
                     .foregroundColor(Color("Error"))
             }
 
-            if let importError = viewModel.importError {
-                importErrorBanner(importError)
+            if let addError = viewModel.addError {
+                addErrorBanner(addError)
             }
 
             let sessions = viewModel.daySessions
@@ -125,7 +160,11 @@ struct AssistantView: View {
                             withAnimation(.spring(duration: 0.35)) {
                                 viewModel.toggleExpanded(session)
                             }
-                        }
+                        },
+                        isRevealed: viewModel.revealedSessionId == session.id,
+                        onReveal: { viewModel.reveal($0 ? session.id : nil) },
+                        onDelete: { pendingDeletion = session },
+                        onSwipe: { swipeGuard.lastSectionSwipeAt = Date() }
                     ) {
                         VStack(alignment: .leading, spacing: 20) {
                             ForEach(session.blocks) { block in
@@ -154,15 +193,30 @@ struct AssistantView: View {
     // MARK: - Quick actions
 
     private func perform(_ action: QuickAction) {
+        viewModel.dismissAddError()
+        viewModel.reveal(nil)
         switch action {
+        case .createWithAI:
+            isCreating = true
         case .importWhiteboard:
-            viewModel.dismissImportError()
             isScanning = true
         }
     }
 
-    /// Why the last import failed, with a way to try again.
-    private func importErrorBanner(_ message: String) -> some View {
+    /// Reopens whatever failed: the camera, or the create sheet with the
+    /// request that was sent.
+    private func retry() {
+        switch viewModel.lastFailedAdd {
+        case let .created(request):
+            createRequest = request
+            perform(.createWithAI)
+        case .whiteboard, nil:
+            perform(.importWhiteboard)
+        }
+    }
+
+    /// Why the last new session failed, with a way to try again.
+    private func addErrorBanner(_ message: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundColor(Color("Warning"))
@@ -170,13 +224,13 @@ struct AssistantView: View {
                 Text(message)
                     .font(.subheadline)
                     .foregroundColor(Color("PrimaryText"))
-                Button("Try again") { perform(.importWhiteboard) }
+                Button("Try again", action: retry)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(Color.brandPrimary)
             }
             Spacer(minLength: 0)
             Button {
-                withAnimation { viewModel.dismissImportError() }
+                withAnimation { viewModel.dismissAddError() }
             } label: {
                 Image(systemName: "xmark")
                     .font(.caption.weight(.bold))
@@ -200,6 +254,8 @@ struct AssistantView: View {
                 let dx = value.translation.width
                 let dy = value.translation.height
                 guard abs(dx) > abs(dy), abs(dx) > 60 else { return }
+                // A swipe on a session header is that section's.
+                guard swipeGuard.allowsDaySwipe(at: Date()) else { return }
                 if dx < 0 {
                     move(forward: true)
                 } else {

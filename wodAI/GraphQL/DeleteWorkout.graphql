@@ -1,0 +1,5 @@
+# Deletes one of the athlete's sessions, with its blocks and any sets logged
+# in it. Results saved for its metcons stay in their history.
+mutation DeleteWorkout($id: String!) {
+  deleteWorkout(id: $id)
+}

@@ -10,18 +10,21 @@ import SwiftUI
 
 /// The actions the + menu offers, top to bottom.
 enum QuickAction: CaseIterable, Identifiable {
+    case createWithAI
     case importWhiteboard
 
     var id: Self { self }
 
     var title: String {
         switch self {
+        case .createWithAI: return "Create with AI"
         case .importWhiteboard: return "Import from whiteboard"
         }
     }
 
     var systemImage: String {
         switch self {
+        case .createWithAI: return "wand.and.stars"
         case .importWhiteboard: return "camera.viewfinder"
         }
     }

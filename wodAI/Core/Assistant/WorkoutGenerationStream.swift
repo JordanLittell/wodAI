@@ -64,9 +64,15 @@ struct WorkoutGenerationStream {
     /// If the socket drops and reconnects mid-stream, Apollo re-subscribes and
     /// the server starts over with a fresh `session` event;
     /// `GenerationProgress` treats that as a restart.
-    func events() -> AsyncThrowingStream<GenerationEvent, Error> {
+    ///
+    /// `request` is what the athlete asked for ("Create with AI"); the
+    /// session is saved on `scheduledDate` ("YYYY-MM-DD"), or today.
+    func events(request: String? = nil, scheduledDate: String? = nil) -> AsyncThrowingStream<GenerationEvent, Error> {
         run(
-            WorkoutGenerationSubscription(),
+            WorkoutGenerationSubscription(
+                request: request.map { .some($0) } ?? .none,
+                scheduledDate: scheduledDate.map { .some($0) } ?? .none
+            ),
             operation: "WorkoutGeneration",
             fallbackMessage: "Unable to generate a workout."
         ) { data in
@@ -190,6 +196,11 @@ struct WorkoutGenerationStream {
                 name: hiit.name
             ))
         }
+        if let draft = event.asGenerationDraftHiitBlock {
+            return .hiitBlock(order: draft.order, name: draft.name, workout: Self.draftWorkout(
+                name: draft.name, format: draft.format, displayText: draft.displayText, stimulus: draft.stimulus
+            ))
+        }
         if let complete = event.asGenerationComplete {
             return .complete(AssistantViewModel.session(from: complete.workout.fragments.sessionDetails))
         }
@@ -216,25 +227,34 @@ struct WorkoutGenerationStream {
             ))
         }
         if let draft = event.asGenerationDraftHiitBlock {
-            // Not saved yet, so no id or timing; enough to draw the card. The
-            // saved session in `complete` replaces it.
-            return .hiitBlock(order: draft.order, name: draft.name, workout: HIITWorkoutItem(
-                id: 0,
-                format: draft.format,
-                displayText: draft.displayText,
-                stimulus: draft.stimulus,
-                constraintType: "",
-                constraintMagnitude: 0,
-                timeCap: nil,
-                timingScheme: nil,
-                tags: [],
-                name: draft.name
+            return .hiitBlock(order: draft.order, name: draft.name, workout: Self.draftWorkout(
+                name: draft.name, format: draft.format, displayText: draft.displayText, stimulus: draft.stimulus
             ))
         }
         if let complete = event.asGenerationComplete {
             return .complete(AssistantViewModel.session(from: complete.workout.fragments.sessionDetails))
         }
         return nil
+    }
+}
+
+extension WorkoutGenerationStream {
+    /// A metcon that isn't saved yet (a whiteboard import's, or one written
+    /// for a request): no id or timing, just enough to draw the card until
+    /// the saved session in `complete` replaces it.
+    static func draftWorkout(name: String, format: String, displayText: String, stimulus: String) -> HIITWorkoutItem {
+        HIITWorkoutItem(
+            id: 0,
+            format: format,
+            displayText: displayText,
+            stimulus: stimulus,
+            constraintType: "",
+            constraintMagnitude: 0,
+            timeCap: nil,
+            timingScheme: nil,
+            tags: [],
+            name: name
+        )
     }
 }
 

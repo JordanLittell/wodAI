@@ -7,13 +7,27 @@ import WodAiAPI
 public class WorkoutGenerationSubscription: GraphQLSubscription {
   public static let operationName: String = "WorkoutGeneration"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "139c5023655700e90abe3836c3bfc8ccfb5e269dd203c3bc66e214036495db40",
+    operationIdentifier: "664729f90977ea466224c59486494e49cd6a0f73b38a24dca9bf868f778588f1",
     definition: .init(
-      #"subscription WorkoutGeneration { workoutGeneration { __typename ... on GenerationSession { name description stimulus } ... on GenerationStrengthBlock { order name instructions } ... on GenerationStrengthSet { order setOrder reps weight rpe exercise { __typename name muscleGroups } } ... on GenerationHiitBlock { order hiitWorkout { __typename ...GeneratedHiitWorkout } } ... on GenerationComplete { workout { __typename ...SessionDetails } } ... on GenerationFailed { message } } }"#,
+      #"subscription WorkoutGeneration($request: String, $scheduledDate: String) { workoutGeneration(request: $request, scheduledDate: $scheduledDate) { __typename ... on GenerationSession { name description stimulus } ... on GenerationStrengthBlock { order name instructions } ... on GenerationStrengthSet { order setOrder reps weight rpe exercise { __typename name muscleGroups } } ... on GenerationHiitBlock { order hiitWorkout { __typename ...GeneratedHiitWorkout } } ... on GenerationDraftHiitBlock { order name format displayText stimulus } ... on GenerationComplete { workout { __typename ...SessionDetails } } ... on GenerationFailed { message } } }"#,
       fragments: [GeneratedHiitWorkout.self, SessionDetails.self]
     ))
 
-  public init() {}
+  public var request: GraphQLNullable<String>
+  public var scheduledDate: GraphQLNullable<String>
+
+  public init(
+    request: GraphQLNullable<String>,
+    scheduledDate: GraphQLNullable<String>
+  ) {
+    self.request = request
+    self.scheduledDate = scheduledDate
+  }
+
+  public var __variables: Variables? { [
+    "request": request,
+    "scheduledDate": scheduledDate
+  ] }
 
   public struct Data: WodAiAPI.SelectionSet {
     public let __data: DataDict
@@ -21,7 +35,10 @@ public class WorkoutGenerationSubscription: GraphQLSubscription {
 
     public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.Subscription }
     public static var __selections: [ApolloAPI.Selection] { [
-      .field("workoutGeneration", WorkoutGeneration.self),
+      .field("workoutGeneration", WorkoutGeneration.self, arguments: [
+        "request": .variable("request"),
+        "scheduledDate": .variable("scheduledDate")
+      ]),
     ] }
 
     public var workoutGeneration: WorkoutGeneration { __data["workoutGeneration"] }
@@ -40,6 +57,7 @@ public class WorkoutGenerationSubscription: GraphQLSubscription {
         .inlineFragment(AsGenerationStrengthBlock.self),
         .inlineFragment(AsGenerationStrengthSet.self),
         .inlineFragment(AsGenerationHiitBlock.self),
+        .inlineFragment(AsGenerationDraftHiitBlock.self),
         .inlineFragment(AsGenerationComplete.self),
         .inlineFragment(AsGenerationFailed.self),
       ] }
@@ -48,6 +66,7 @@ public class WorkoutGenerationSubscription: GraphQLSubscription {
       public var asGenerationStrengthBlock: AsGenerationStrengthBlock? { _asInlineFragment() }
       public var asGenerationStrengthSet: AsGenerationStrengthSet? { _asInlineFragment() }
       public var asGenerationHiitBlock: AsGenerationHiitBlock? { _asInlineFragment() }
+      public var asGenerationDraftHiitBlock: AsGenerationDraftHiitBlock? { _asInlineFragment() }
       public var asGenerationComplete: AsGenerationComplete? { _asInlineFragment() }
       public var asGenerationFailed: AsGenerationFailed? { _asInlineFragment() }
 
@@ -184,6 +203,30 @@ public class WorkoutGenerationSubscription: GraphQLSubscription {
 
           public typealias TimingScheme = GeneratedHiitWorkout.TimingScheme
         }
+      }
+
+      /// WorkoutGeneration.AsGenerationDraftHiitBlock
+      ///
+      /// Parent Type: `GenerationDraftHiitBlock`
+      public struct AsGenerationDraftHiitBlock: WodAiAPI.InlineFragment {
+        public let __data: DataDict
+        public init(_dataDict: DataDict) { __data = _dataDict }
+
+        public typealias RootEntityType = WorkoutGenerationSubscription.Data.WorkoutGeneration
+        public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.GenerationDraftHiitBlock }
+        public static var __selections: [ApolloAPI.Selection] { [
+          .field("order", Int.self),
+          .field("name", String.self),
+          .field("format", String.self),
+          .field("displayText", String.self),
+          .field("stimulus", String.self),
+        ] }
+
+        public var order: Int { __data["order"] }
+        public var name: String { __data["name"] }
+        public var format: String { __data["format"] }
+        public var displayText: String { __data["displayText"] }
+        public var stimulus: String { __data["stimulus"] }
       }
 
       /// WorkoutGeneration.AsGenerationComplete

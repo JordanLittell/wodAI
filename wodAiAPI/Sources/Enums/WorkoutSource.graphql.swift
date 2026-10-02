@@ -8,4 +8,5 @@ public enum WorkoutSource: String, EnumType {
   case planned = "PLANNED"
   case imported = "IMPORTED"
   case whiteboard = "WHITEBOARD"
+  case created = "CREATED"
 }

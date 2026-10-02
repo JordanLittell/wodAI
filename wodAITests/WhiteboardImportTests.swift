@@ -154,7 +154,7 @@ struct WhiteboardImportViewModelTests {
         let (viewModel, continuation, sent) = viewModel(sessions: [session("programmed", name: "Programmed")])
 
         viewModel.importWhiteboard(capture)
-        #expect(viewModel.isImporting)
+        #expect(viewModel.isAddingSession)
         #expect(sent()?.recognizedText == .some("AMRAP 12"))
         #expect(sent()?.scheduledDate == viewModel.week.calendarDate(for: viewModel.selectedDay))
 
@@ -175,7 +175,7 @@ struct WhiteboardImportViewModelTests {
 
         continuation.yield(.complete(session("saved", name: "Tuesday")))
         continuation.finish()
-        await waitUntil { !viewModel.isImporting }
+        await waitUntil { !viewModel.isAddingSession }
 
         #expect(viewModel.daySessions.map(\.id) == ["programmed", "saved"])
         let saved = viewModel.daySessions[1]
@@ -184,7 +184,7 @@ struct WhiteboardImportViewModelTests {
         #expect(viewModel.isExpanded(saved))
         #expect(viewModel.focusedSessionId == "saved")
         #expect(viewModel.openableBlocks(in: "saved").count == 1)
-        #expect(viewModel.importError == nil)
+        #expect(viewModel.addError == nil)
     }
 
     @Test func aFailedImportLeavesTheDayAsItWas() async {
@@ -193,10 +193,10 @@ struct WhiteboardImportViewModelTests {
         viewModel.importWhiteboard(capture)
         continuation.yield(.session(name: "Tuesday", description: "", stimulus: ""))
         continuation.finish(throwing: WorkoutGenerationError.server("That doesn't look like a workout."))
-        await waitUntil { !viewModel.isImporting }
+        await waitUntil { !viewModel.isAddingSession }
 
         #expect(viewModel.daySessions.map(\.id) == ["programmed"])
-        #expect(viewModel.importError == "That doesn't look like a workout.")
+        #expect(viewModel.addError == "That doesn't look like a workout.")
         #expect(viewModel.focusedSessionId == nil)
     }
 
@@ -205,11 +205,11 @@ struct WhiteboardImportViewModelTests {
 
         viewModel.importWhiteboard(capture)
         #expect(viewModel.hasSession(on: viewModel.selectedDay))
-        viewModel.cancelImport()
-        await waitUntil { !viewModel.isImporting }
+        viewModel.cancelNewSession()
+        await waitUntil { !viewModel.isAddingSession }
 
         #expect(!viewModel.hasSession(on: viewModel.selectedDay))
         // Cancelling isn't an error to show.
-        #expect(viewModel.importError == nil)
+        #expect(viewModel.addError == nil)
     }
 }

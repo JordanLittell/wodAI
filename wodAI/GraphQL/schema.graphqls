@@ -149,6 +149,7 @@ enum WorkoutSource {
   PLANNED
   IMPORTED
   WHITEBOARD
+  CREATED
 }
 
 enum WorkoutPieceType {
@@ -383,6 +384,7 @@ type Mutation {
   completeWod(id: String!): Workout!
   updateWod(id: String!, instructions: String): Workout!
   importWorkout(input: ImportWorkoutInput!): Workout!
+  deleteWorkout(id: String!): Boolean!
   updateUserContext(input: UpdateUserContextInput!): UserContext!
   updateUserRestDays(restDays: [RestDay!]!): User!
   createProgram(input: CreateProgramInput!): Program!
@@ -426,7 +428,7 @@ type Mutation {
 
 type Subscription {
   agentResponse(wodId: String!): AgentResponse!
-  workoutGeneration: WorkoutGenerationEvent!
+  workoutGeneration(request: String, scheduledDate: String): WorkoutGenerationEvent!
   weeklyPlanGeneration(timezone: String!): WeeklyPlanGenerationEvent!
   whiteboardImport(input: WhiteboardImportInput!): WorkoutGenerationEvent!
 }

@@ -57,6 +57,10 @@ Tapping a session block pushes `BlockPagerView` (swipe between blocks, dot indic
 
 A day can hold several sessions (`AssistantViewModel.sessions: [Date: [AssistantSession]]`): the programmed one plus any imports. Each renders as a collapsible `SessionSectionView` (source chip, done count, colored rail). Anything block-addressed is scoped by session id (`AssistantBlockRoute(sessionId:blockId:)`, `openableBlocks(in:)`, `markHiitCompleted(sessionId:blockId:)`, `updateStrength(_:sessionId:)`), and the pager only pages within one session.
 
+**Deleting a session:** swipe its header left to reveal Delete (`SessionSectionView`), then confirm. Deletion is optimistic (`AssistantViewModel.deleteSession`, `DeleteWorkoutMutation`) and restores the session if the server refuses. `DaySwipeGuard` stops the page's day swipe from also firing during a header swipe. Sessions still streaming in can't be deleted.
+
+**Create with AI:** a + menu action opening `CreateSessionSheet`. `AssistantViewModel.createSession(request:)` streams `workoutGeneration(request:scheduledDate:)` into the selected day through the same pending → streamed → saved flow as the whiteboard import (`streamNewSession`).
+
 ### Whiteboard import
 The floating + on the Workout page (`Core/Components/FloatingActionMenu.swift`; add actions as `QuickAction` cases) opens `WhiteboardScannerView` (`Core/Import/`). VisionKit live text runs on the phone. When `WhiteboardHeuristic.looksLikeWorkout` passes and holds for about 1s (`WhiteboardStabilityGate`), it captures, downscales (`WhiteboardImageEncoder`) and closes. Where the live camera is unavailable (the Simulator, camera access denied) it falls back to the photo library plus Vision OCR. `AssistantViewModel.importWhiteboard` then streams the backend's `whiteboardImport` subscription into the selected day: a pending placeholder, then blocks via `GenerationProgress`, then the saved session. The server has the final say: a non-workout comes back as `GenerationFailed`, shown in a banner with Try again.
 

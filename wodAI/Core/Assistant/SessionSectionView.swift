@@ -7,6 +7,9 @@
 //  blocks; closed, a single line lists the blocks so a day with several
 //  sessions stays short. A colored rail down the side tells sessions apart.
 //
+//  Swiping the header left reveals a Delete button; deleting still needs a
+//  confirmation, so a stray swipe can't remove anything.
+//
 
 import SwiftUI
 
@@ -14,9 +17,42 @@ struct SessionSectionView<Blocks: View>: View {
     let session: AssistantSession
     let isExpanded: Bool
     let onToggle: () -> Void
+    /// Whether the Delete button is showing.
+    var isRevealed = false
+    /// Shows (true) or hides (false) the Delete button.
+    var onReveal: (Bool) -> Void = { _ in }
+    /// Asks to delete; the owner confirms first.
+    var onDelete: () -> Void = {}
+    /// Called throughout a swipe on the header, so the page can tell it
+    /// apart from its own swipe between days.
+    var onSwipe: () -> Void = {}
     @ViewBuilder let blocks: () -> Blocks
 
+    /// How far the section slides to show the Delete button.
+    static var revealWidth: CGFloat { 88 }
+    @State private var dragOffset: CGFloat = 0
+
+    /// A session still streaming in can't be deleted.
+    private var canDelete: Bool { !session.isPending }
+
+    private var offset: CGFloat {
+        let base = isRevealed ? -Self.revealWidth : 0
+        // Rubber-bands a little past the button, never to the right.
+        return min(0, max(base + dragOffset, -Self.revealWidth * 1.3))
+    }
+
     var body: some View {
+        card
+            .offset(x: offset)
+            // A background, so the button takes the card's height.
+            .background(alignment: .trailing) {
+                if offset < 0 {
+                    deleteButton
+                }
+            }
+    }
+
+    private var card: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
 
@@ -41,6 +77,9 @@ struct SessionSectionView<Blocks: View>: View {
                 .fill(accent)
                 .frame(width: 4)
         }
+        // Opaque, so the Delete button behind only shows where the card
+        // has slid away.
+        .background(Color("Background"))
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(
             RoundedRectangle(cornerRadius: 16)
@@ -48,16 +87,75 @@ struct SessionSectionView<Blocks: View>: View {
         )
     }
 
-    /// Whiteboard imports get the secondary brand color so they read as
-    /// different from the programmed session at a glance.
+    private var deleteButton: some View {
+        Button(action: onDelete) {
+            VStack(spacing: 6) {
+                Image(systemName: "trash.fill")
+                    .font(.title3)
+                Text("Delete")
+                    .font(.caption.weight(.semibold))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: Self.revealWidth, maxHeight: .infinity)
+            .background(RoundedRectangle(cornerRadius: 16).fill(Color("Error")))
+        }
+        .buttonStyle(.plain)
+        .transition(.opacity)
+    }
+
+    /// Imports get their own color so they read as different from the
+    /// programmed session at a glance.
     private var accent: Color {
-        session.source == .whiteboard ? Color.brandSecondary : Color.brandPrimary
+        switch session.source {
+        case .whiteboard: return Color.brandSecondary
+        // The palette's other accents are pinks too close to the
+        // whiteboard's; teal reads as distinct in both themes.
+        case .created: return Color.teal
+        case .generated, .planned, .imported: return Color.brandPrimary
+        }
+    }
+
+    // MARK: - Swipe to delete
+
+    /// Left on the header reveals Delete; right hides it. A rightward swipe
+    /// with nothing revealed is left alone, so it still changes the day.
+    private var revealDrag: some Gesture {
+        DragGesture(minimumDistance: 15)
+            .onChanged { value in
+                guard canDelete, claims(value) else { return }
+                onSwipe()
+                dragOffset = value.translation.width
+            }
+            .onEnded { value in
+                guard canDelete, claims(value) else { return }
+                onSwipe()
+                let shouldReveal = (isRevealed ? -Self.revealWidth : 0) + value.translation.width < -Self.revealWidth / 2
+                withAnimation(.spring(duration: 0.3)) {
+                    dragOffset = 0
+                    onReveal(shouldReveal)
+                }
+            }
+    }
+
+    /// Whether a drag is this section's: mostly sideways, and either leftward
+    /// or closing a revealed button.
+    private func claims(_ value: DragGesture.Value) -> Bool {
+        let dx = value.translation.width
+        guard abs(dx) > abs(value.translation.height) else { return false }
+        return dx < 0 || isRevealed
     }
 
     // MARK: - Header
 
     private var header: some View {
-        Button(action: onToggle) {
+        Button {
+            // With Delete showing, a tap puts the section back first.
+            if isRevealed {
+                withAnimation(.spring(duration: 0.3)) { onReveal(false) }
+            } else {
+                onToggle()
+            }
+        } label: {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
                     sourceChip
@@ -87,6 +185,13 @@ struct SessionSectionView<Blocks: View>: View {
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(isExpanded ? "Collapses the session" : "Expands the session")
         .accessibilityAddTraits(.isHeader)
+        // VoiceOver can't swipe to reveal, so it gets the action directly.
+        .accessibilityActions {
+            if canDelete {
+                Button("Delete session", action: onDelete)
+            }
+        }
+        .simultaneousGesture(revealDrag)
     }
 
     private var sourceChip: some View {
@@ -145,5 +250,18 @@ struct SessionSectionView<Blocks: View>: View {
             parts.append("\(openable.filter(\.isCompleted).count) of \(openable.count) blocks done")
         }
         return parts.joined(separator: ", ")
+    }
+}
+
+/// Keeps the page's swipe between days from also firing during a swipe on
+/// a session header: the day swipe waits until the section has been quiet for
+/// `quietPeriod`.
+struct DaySwipeGuard {
+    static let quietPeriod: TimeInterval = 0.3
+    var lastSectionSwipeAt: Date?
+
+    func allowsDaySwipe(at now: Date) -> Bool {
+        guard let lastSectionSwipeAt else { return true }
+        return now.timeIntervalSince(lastSectionSwipeAt) >= Self.quietPeriod
     }
 }

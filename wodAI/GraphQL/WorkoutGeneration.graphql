@@ -1,9 +1,11 @@
 # Streams a new session as the agent writes it: the header, then each block in
 # order (a strength block followed by its sets, or a HIIT block), then the saved
 # session. Subscribing starts generation; GenerationComplete or GenerationFailed
-# is always the last event.
-subscription WorkoutGeneration {
-  workoutGeneration {
+# is always the last event. With a `request` ("Create with AI"), HIIT blocks the
+# agent wrote itself arrive as drafts (no id) until GenerationComplete. The
+# session is saved on `scheduledDate` ("YYYY-MM-DD"), or today when omitted.
+subscription WorkoutGeneration($request: String, $scheduledDate: String) {
+  workoutGeneration(request: $request, scheduledDate: $scheduledDate) {
     __typename
     ... on GenerationSession {
       name
@@ -31,6 +33,13 @@ subscription WorkoutGeneration {
       hiitWorkout {
         ...GeneratedHiitWorkout
       }
+    }
+    ... on GenerationDraftHiitBlock {
+      order
+      name
+      format
+      displayText
+      stimulus
     }
     ... on GenerationComplete {
       workout {

@@ -18,12 +18,15 @@ enum SessionSource: Equatable {
     case planned
     case imported
     case whiteboard
+    /// From the athlete's own request ("Create with AI").
+    case created
 
     init(_ value: GraphQLEnum<WorkoutSource>) {
         switch value.value {
         case .planned: self = .planned
         case .imported: self = .imported
         case .whiteboard: self = .whiteboard
+        case .created: self = .created
         // Generated, or a source this build doesn't know.
         default: self = .generated
         }
@@ -34,6 +37,7 @@ enum SessionSource: Equatable {
         case .generated, .planned: return "Programmed"
         case .imported: return "Imported"
         case .whiteboard: return "Whiteboard"
+        case .created: return "Created"
         }
     }
 
@@ -42,6 +46,7 @@ enum SessionSource: Equatable {
         case .generated, .planned: return "sparkles"
         case .imported: return "square.and.arrow.down"
         case .whiteboard: return "camera.viewfinder"
+        case .created: return "wand.and.stars"
         }
     }
 }
@@ -121,6 +126,52 @@ struct WhiteboardCapture {
     let recognizedText: String
 }
 
+/// A session being added to a day by streaming it from the server.
+enum NewSession: Equatable {
+    case whiteboard
+    /// "Create with AI", with what the athlete asked for.
+    case created(request: String)
+
+    /// What the section shows before the server sends the session's name.
+    var placeholderName: String {
+        switch self {
+        case .whiteboard: return "Reading whiteboard…"
+        case .created: return "Creating your session…"
+        }
+    }
+
+    var source: SessionSource {
+        switch self {
+        case .whiteboard: return .whiteboard
+        case .created: return .created
+        }
+    }
+
+    var stoppedEarlyMessage: String {
+        switch self {
+        case .whiteboard: return "The whiteboard import stopped early. Please try again."
+        case .created: return "Creating your session stopped early. Please try again."
+        }
+    }
+}
+
+enum SessionDeletion {
+    /// The confirmation's message: a stronger warning when the session holds
+    /// logged work, since deleting it deletes those sets.
+    static func message(for session: AssistantSession) -> String {
+        let hasLoggedWork = session.blocks.contains { block in
+            switch block.kind {
+            case let .strength(workout): return workout.components.contains { $0.completed != nil }
+            case .hiit: return block.hiitCompleted
+            case .other: return false
+            }
+        }
+        return hasLoggedWork
+            ? "Sets you logged in it will be deleted too. Results you saved for its metcons stay in your history."
+            : "This can't be undone."
+    }
+}
+
 /// The strength data carried to `StrengthWorkoutView`, decoupled from the
 /// generated Apollo type.
 struct StrengthDetail: Hashable {
@@ -187,29 +238,46 @@ final class AssistantViewModel: ObservableObject {
     /// scheduled have no entry.
     @Published private(set) var sessions: [Date: [AssistantSession]]
     /// The day being shown. Always a day of `week`.
-    @Published private(set) var selectedDay: Date
+    @Published private(set) var selectedDay: Date {
+        // Changing days hides any Delete button left showing.
+        didSet { revealedSessionId = nil }
+    }
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
     /// True once the week has come back, found or not. Lets the view tell
     /// "still looking" apart from "nothing scheduled".
     @Published private(set) var hasLoaded = false
-    /// True while a whiteboard import streams in. One at a time.
-    @Published private(set) var isImporting = false
-    /// Why the last whiteboard import failed, until the next one starts.
-    @Published private(set) var importError: String?
-    /// A session the page should scroll to (a new import).
+    /// True while a new session (whiteboard import or "Create with AI")
+    /// streams in. One at a time.
+    @Published private(set) var isAddingSession = false
+    /// Why the last new session failed, until the next one starts.
+    @Published private(set) var addError: String?
+    /// What failed last, so "Try again" can reopen it (with the request, for
+    /// "Create with AI"). Nil after a cancel or a success.
+    @Published private(set) var lastFailedAdd: NewSession?
+    /// A session the page should scroll to (a new one streaming in).
     @Published private(set) var focusedSessionId: String?
+    /// The session whose Delete button is showing; at most one at a time.
+    @Published private(set) var revealedSessionId: String?
     /// Sections the athlete opened or closed, by session id. Others follow
     /// `isExpanded`'s defaults.
     @Published private var expansion: [String: Bool] = [:]
 
     let week: AssistantWeek
     private let network = Network.shared
-    /// Starts a whiteboard import on the server. Swapped out in tests.
+    // Server calls, swapped out in tests.
+    /// Starts a whiteboard import on the server.
     var whiteboardEvents: (WhiteboardImportInput) -> AsyncThrowingStream<GenerationEvent, Error> = {
         // Reading the photo comes before the first event, so allow longer.
         WorkoutGenerationStream(stallTimeout: 90).whiteboardEvents($0)
     }
+    /// Starts generating a session from a request, saved on the given day.
+    var createEvents: (_ request: String, _ scheduledDate: String) -> AsyncThrowingStream<GenerationEvent, Error> = {
+        // Writing to a request can take longer before the first event.
+        WorkoutGenerationStream(stallTimeout: 90).events(request: $0, scheduledDate: $1)
+    }
+    /// Deletes a session on the server.
+    var deleteWorkout: (_ id: String) async throws -> Void = AssistantViewModel.performDelete
     /// Only touched on the main actor, except to cancel it in `deinit`.
     nonisolated(unsafe) private var importTask: Task<Void, Never>?
 
@@ -220,8 +288,8 @@ final class AssistantViewModel: ObservableObject {
         self.hasLoaded = !sessions.isEmpty
     }
 
-    /// Leaving the page stops an import in progress, which unsubscribes and
-    /// stops the server reading.
+    /// Leaving the page stops a new session streaming in, which unsubscribes
+    /// and stops the server.
     deinit {
         importTask?.cancel()
     }
@@ -384,30 +452,48 @@ final class AssistantViewModel: ObservableObject {
         sessions[day] = list
     }
 
-    // MARK: - Whiteboard import
+    // MARK: - Adding a session
 
-    /// Reads a whiteboard photo into a new session on the selected day. The
-    /// session appears at once as a placeholder, fills in block by block as
-    /// the server reads the board, then becomes the saved session. On failure
-    /// the placeholder goes away and `importError` says why.
+    /// Reads a whiteboard photo into a new session on the selected day.
     func importWhiteboard(_ capture: WhiteboardCapture) {
-        guard importTask == nil else { return }
         let day = selectedDay
-        let pendingId = "pending-\(UUID().uuidString)"
-
-        importError = nil
-        isImporting = true
-        sessions[day, default: []].append(Self.pendingSession(id: pendingId, day: day))
-        expandOnly(pendingId, on: day)
-        focusedSessionId = pendingId
-
         let text = capture.recognizedText.trimmingCharacters(in: .whitespacesAndNewlines)
         let input = WhiteboardImportInput(
             imageJpegBase64: capture.jpeg.base64EncodedString(),
             recognizedText: text.isEmpty ? nil : .some(text),
             scheduledDate: week.calendarDate(for: day)
         )
-        let events = whiteboardEvents(input)
+        streamNewSession(.whiteboard, on: day) { [whiteboardEvents] in whiteboardEvents(input) }
+    }
+
+    /// Generates a session from what the athlete asked for, on the selected day.
+    func createSession(request: String) {
+        let request = request.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !request.isEmpty else { return }
+        let day = selectedDay
+        let date = week.calendarDate(for: day)
+        streamNewSession(.created(request: request), on: day) { [createEvents] in createEvents(request, date) }
+    }
+
+    /// Adds a session to `day` as the server streams it. It appears at once
+    /// as a placeholder, fills in block by block, then becomes the saved
+    /// session. On failure the placeholder goes away and `addError` says why.
+    private func streamNewSession(
+        _ kind: NewSession,
+        on day: Date,
+        start: () -> AsyncThrowingStream<GenerationEvent, Error>
+    ) {
+        guard importTask == nil else { return }
+        let pendingId = "pending-\(UUID().uuidString)"
+
+        addError = nil
+        lastFailedAdd = nil
+        isAddingSession = true
+        revealedSessionId = nil
+        sessions[day, default: []].append(Self.pendingSession(id: pendingId, kind: kind, day: day))
+        expandOnly(pendingId, on: day)
+        focusedSessionId = pendingId
+        let events = start()
 
         importTask = Task { [weak self] in
             // The session's id: the placeholder's, then the saved one's.
@@ -417,11 +503,9 @@ final class AssistantViewModel: ObservableObject {
                 for try await event in events {
                     progress.apply(event)
                     guard let self, var session = progress.session else { continue }
-                    if progress.isComplete {
-                        session.source = .whiteboard
-                    } else {
+                    session.source = kind.source
+                    if !progress.isComplete {
                         session.id = currentId
-                        session.source = .whiteboard
                         session.isPending = true
                     }
                     self.replaceSession(currentId, with: session, on: day)
@@ -430,27 +514,84 @@ final class AssistantViewModel: ObservableObject {
                 guard let self else { return }
                 if !progress.isComplete {
                     // A cancelled task ends the loop rather than throwing.
-                    self.failImport(currentId, on: day, message: Task.isCancelled
-                        ? nil
-                        : "The whiteboard import stopped early. Please try again.")
+                    self.failNewSession(currentId, kind, on: day, message: Task.isCancelled ? nil : kind.stoppedEarlyMessage)
                 }
             } catch {
                 guard let self else { return }
                 // Cancelled means the page went away; nothing to tell anyone.
-                self.failImport(currentId, on: day, message: error is CancellationError ? nil : error.localizedDescription)
+                self.failNewSession(currentId, kind, on: day, message: error is CancellationError ? nil : error.localizedDescription)
             }
-            self?.isImporting = false
+            self?.isAddingSession = false
             self?.importTask = nil
         }
     }
 
-    /// Stops an import in progress; its placeholder is removed.
-    func cancelImport() {
+    /// Stops a new session streaming in; its placeholder is removed.
+    func cancelNewSession() {
         importTask?.cancel()
     }
 
-    func dismissImportError() {
-        importError = nil
+    func dismissAddError() {
+        addError = nil
+        lastFailedAdd = nil
+    }
+
+    // MARK: - Deleting a session
+
+    /// Shows one session's Delete button (hiding any other), or hides it
+    /// with nil. A session still streaming in has none.
+    func reveal(_ id: String?) {
+        if let id, session(id: id)?.isPending ?? true { return }
+        revealedSessionId = id
+    }
+
+    /// Deletes a session from the selected day. It goes at once; if the
+    /// server refuses, it comes back where it was and `errorMessage` says so.
+    func deleteSession(id: String) {
+        let day = selectedDay
+        guard var list = sessions[day],
+              let index = list.firstIndex(where: { $0.id == id }),
+              !list[index].isPending
+        else { return }
+
+        let removed = list.remove(at: index)
+        sessions[day] = list.isEmpty ? nil : list
+        let wasExpanded = expansion.removeValue(forKey: id)
+        if revealedSessionId == id { revealedSessionId = nil }
+        errorMessage = nil
+
+        Task { [weak self, deleteWorkout] in
+            do {
+                try await deleteWorkout(id)
+            } catch {
+                guard let self else { return }
+                TelemetryService.captureError(error, tags: ["operation": "DeleteWorkout"])
+                var restored = self.sessions[day] ?? []
+                restored.insert(removed, at: min(index, restored.count))
+                self.sessions[day] = restored
+                self.expansion[id] = wasExpanded
+                self.errorMessage = "Couldn't delete that session. Please try again."
+            }
+        }
+    }
+
+    private static func performDelete(_ id: String) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            Network.shared.client.perform(mutation: DeleteWorkoutMutation(id: id)) { result in
+                switch result {
+                case let .success(graphQLResult):
+                    if let errors = graphQLResult.errors, !errors.isEmpty {
+                        let messages = errors.compactMap(\.message).joined(separator: "; ")
+                        TelemetryService.captureGraphQLErrors(messages: messages, operation: "DeleteWorkout")
+                        continuation.resume(throwing: WorkoutGenerationError.server(errors.first?.message ?? "Couldn't delete that session."))
+                    } else {
+                        continuation.resume()
+                    }
+                case let .failure(error):
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
     }
 
     /// Swaps session `id` on `day` for `session`, keeping its place and
@@ -465,25 +606,26 @@ final class AssistantViewModel: ObservableObject {
         }
     }
 
-    private func failImport(_ id: String, on day: Date, message: String?) {
+    private func failNewSession(_ id: String, _ kind: NewSession, on day: Date, message: String?) {
         sessions[day]?.removeAll { $0.id == id && $0.isPending }
         if sessions[day]?.isEmpty == true { sessions[day] = nil }
         expansion[id] = nil
         if focusedSessionId == id { focusedSessionId = nil }
-        importError = message
+        addError = message
+        lastFailedAdd = message == nil ? nil : kind
     }
 
-    /// What shows before the server has read the board's title.
-    private static func pendingSession(id: String, day: Date) -> AssistantSession {
+    /// What shows before the server has sent the session's name.
+    private static func pendingSession(id: String, kind: NewSession, day: Date) -> AssistantSession {
         AssistantSession(
             id: id,
-            name: "Reading whiteboard…",
+            name: kind.placeholderName,
             description: "",
             stimulus: nil,
             coaching: nil,
             scheduledDate: day,
             blocks: [],
-            source: .whiteboard,
+            source: kind.source,
             isPending: true
         )
     }
