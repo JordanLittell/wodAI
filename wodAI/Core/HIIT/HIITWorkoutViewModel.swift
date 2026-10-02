@@ -126,6 +126,10 @@ class HIITWorkoutViewModel: ObservableObject {
     private var sensorRecorder: WorkoutSensorRecorder?
     /// The finished run's sensor session, linked to the completion on submit.
     private var completionSessionId: String?
+    /// The scheduled session piece this metcon was opened from, if any, and
+    /// the WOD it holds. A result for that WOD is logged against the piece so
+    /// the session shows it done after a reload.
+    private let scheduledPiece: (pieceId: Int, workoutId: Int)?
     private var cancellables = Set<AnyCancellable>()
     private let countdownFeedback = CountdownFeedback()
     private var lastCountdownTick: Int?
@@ -133,13 +137,22 @@ class HIITWorkoutViewModel: ObservableObject {
     init() {
         self.advancesAfterCompletion = true
         self.onCompleted = nil
+        self.scheduledPiece = nil
         setupFilterSubscription()
     }
 
-    init(preloaded: HIITWorkoutItem, advancesAfterCompletion: Bool = true, onCompleted: (() -> Void)? = nil) {
+    /// `pieceId` is the session's WorkoutHiitPiece id when the metcon is
+    /// opened from a scheduled session; nil elsewhere (e.g. saved workouts).
+    init(
+        preloaded: HIITWorkoutItem,
+        pieceId: Int? = nil,
+        advancesAfterCompletion: Bool = true,
+        onCompleted: (() -> Void)? = nil
+    ) {
         self.currentWorkout = preloaded
         self.advancesAfterCompletion = advancesAfterCompletion
         self.onCompleted = onCompleted
+        self.scheduledPiece = pieceId.map { (pieceId: $0, workoutId: preloaded.id) }
         self.editableTimeCap = preloaded.timeCap
         self.isFavorited = true
         setupFilterSubscription()
@@ -629,6 +642,9 @@ class HIITWorkoutViewModel: ObservableObject {
 
         // A blank or whitespace-only note is "no note", not an empty string.
         let trimmedNotes = draft.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Only a result for the piece's own WOD belongs to the piece; the
+        // server rejects any other pairing.
+        let pieceId = scheduledPiece.flatMap { $0.workoutId == draft.id ? $0.pieceId : nil }
 
         do {
             let result = try await withCheckedThrowingContinuation { continuation in
@@ -640,7 +656,8 @@ class HIITWorkoutViewModel: ObservableObject {
                         repsCompleted: draft.repsCompleted.map { .some($0) } ?? .none,
                         perceivedEffort: draft.perceivedEffort.map { .some($0) } ?? .none,
                         notes: trimmedNotes.isEmpty ? .none : .some(trimmedNotes),
-                        sessionId: completionSessionId.map { .some($0) } ?? .none
+                        sessionId: completionSessionId.map { .some($0) } ?? .none,
+                        pieceId: pieceId.map { .some($0) } ?? .none
                     )
                 ) { result in
                     continuation.resume(with: result)

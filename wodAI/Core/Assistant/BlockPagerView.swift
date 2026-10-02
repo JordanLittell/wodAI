@@ -103,6 +103,7 @@ struct BlockPagerView: View {
         case let .hiit(workout):
             MetconView(
                 preloaded: workout,
+                pieceId: block.hiitPieceId,
                 onCompleted: {
                     viewModel.markHiitCompleted(blockId: block.id)
                     advance(after: block.id)

@@ -14,7 +14,15 @@ struct DeviceConnectSheet: View {
     @State private var brand: DeviceBrand
     @State private var acknowledgedPermission = false
 
-    init(sensors: SensorManager = .shared) {
+    @MainActor
+    init(sensors: SensorManager) {
+        self._sensors = ObservedObject(wrappedValue: sensors)
+        self._brand = State(initialValue: sensors.rememberedDevice?.brand ?? .garmin)
+    }
+
+    @MainActor
+    init() {
+        let sensors = SensorManager.shared
         self._sensors = ObservedObject(wrappedValue: sensors)
         self._brand = State(initialValue: sensors.rememberedDevice?.brand ?? .garmin)
     }

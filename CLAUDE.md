@@ -48,7 +48,7 @@ ContentView
 `AppNavigationView` is a single `NavigationStack` with a hamburger-triggered side menu (`SideMenuView`), not a `TabView`. Destinations are switched by local `@State`, no deep-link/notification-based tab switching:
 - `.workout` → `AssistantView` (default landing screen; the week's sessions, block by block, menu label "Workout")
 - `.saved` → `SavedWorkoutsView`
-- `.activity` → `ActivityView` (weekly completed-workout history)
+- `.activity` → `ActivityView` (weekly stats and completed-workout history, menu label "Stats")
 - `.equipment` → `GymProfilesView`
 - `.skills` → `SkillsView`
 - `.devices` → `HeartRateDevicesView` (menu label "Heart Rate Monitor")

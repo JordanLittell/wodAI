@@ -140,6 +140,7 @@ type WorkoutHiitPiece implements WorkoutBlock {
   id: Int!
   order: Int!
   hiitWorkout: HIITWorkout!
+  completion: CompletedHIITWorkout
 }
 
 enum WorkoutPieceType {
@@ -395,7 +396,7 @@ type Mutation {
   generateHiitWorkouts(tagIds: [Int!], skipWorkoutId: Int, timezone: String): [HIITWorkout!]!
   createHiitWorkout(input: CreateHIITWorkoutInput!): HIITWorkout!
   deleteHiitWorkout(id: Int!): Boolean!
-  completeHiitWorkout(id: Int!, durationSeconds: Int, roundsCompleted: Int, repsCompleted: Int, perceivedEffort: Int, notes: String, sessionId: ID): CompletedHIITWorkout!
+  completeHiitWorkout(id: Int!, durationSeconds: Int, roundsCompleted: Int, repsCompleted: Int, perceivedEffort: Int, notes: String, sessionId: ID, pieceId: Int): CompletedHIITWorkout!
   updateHiitCompletion(id: Int!, durationSeconds: Int, roundsCompleted: Int, repsCompleted: Int, perceivedEffort: Int, notes: String): CompletedHIITWorkout!
   completeStrengthComponents(strengthWorkoutId: Int!, components: [StrengthComponentResultInput!]!): StrengthWorkout!
   uncompleteStrengthComponents(strengthWorkoutId: Int!, componentIds: [Int!]!): StrengthWorkout!

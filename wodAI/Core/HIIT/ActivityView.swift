@@ -51,7 +51,7 @@ struct ActivityView: View {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 48))
                         .foregroundColor(Color("Warning"))
-                    Text("Unable to load activity")
+                    Text("Unable to load stats")
                         .font(.headline)
                         .foregroundColor(Color("PrimaryText"))
                     Text(error.localizedDescription)
@@ -83,7 +83,7 @@ struct ActivityView: View {
                 }
             }
         }
-        .navigationTitle("Activity")
+        .navigationTitle("Stats")
         .navigationBarTitleDisplayMode(.large)
         .onAppear { loadActivity() }
         // Runs on appear and again whenever the week changes, cancelling the
@@ -172,7 +172,6 @@ struct ActivityView: View {
                                 id: item.id,
                                 completedAt: DateParser().parseDate(item.completedAt) ?? Date(),
                                 workoutId: item.workout.id,
-                                displayText: item.workout.displayText,
                                 stimulus: item.workout.stimulus,
                                 constraintType: item.workout.constraintType,
                                 constraintMagnitude: item.workout.constraintMagnitude,
@@ -201,7 +200,6 @@ struct CompletedHiitEntry: Identifiable {
     let id: Int
     let completedAt: Date
     let workoutId: Int
-    let displayText: String
     let stimulus: String
     let constraintType: String
     let constraintMagnitude: Int
@@ -247,12 +245,6 @@ struct CompletedHiitCard: View {
                         .foregroundColor(Color("SecondaryText"))
                 }
             }
-
-            Text(entry.displayText)
-                .font(.system(.body, design: .monospaced))
-                .foregroundColor(Color("PrimaryText"))
-                .lineLimit(4)
-                .truncationMode(.tail)
 
             if entry.avgHeartRate != nil || entry.trainingLoad != nil {
                 HStack(spacing: 14) {
@@ -332,7 +324,6 @@ private struct WeekSelectorBar: View {
                 id: 1,
                 completedAt: Date().addingTimeInterval(-3600),
                 workoutId: 101,
-                displayText: "21-15-9:\nThrusters (95/65 lb)\nPull-ups",
                 stimulus: "Lactic Threshold",
                 constraintType: "reps",
                 constraintMagnitude: 45
@@ -341,7 +332,6 @@ private struct WeekSelectorBar: View {
                 id: 2,
                 completedAt: Date().addingTimeInterval(-86400),
                 workoutId: 102,
-                displayText: "3 Rounds:\n400m Run\n21 Kettlebell Swings (53/35 lb)\n12 Pull-ups",
                 stimulus: "Aerobic Endurance",
                 constraintType: "rounds",
                 constraintMagnitude: 3
@@ -350,7 +340,6 @@ private struct WeekSelectorBar: View {
                 id: 3,
                 completedAt: Date().addingTimeInterval(-8 * 86400),
                 workoutId: 103,
-                displayText: "AMRAP 20:\n5 Pull-ups\n10 Push-ups\n15 Air Squats",
                 stimulus: "Aerobic Capacity",
                 constraintType: "minutes",
                 constraintMagnitude: 20

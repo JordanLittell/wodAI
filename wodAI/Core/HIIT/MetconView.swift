@@ -13,10 +13,12 @@ struct MetconView: View {
     @StateObject private var viewModel: HIITWorkoutViewModel
 
     /// Opens a fixed metcon (a session block or a saved workout).
-    /// `onCompleted` runs once the athlete's result is saved.
-    init(preloaded: HIITWorkoutItem, onCompleted: (() -> Void)? = nil) {
+    /// `pieceId` is the session piece it was opened from, if any, so the
+    /// result is logged against it. `onCompleted` runs once the result is saved.
+    init(preloaded: HIITWorkoutItem, pieceId: Int? = nil, onCompleted: (() -> Void)? = nil) {
         self._viewModel = StateObject(wrappedValue: HIITWorkoutViewModel(
             preloaded: preloaded,
+            pieceId: pieceId,
             advancesAfterCompletion: false,
             onCompleted: onCompleted
         ))

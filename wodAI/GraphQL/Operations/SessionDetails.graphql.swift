@@ -6,7 +6,7 @@ import WodAiAPI
 
 public struct SessionDetails: WodAiAPI.SelectionSet, Fragment {
   public static var fragmentDefinition: StaticString {
-    #"fragment SessionDetails on Workout { __typename id name description stimulus coaching scheduledDate blocks { __typename order ... on StrengthWorkout { id name stimulus instructions components { __typename id order reps weight rpe completedAt completedReps completedWeight completedRpe exercise { __typename name muscleGroups } } } ... on WorkoutHiitPiece { hiitWorkout { __typename id name format stimulus displayText constraintType constraintMagnitude timeCap timingScheme { __typename version segments { __typename rounds phases { __typename durationSeconds direction label } } phases { __typename durationSeconds direction label } } } } } }"#
+    #"fragment SessionDetails on Workout { __typename id name description stimulus coaching scheduledDate blocks { __typename order ... on StrengthWorkout { id name stimulus instructions components { __typename id order reps weight rpe completedAt completedReps completedWeight completedRpe exercise { __typename name muscleGroups } } } ... on WorkoutHiitPiece { id completion { __typename id completedAt } hiitWorkout { __typename id name format stimulus displayText constraintType constraintMagnitude timeCap timingScheme { __typename version segments { __typename rounds phases { __typename durationSeconds direction label } } phases { __typename durationSeconds direction label } } } } } }"#
   }
 
   public let __data: DataDict
@@ -139,11 +139,33 @@ public struct SessionDetails: WodAiAPI.SelectionSet, Fragment {
       public typealias RootEntityType = SessionDetails.Block
       public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.WorkoutHiitPiece }
       public static var __selections: [ApolloAPI.Selection] { [
+        .field("id", Int.self),
+        .field("completion", Completion?.self),
         .field("hiitWorkout", HiitWorkout.self),
       ] }
 
+      public var id: Int { __data["id"] }
+      public var completion: Completion? { __data["completion"] }
       public var hiitWorkout: HiitWorkout { __data["hiitWorkout"] }
       public var order: Int { __data["order"] }
+
+      /// Block.AsWorkoutHiitPiece.Completion
+      ///
+      /// Parent Type: `CompletedHIITWorkout`
+      public struct Completion: WodAiAPI.SelectionSet {
+        public let __data: DataDict
+        public init(_dataDict: DataDict) { __data = _dataDict }
+
+        public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.CompletedHIITWorkout }
+        public static var __selections: [ApolloAPI.Selection] { [
+          .field("__typename", String.self),
+          .field("id", Int.self),
+          .field("completedAt", WodAiAPI.DateTime.self),
+        ] }
+
+        public var id: Int { __data["id"] }
+        public var completedAt: WodAiAPI.DateTime { __data["completedAt"] }
+      }
 
       /// Block.AsWorkoutHiitPiece.HiitWorkout
       ///

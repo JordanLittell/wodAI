@@ -115,8 +115,8 @@ struct SideMenuView: View {
                 }
 
                 MenuRow(
-                    icon: "clock.arrow.circlepath",
-                    label: "Activity",
+                    icon: "chart.bar.fill",
+                    label: "Stats",
                     isSelected: destination == .activity
                 ) {
                     navigate(to: .activity)
@@ -139,8 +139,8 @@ struct SideMenuView: View {
                 }
 
                 MenuRow(
-                    icon: "heart.text.square",
-                    label: "Heart Rate Monitor",
+                    icon: "applewatch.radiowaves.left.and.right",
+                    label: "Devices",
                     isSelected: destination == .devices
                 ) {
                     navigate(to: .devices)

@@ -7,6 +7,8 @@
 
 import Testing
 import Foundation
+import Apollo
+import WodAiAPI
 @testable import wodAI
 
 @MainActor
@@ -86,6 +88,40 @@ struct BlockPagerTests {
         // Not a HIIT block: ignored.
         viewModel.markHiitCompleted(blockId: 0)
         #expect(viewModel.session?.blocks[0].isCompleted == false)
+    }
+
+    // MARK: - Server completion
+
+    @Test func hiitPieceCompletionFromTheServerSurvivesAReload() throws {
+        let session = AssistantViewModel.session(from: try sessionDetails(pieces: [
+            (id: 41, order: 0, completion: ["__typename": "CompletedHIITWorkout", "id": 7, "completedAt": "2026-10-05T15:00:00.000Z"]),
+            (id: 42, order: 1, completion: nil),
+        ]))
+
+        #expect(session.blocks.map(\.hiitPieceId) == [41, 42])
+        #expect(session.blocks.map(\.isCompleted) == [true, false])
+    }
+
+    /// A SessionDetails as the server sends it, with one HIIT piece per entry.
+    private func sessionDetails(pieces: [(id: Int, order: Int, completion: [String: Any]?)]) throws -> SessionDetails {
+        let blocks: [[String: Any]] = pieces.map { piece in
+            [
+                "__typename": "WorkoutHiitPiece",
+                "order": piece.order,
+                "id": piece.id,
+                "completion": piece.completion ?? NSNull(),
+                "hiitWorkout": [
+                    "__typename": "HIITWorkout", "id": 1, "name": "Fran", "format": "For Time",
+                    "stimulus": "", "displayText": "21-15-9", "constraintType": "time",
+                    "constraintMagnitude": 1, "timeCap": NSNull(), "timingScheme": NSNull(),
+                ] as [String: Any],
+            ]
+        }
+        return try SessionDetails(data: [
+            "__typename": "Workout", "id": "w1", "name": "Day", "description": "",
+            "stimulus": NSNull(), "coaching": NSNull(), "scheduledDate": "2026-10-05",
+            "blocks": blocks,
+        ])
     }
 
     private func viewModelWithBlocks() -> AssistantViewModel {

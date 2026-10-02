@@ -32,6 +32,12 @@ fragment SessionDetails on Workout {
       }
     }
     ... on WorkoutHiitPiece {
+      id
+      # Null until a result is logged for this piece (or for this WOD that day).
+      completion {
+        id
+        completedAt
+      }
       hiitWorkout {
         id
         name

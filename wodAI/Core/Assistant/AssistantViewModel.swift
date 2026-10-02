@@ -35,9 +35,12 @@ struct AssistantBlock: Identifiable {
     let label: String
     let letter: String
     var kind: Kind
-    /// Set once the athlete saves a result for this HIIT block in the
-    /// pager. Local only: the session query has no per-piece HIIT
-    /// completion, so it resets when the week reloads.
+    /// The session's WorkoutHiitPiece id for a HIIT block, sent with the
+    /// result so the server records which piece it completes.
+    var hiitPieceId: Int? = nil
+    /// Whether this HIIT block has a result. Loaded from the piece's
+    /// `completion`, and set locally the moment a result is saved in the pager
+    /// so the block turns done before the next reload.
     var hiitCompleted = false
 
     /// Whether a tap can open this block in the pager (`.other` can't).
@@ -303,7 +306,8 @@ final class AssistantViewModel: ObservableObject {
                         kind:.strength(strengthWorkout)
                     )
                 }
-                if let hiit = block.asWorkoutHiitPiece?.hiitWorkout {
+                if let piece = block.asWorkoutHiitPiece {
+                    let hiit = piece.hiitWorkout
                     let item = HIITWorkoutItem(
                         id: hiit.id,
                         format: hiit.format,
@@ -320,7 +324,9 @@ final class AssistantViewModel: ObservableObject {
                         id: block.order,
                         label: "\(hiit.name ?? "Metcon")",
                         letter: letter,
-                        kind: .hiit(item)
+                        kind: .hiit(item),
+                        hiitPieceId: piece.id,
+                        hiitCompleted: piece.completion != nil
                     )
                 }
                 return AssistantBlock(
