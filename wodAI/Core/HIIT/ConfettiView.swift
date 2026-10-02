@@ -2,7 +2,7 @@
 //  ConfettiView.swift
 //  wodAI
 //
-//  Shared celebratory confetti overlay. Extracted from HIITWorkoutView so both
+//  Shared celebratory confetti overlay. Extracted from MetconView so both
 //  the workout feed and the completion screen use a single implementation.
 //
 

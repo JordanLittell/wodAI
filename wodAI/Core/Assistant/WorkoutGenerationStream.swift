@@ -145,7 +145,8 @@ struct WorkoutGenerationStream {
                 constraintMagnitude: hiit.constraintMagnitude,
                 timeCap: hiit.timeCap,
                 timingScheme: hiit.timingScheme.flatMap { WodTimerConfig(fragment: $0) },
-                tags: []
+                tags: [],
+                name: hiit.name
             ))
         }
         if let complete = event.asGenerationComplete {

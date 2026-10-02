@@ -4,6 +4,7 @@ query SavedHiitWorkoutsQuery {
     savedAt
     workout {
       id
+      name
       format
       displayText
       stimulus

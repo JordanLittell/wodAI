@@ -2,10 +2,10 @@
 //  AssistantViewModel.swift
 //  wodAI
 //
-//  Assistant: asks the backend's workout agent (`workoutGeneration`
-//  subscription) for a session and lays it out block by block as the agent
-//  writes it — "Block A - …", "Block B - …" in session order. Strength blocks are written like a whiteboard; HIIT blocks
-//  reuse the feed's WOD card and open in `HIITWorkoutView`.
+//  Assistant: the current week's sessions, one day at a time, laid out block
+//  by block — "Block A - …", "Block B - …" in session order. Strength blocks
+//  are written like a whiteboard; HIIT blocks reuse the feed's WOD card and
+//  open in `MetconView`.
 //
 
 import Foundation
@@ -35,26 +35,31 @@ struct AssistantBlock: Identifiable {
     let label: String
     let letter: String
     var kind: Kind
+    /// Set once the athlete saves a result for this HIIT block in the
+    /// pager. Local only: the session query has no per-piece HIIT
+    /// completion, so it resets when the week reloads.
+    var hiitCompleted = false
 
-    /// The destination a tap on this block should push, or `nil` for blocks
-    /// this build can't open (`.other`).
-    var route: AssistantRoute? {
+    /// Whether a tap can open this block in the pager (`.other` can't).
+    var isOpenable: Bool {
+        if case .other = kind { return false }
+        return true
+    }
+
+    /// True once every component is done. Strength blocks track completion
+    /// per set; HIIT blocks once a result is saved; unknown blocks never.
+    var isCompleted: Bool {
         switch kind {
-        case let .strength(workout):
-            return .strength(workout)
-        case let .hiit(workout):
-            return .hiit(workout)
-        case .other:
-            return nil
+        case let .strength(workout): return workout.isCompleted
+        case .hiit: return hiitCompleted
+        case .other: return false
         }
     }
 }
 
-/// A pushable destination for a session block. Value-typed so a single
-/// `navigationDestination(for:)` can fan out to the right screen.
-enum AssistantRoute: Hashable {
-    case strength(StrengthWorkout)
-    case hiit(HIITWorkoutItem)
+/// Opens the block pager on the block with session identity `blockId`.
+struct AssistantBlockRoute: Hashable {
+    let blockId: Int
 }
 
 /// The strength data carried to `StrengthWorkoutView`, decoupled from the
@@ -118,100 +123,105 @@ enum AssistantFormatting {
 
 @MainActor
 final class AssistantViewModel: ObservableObject {
-    @Published private(set) var session: AssistantSession?
-    /// Fetching the user's latest session when the page opens.
-    @Published private(set) var isLoadingLatest = false
-    /// Running the agent for a brand-new session.
-    @Published private(set) var isGenerating = false
+    /// This week's sessions, keyed by local start-of-day. Days with nothing
+    /// scheduled have no entry.
+    @Published private(set) var sessions: [Date: AssistantSession]
+    /// The day being shown. Always a day of `week`.
+    @Published private(set) var selectedDay: Date
+    @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
-    /// True once the latest-session lookup has come back, found or not. Lets
-    /// the view tell "still looking" apart from "there's nothing yet".
-    @Published private(set) var hasLoadedLatest = false
+    /// True once the week has come back, found or not. Lets the view tell
+    /// "still looking" apart from "nothing scheduled".
+    @Published private(set) var hasLoaded = false
 
+    let week: AssistantWeek
     private let network = Network.shared
-    private var generation: Task<Void, Never>?
 
-    init(session: AssistantSession? = nil) {
-        self.session = session
-        self.hasLoadedLatest = session != nil
+    init(week: AssistantWeek = AssistantWeek(), sessions: [Date: AssistantSession] = [:]) {
+        self.week = week
+        self.sessions = sessions
+        self.selectedDay = week.today
+        self.hasLoaded = !sessions.isEmpty
     }
 
-    deinit {
-        // Unsubscribing stops the agent on the server.
-        generation?.cancel()
+    /// Seeds `session` as today's (previews and tests).
+    convenience init(session: AssistantSession) {
+        let week = AssistantWeek()
+        self.init(week: week, sessions: [week.today: session])
     }
 
-    /// Opens the subscription socket while the user is still reading the page,
-    /// so tapping Generate doesn't wait on the connection handshake.
-    func warmUpGeneration() {
-        network.connectSubscriptions()
+    /// The selected day's session, or nil when nothing is scheduled.
+    var session: AssistantSession? { sessions[selectedDay] }
+
+    func hasSession(on day: Date) -> Bool { sessions[day] != nil }
+
+    // MARK: - Navigation (clamped to this week)
+
+    var canGoForward: Bool { week.day(after: selectedDay) != nil }
+    var canGoBack: Bool { week.day(before: selectedDay) != nil }
+
+    /// Moves one day later. Returns false at the end of the week.
+    @discardableResult
+    func goForward() -> Bool {
+        guard let next = week.day(after: selectedDay) else { return false }
+        selectedDay = next
+        return true
     }
 
-    /// Show the user's newest not-yet-completed session, so the page opens on
-    /// their workout rather than blank. Only runs until it has succeeded once.
-    func loadLatest() {
-        guard !hasLoadedLatest, !isLoadingLatest else { return }
-        isLoadingLatest = true
+    /// Moves one day earlier. Returns false at the start of the week.
+    @discardableResult
+    func goBack() -> Bool {
+        guard let previous = week.day(before: selectedDay) else { return false }
+        selectedDay = previous
+        return true
+    }
+
+    func select(_ day: Date) {
+        guard week.contains(day) else { return }
+        selectedDay = week.calendar.startOfDay(for: day)
+    }
+
+    // MARK: - Loading
+
+    /// Fetches every session scheduled this week in one query. Only runs
+    /// until it has succeeded once.
+    func loadWeek() {
+        guard !hasLoaded, !isLoading else { return }
+        isLoading = true
         errorMessage = nil
 
+        let week = week
         network.client.fetch(
-            query: CurrentWorkoutQuery(),
+            query: WeekSessionsQuery(
+                startDate: week.serverArgument(for: week.first),
+                endDate: week.serverArgument(for: week.last)
+            ),
             cachePolicy: .fetchIgnoringCacheCompletely
         ) { [weak self] result in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.isLoadingLatest = false
+                self.isLoading = false
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors, !errors.isEmpty {
                         let messages = errors.compactMap { $0.message }.joined(separator: "; ")
-                        TelemetryService.captureGraphQLErrors(messages: messages, operation: "CurrentWorkout")
-                        self.errorMessage = errors.first?.message ?? "Unable to load your latest workout."
+                        TelemetryService.captureGraphQLErrors(messages: messages, operation: "WeekSessions")
+                        self.errorMessage = errors.first?.message ?? "Unable to load this week's workouts."
                         return
                     }
-                    self.hasLoadedLatest = true
-                    // A generate that finished first is newer; don't overwrite it.
-                    if self.session == nil, let workout = graphQLResult.data?.currentWorkout {
-                        self.session = Self.session(from: workout.fragments.sessionDetails)
+                    var sessions: [Date: AssistantSession] = [:]
+                    // Ordered by scheduledDate, so with two on one day the
+                    // later one in the list wins.
+                    for workout in graphQLResult.data?.getWorkoutsByDateRange ?? [] {
+                        let details = workout.fragments.sessionDetails
+                        guard let day = week.localDay(fromServer: details.scheduledDate), week.contains(day) else { continue }
+                        sessions[day] = Self.session(from: details)
                     }
+                    self.sessions = sessions
+                    self.hasLoaded = true
                 case .failure(let networkError):
-                    TelemetryService.captureError(networkError, tags: ["operation": "CurrentWorkout"])
+                    TelemetryService.captureError(networkError, tags: ["operation": "WeekSessions"])
                     self.errorMessage = networkError.localizedDescription
-                }
-            }
-        }
-    }
-
-    /// Streams a new session in: the page switches to it when its header
-    /// arrives and fills in each block as the agent writes it, then settles on
-    /// the saved session. On failure the previous session comes back, since a
-    /// half-streamed one was never saved.
-    func generate() {
-        guard !isGenerating else { return }
-        isGenerating = true
-        errorMessage = nil
-        let previous = session
-
-        generation = Task { [weak self] in
-            var progress = GenerationProgress()
-            do {
-                for try await event in WorkoutGenerationStream().events() {
-                    progress.apply(event)
-                    guard let self else { return }
-                    if let session = progress.session {
-                        self.session = session
-                    }
-                }
-                guard let self else { return }
-                self.isGenerating = false
-            } catch {
-                guard let self else { return }
-                self.isGenerating = false
-                if !progress.isComplete {
-                    self.session = previous
-                }
-                if !(error is CancellationError) {
-                    self.errorMessage = error.localizedDescription
                 }
             }
         }
@@ -225,17 +235,36 @@ final class AssistantViewModel: ObservableObject {
         return nil
     }
 
+    /// The selected day's blocks that the pager can show, in session order.
+    var openableBlocks: [AssistantBlock] {
+        session?.blocks.filter(\.isOpenable) ?? []
+    }
+
+    /// Marks a HIIT block done after its result is saved in the pager.
+    func markHiitCompleted(blockId: Int) {
+        let day = selectedDay
+        guard var session = sessions[day],
+              let index = session.blocks.firstIndex(where: { $0.id == blockId }),
+              case .hiit = session.blocks[index].kind
+        else { return }
+        session.blocks[index].hiitCompleted = true
+        sessions[day] = session
+    }
+
     /// Takes a strength block's latest set results (after a save in
     /// StrengthWorkoutView), so reopening the block shows what was logged.
+    /// Applies to the selected day: the strength screen is pushed from it,
+    /// and swiping is behind that screen.
     func updateStrength(_ workout: StrengthWorkout) {
-        guard var session,
+        let day = selectedDay
+        guard var session = sessions[day],
               let index = session.blocks.firstIndex(where: {
                   if case let .strength(existing) = $0.kind { return existing.id == workout.id }
                   return false
               })
         else { return }
         session.blocks[index].kind = .strength(workout)
-        self.session = session
+        sessions[day] = session
     }
 
     // MARK: - Mapping
@@ -284,7 +313,8 @@ final class AssistantViewModel: ObservableObject {
                         constraintMagnitude: hiit.constraintMagnitude,
                         timeCap: hiit.timeCap,
                         timingScheme: hiit.timingScheme.flatMap { WodTimerConfig(fragment: $0) },
-                        tags: []
+                        tags: [],
+                        name: hiit.name
                     )
                     return AssistantBlock(
                         id: block.order,
@@ -305,7 +335,8 @@ final class AssistantViewModel: ObservableObject {
             description: workout.description,
             stimulus: workout.stimulus,
             coaching: workout.coaching,
-            scheduledDate: DateParser().parseDate(workout.scheduledDate),
+            // The local calendar day, not the raw UTC-midnight instant.
+            scheduledDate: AssistantWeek().localDay(fromServer: workout.scheduledDate),
             blocks: blocks
         )
     }
@@ -332,9 +363,9 @@ final class AssistantViewModel: ObservableObject {
                     label: "Back Squat",
                     letter: "A",
                     kind: .strength(StrengthWorkout(id: 0, name: "Back Squats", instructions: "Do back squats at a moderate intensity for building strength.", components: [
-                        StrengthComponent(order: 0, reps: 3, weight: nil, rpe: 7, exercise: ExerciseName(name: "Back Squat")),
-                        StrengthComponent(order: 0, reps: 3, weight: nil, rpe: 7, exercise: ExerciseName(name: "Back Squat")),
-                        StrengthComponent(order: 0, reps: 3, weight: nil, rpe: 7, exercise: ExerciseName(name: "Back Squat"))
+                        StrengthComponent(order: 0, reps: 3, weight: nil, rpe: 7, exercise: ExerciseName(name: "Back Squat"), completed: CompletedSet(weightUsed: 225, reps: 3)),
+                        StrengthComponent(order: 0, reps: 3, weight: nil, rpe: 7, exercise: ExerciseName(name: "Back Squat"), completed: CompletedSet(weightUsed: 225, reps: 3)),
+                        StrengthComponent(order: 0, reps: 3, weight: nil, rpe: 7, exercise: ExerciseName(name: "Back Squat"), completed: CompletedSet(weightUsed: 225, reps: 3))
                     ]))
                 ),
                 AssistantBlock(

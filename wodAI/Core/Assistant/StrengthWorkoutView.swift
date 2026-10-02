@@ -29,10 +29,18 @@ struct StrengthWorkoutView: View {
         case oneRepMax(exercise: String)
     }
 
+    /// Runs when the last set is checked off here (not when opened already done).
+    private let onFinished: (() -> Void)?
+
     /// `onChange` receives the block after each saved set, so the owner's
     /// copy stays current for when the block is reopened.
-    init(workout: StrengthWorkout, onChange: ((StrengthWorkout) -> Void)? = nil) {
+    init(
+        workout: StrengthWorkout,
+        onChange: ((StrengthWorkout) -> Void)? = nil,
+        onFinished: (() -> Void)? = nil
+    ) {
         self.workout = workout
+        self.onFinished = onFinished
         self._viewModel = StateObject(wrappedValue: StrengthWorkoutViewModel(workout: workout, onChange: onChange))
     }
 
@@ -127,6 +135,9 @@ struct StrengthWorkoutView: View {
         // session lands, hand them over so logged sets reach the server.
         .onChange(of: workout.serverId) { _, _ in
             viewModel.adoptSaved(workout)
+        }
+        .onChange(of: viewModel.isFinished) { wasFinished, isFinished in
+            if !wasFinished && isFinished { onFinished?() }
         }
         .toolbar {
             ToolbarItem(placement: .principal) {

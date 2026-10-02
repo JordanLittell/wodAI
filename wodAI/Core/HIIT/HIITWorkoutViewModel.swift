@@ -22,6 +22,15 @@ struct HIITWorkoutItem: Identifiable, Hashable {
     let timeCap: Int?
     let timingScheme: WodTimerConfig?
     let tags: [HIITWorkoutTag]
+    /// The workout's own name, e.g. "Fran". Most generated metcons have none.
+    var name: String? = nil
+
+    /// What to call it on screen: its name when it has one, otherwise
+    /// "Metcon". A named workout implies it's a metcon, so the name wins.
+    var title: String {
+        let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? "Metcon" : trimmed
+    }
 
     static func == (lhs: HIITWorkoutItem, rhs: HIITWorkoutItem) -> Bool {
         lhs.id == rhs.id
@@ -91,6 +100,9 @@ class HIITWorkoutViewModel: ObservableObject {
     /// that is a fixed part of something else (an Assistant session block)
     /// stays put instead.
     private let advancesAfterCompletion: Bool
+    /// Called once a result is saved on the server (Done or Skip, not
+    /// Discard), so an owner such as the block pager can move on.
+    private let onCompleted: (() -> Void)?
 
     private var timerCancellable: AnyCancellable?
     private var cancellables = Set<AnyCancellable>()
@@ -99,12 +111,14 @@ class HIITWorkoutViewModel: ObservableObject {
 
     init() {
         self.advancesAfterCompletion = true
+        self.onCompleted = nil
         setupFilterSubscription()
     }
 
-    init(preloaded: HIITWorkoutItem, advancesAfterCompletion: Bool = true) {
+    init(preloaded: HIITWorkoutItem, advancesAfterCompletion: Bool = true, onCompleted: (() -> Void)? = nil) {
         self.currentWorkout = preloaded
         self.advancesAfterCompletion = advancesAfterCompletion
+        self.onCompleted = onCompleted
         self.editableTimeCap = preloaded.timeCap
         self.isFavorited = true
         setupFilterSubscription()
@@ -616,6 +630,7 @@ class HIITWorkoutViewModel: ObservableObject {
 
         // Only past this point is the result safely on the server.
         completionDraft = nil
+        onCompleted?()
         if advancesAfterCompletion { nextWorkout() }
     }
 

@@ -7,9 +7,9 @@ import WodAiAPI
 public class SavedHiitWorkoutsQuery: GraphQLQuery {
   public static let operationName: String = "SavedHiitWorkoutsQuery"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "edb44242c4f502ba11144060611ff4a0db7ca1a1a6f358cc49161370355d7ee7",
+    operationIdentifier: "6254d15fb4144c44b11ad1036be9bf4a368300882d09f6950bc49df4542f5a0c",
     definition: .init(
-      #"query SavedHiitWorkoutsQuery { savedHiitWorkouts { __typename id savedAt workout { __typename id format displayText stimulus constraintType constraintMagnitude timeCap timingScheme { __typename version segments { __typename rounds phases { __typename durationSeconds direction label } } phases { __typename durationSeconds direction label } } } } }"#
+      #"query SavedHiitWorkoutsQuery { savedHiitWorkouts { __typename id savedAt workout { __typename id name format displayText stimulus constraintType constraintMagnitude timeCap timingScheme { __typename version segments { __typename rounds phases { __typename durationSeconds direction label } } phases { __typename durationSeconds direction label } } } } }"#
     ))
 
   public init() {}
@@ -55,6 +55,7 @@ public class SavedHiitWorkoutsQuery: GraphQLQuery {
         public static var __selections: [ApolloAPI.Selection] { [
           .field("__typename", String.self),
           .field("id", Int.self),
+          .field("name", String?.self),
           .field("format", String?.self),
           .field("displayText", String.self),
           .field("stimulus", String.self),
@@ -65,6 +66,7 @@ public class SavedHiitWorkoutsQuery: GraphQLQuery {
         ] }
 
         public var id: Int { __data["id"] }
+        public var name: String? { __data["name"] }
         public var format: String? { __data["format"] }
         public var displayText: String { __data["displayText"] }
         public var stimulus: String { __data["stimulus"] }

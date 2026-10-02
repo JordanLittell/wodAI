@@ -22,6 +22,11 @@ struct StrengthWorkout: Identifiable, Hashable {
     /// and unsaved, in which case completion stays local.
     var serverId: Int? = nil
 
+    /// Every set has a logged result. An empty block is never complete.
+    var isCompleted: Bool {
+        !components.isEmpty && components.allSatisfy { $0.completed != nil }
+    }
+
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }

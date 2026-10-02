@@ -221,6 +221,33 @@ struct StrengthWorkoutSyncTests {
         #expect(viewModel.syncError != nil)
     }
 
+    @Test func blockIsCompletedOnlyOnceEverySetIsLogged() async {
+        var reported: StrengthWorkout?
+        let viewModel = StrengthWorkoutViewModel(
+            workout: savedBlock(),
+            stats: makeStore(),
+            sync: FakeSync(),
+            onChange: { reported = $0 }
+        )
+
+        viewModel.log(0, weight: 225, reps: 5)
+        viewModel.log(1, weight: 225, reps: 5)
+        await viewModel.waitForPendingWrites()
+        #expect(reported?.isCompleted == false)
+
+        viewModel.log(2, weight: 225, reps: 3)
+        await viewModel.waitForPendingWrites()
+        #expect(reported?.isCompleted == true)
+
+        viewModel.toggleComplete(1)
+        await viewModel.waitForPendingWrites()
+        #expect(reported?.isCompleted == false)
+    }
+
+    @Test func emptyBlockIsNeverCompleted() {
+        #expect(!StrengthWorkout(id: 0, name: "Empty", instructions: "", components: []).isCompleted)
+    }
+
     @Test func seedsLoggedSetsFromTheServer() {
         let viewModel = StrengthWorkoutViewModel(
             workout: savedBlock(completed: [

@@ -8,6 +8,8 @@ import SwiftUI
 struct AssistantView: View {
     @StateObject private var viewModel: AssistantViewModel
     @State private var stimulusExpanded = false
+    /// Where the incoming day slides in from: trailing when moving forward.
+    @State private var slideEdge: Edge = .trailing
 
     init() {
         self._viewModel = StateObject(wrappedValue: AssistantViewModel())
@@ -18,46 +20,33 @@ struct AssistantView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                
+        VStack(spacing: 0) {
+            WeekStrip(
+                week: viewModel.week,
+                selectedDay: viewModel.selectedDay,
+                hasSession: viewModel.hasSession(on:),
+                onSelect: select
+            )
+            Divider()
 
-                if let error = viewModel.errorMessage {
-                    Text(error)
-                        .foregroundColor(Color("Error"))
-                }
-
-                if let session = viewModel.session {
-                    ForEach(session.blocks) { block in
-                        blockLink(block)
-                    }
-                } else if viewModel.isLoadingLatest {
-                    placeholder(icon: nil, title: "Loading your latest workout…", detail: nil)
-                } else if viewModel.hasLoadedLatest {
-                    placeholder(
-                        icon: "sparkles",
-                        title: "No workout yet",
-                        detail: "Tap Generate Workout and the assistant will build today's session for you."
-                    )
-                }
-                Button {
-                    viewModel.generate()
-                } label: {
-                    HStack {
-                        if viewModel.isGenerating { ProgressView() }
-                        Text(viewModel.isGenerating ? "Generating…" : "Generate Workout")
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(viewModel.isGenerating)
+            ScrollView {
+                dayContent
+                    // A new identity per day so changing days slides the old
+                    // day out and the new one in.
+                    .id(viewModel.selectedDay)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: slideEdge),
+                        removal: .move(edge: slideEdge == .trailing ? .leading : .trailing)
+                    ))
             }
-            .padding()
+            // Simultaneous so vertical scrolling is untouched; only a clearly
+            // horizontal drag changes the day.
+            .simultaneousGesture(daySwipe)
+            .clipped()
         }
         .background(Color("Background").ignoresSafeArea())
         .task {
-            viewModel.warmUpGeneration()
-            viewModel.loadLatest()
+            viewModel.loadWeek()
         }
         // Set as a principal item as well as the title: a pushed block's own
         // principal title (StrengthWorkoutView) can otherwise linger here after
@@ -72,25 +61,80 @@ struct AssistantView: View {
                     .lineLimit(1)
             }
         }
-        .navigationDestination(for: AssistantRoute.self) { route in
-            switch route {
-            case let .hiit(workout):
-                HIITWorkoutView(preloaded: workout, showsFeedControls: false)
-            case let .strength(detail):
-                // The live copy, not the one captured at push time, so a block
-                // opened mid-generation still gets its ids once it's saved.
-                StrengthWorkoutView(
-                    workout: viewModel.strengthWorkout(id: detail.id) ?? detail,
-                    onChange: viewModel.updateStrength
-                )
-            }
+        .navigationDestination(for: AssistantBlockRoute.self) { route in
+            // Reads the live session, so blocks pick up later changes (ids,
+            // sets logged and saved) and show their completion in the dots.
+            BlockPagerView(viewModel: viewModel, startingAt: route.blockId)
         }
     }
 
-    /// "Programming for 1/23/25" once a session is showing, else the page name.
+    /// The month of the day being shown, e.g. "October". A week can span two
+    /// months, so it follows the selected day.
     private var title: String {
-        guard let date = viewModel.session?.scheduledDate else { return "Assistant" }
-        return "Programming for \(date.formatted(.dateTime.month(.defaultDigits).day().year(.twoDigits)))"
+        viewModel.selectedDay.formatted(.dateTime.month(.wide))
+    }
+
+    @ViewBuilder
+    private var dayContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            if let error = viewModel.errorMessage {
+                Text(error)
+                    .foregroundColor(Color("Error"))
+            }
+
+            if let session = viewModel.session {
+                ForEach(session.blocks) { block in
+                    blockLink(block)
+                }
+            } else if viewModel.isLoading || (!viewModel.hasLoaded && viewModel.errorMessage == nil) {
+                placeholder(icon: nil, title: "Loading this week…", detail: nil)
+            } else if viewModel.hasLoaded {
+                Text("No workout scheduled")
+                    .font(.subheadline)
+                    .foregroundColor(Color("SecondaryText"))
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 60)
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Day navigation
+
+    /// Swipe left for the next day, right for the previous one. A drag only
+    /// counts when it's mostly sideways and long enough to be deliberate.
+    private var daySwipe: some Gesture {
+        DragGesture(minimumDistance: 30)
+            .onEnded { value in
+                let dx = value.translation.width
+                let dy = value.translation.height
+                guard abs(dx) > abs(dy), abs(dx) > 60 else { return }
+                if dx < 0 {
+                    move(forward: true)
+                } else {
+                    move(forward: false)
+                }
+            }
+    }
+
+    private func move(forward: Bool) {
+        slideEdge = forward ? .trailing : .leading
+        let moved = withAnimation(.easeInOut(duration: 0.25)) {
+            forward ? viewModel.goForward() : viewModel.goBack()
+        }
+        // The week is the limit: a light tap says there's nothing further.
+        if !moved {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
+    }
+
+    private func select(_ day: Date) {
+        guard day != viewModel.selectedDay else { return }
+        slideEdge = day > viewModel.selectedDay ? .trailing : .leading
+        withAnimation(.easeInOut(duration: 0.25)) {
+            viewModel.select(day)
+        }
     }
 
     // MARK: - Empty / loading
@@ -165,24 +209,43 @@ struct AssistantView: View {
 
     // MARK: - Blocks
 
-    private func blockLetter(_ label: String) -> some View {
+    /// The block's letter, or a check once every component is done.
+    private func blockLetter(_ label: String, completed: Bool) -> some View {
         ZStack {
             Circle()
-                .fill(Color.brandPrimary)
+                .fill(completed ? Color("Success") : Color.brandPrimary)
                 .frame(width: 40, height: 40)
-            Text(label)
-                .foregroundColor(Color.white)
-                .font(Font.body.monospacedDigit())
+            if completed {
+                Image(systemName: "checkmark")
+                    .font(.body.weight(.bold))
+                    .foregroundColor(.white)
+                    .transition(.scale.combined(with: .opacity))
+            } else {
+                Text(label)
+                    .foregroundColor(Color.white)
+                    .font(Font.body.monospacedDigit())
+            }
         }
         .padding(10)
     }
 
-    /// Wraps a block in a `NavigationLink` that routes by kind (strength → the
-    /// strength screen, HIIT → the WOD screen); `.other` blocks aren't tappable.
+    private var completedTag: some View {
+        Label("Completed", systemImage: "checkmark.seal.fill")
+            .font(.caption.weight(.semibold))
+            .foregroundColor(Color("Success"))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(Color("Success").opacity(0.12)))
+            .transition(.opacity)
+    }
+
+    /// Wraps a block in a `NavigationLink` that opens the block pager on it
+    /// (strength → the strength screen, HIIT → the Metcon screen); `.other`
+    /// blocks aren't tappable.
     @ViewBuilder
     private func blockLink(_ block: AssistantBlock) -> some View {
-        if let route = block.route {
-            NavigationLink(value: route) {
+        if block.isOpenable {
+            NavigationLink(value: AssistantBlockRoute(blockId: block.id)) {
                 blockView(block)
             }
             .buttonStyle(.plain)
@@ -194,10 +257,17 @@ struct AssistantView: View {
     private func blockView(_ block: AssistantBlock) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                blockLetter(block.letter)
+                blockLetter(block.letter, completed: block.isCompleted)
                 Text(block.label)
                     .font(.headline)
+                Spacer(minLength: 8)
+                if block.isCompleted {
+                    completedTag
+                        .padding(.trailing, 10)
+                }
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityValue(block.isCompleted ? "Completed" : "")
 
 
             switch block.kind {
@@ -211,7 +281,7 @@ struct AssistantView: View {
                     workout.components
                         .sorted { $0.order < $1.order }
                         .map { WhiteboardSet(exercise: $0.exercise.name, reps: $0.reps, weight: $0.weight, rpe: $0.rpe) }
-                ))
+                ), completed: block.isCompleted)
             case .hiit(let workout):
                 HIITWorkoutCard(format: workout.format, displayText: workout.displayText) {
                   
@@ -219,12 +289,16 @@ struct AssistantView: View {
             case .other:
                 EmptyView()
             }
-        }.background(Color.surface2)
+        }
+        .background(Color.surface2)
+        .animation(.spring(duration: 0.35), value: block.isCompleted)
     }
     
 
     /// The set list, drawn on the same card surface as the HIIT WOD card.
-    private func whiteboard(_ lines: [String]) -> some View {
+    /// A completed block keeps its sets fully readable (it's the record of
+    /// what was lifted) and swaps the border for the success color.
+    private func whiteboard(_ lines: [String], completed: Bool) -> some View {
         Text(lines.joined(separator: "\n"))
             .font(.system(.body, design: .monospaced))
             .foregroundColor(Color("PrimaryText"))
@@ -234,7 +308,7 @@ struct AssistantView: View {
             .cornerRadius(16)
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color("Border"), lineWidth: 1)
+                    .stroke(completed ? Color("Success") : Color("Border"), lineWidth: completed ? 1.5 : 1)
             )
     }
 }

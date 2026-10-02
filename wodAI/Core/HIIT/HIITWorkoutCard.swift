@@ -3,8 +3,8 @@
 //  wodAI
 //
 //  The WOD card: format header, a top-right accessory slot, and the
-//  whiteboard-style display text. Shared by the HIIT feed (bookmark accessory,
-//  execution-state border) and the Assistant's session blocks (chevron).
+//  whiteboard-style display text. Shared by MetconView (bookmark accessory,
+//  execution-state border) and the Assistant's session blocks.
 //
 
 import SwiftUI

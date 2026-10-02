@@ -45,14 +45,19 @@ ContentView
 ├── authenticated + needsProvisioning → ProvisioningView (onboarding)
 └── authenticated + provisioned  → RootAppView → AppNavigationView
 ```
-`AppNavigationView` is a single `NavigationStack` with a hamburger-triggered side menu (`SideMenuView`), not a `TabView`. Four destinations, switched by local `@State`, no deep-link/notification-based tab switching:
-- `.workout` → `HIITWorkoutView` (default landing screen)
+`AppNavigationView` is a single `NavigationStack` with a hamburger-triggered side menu (`SideMenuView`), not a `TabView`. Destinations are switched by local `@State`, no deep-link/notification-based tab switching:
+- `.workout` → `AssistantView` (default landing screen; the week's sessions, block by block, menu label "Workout")
 - `.saved` → `SavedWorkoutsView`
-- `.activity` → `ActivityView` (completed-workout history)
+- `.activity` → `ActivityView` (weekly completed-workout history)
 - `.equipment` → `GymProfilesView`
+- `.skills` → `SkillsView`
+
+Tapping a session block pushes `BlockPagerView` (swipe between blocks, dot indicator, auto-advance on completion), which shows `StrengthWorkoutView` or `MetconView`. `MetconView` (formerly `HIITWorkoutView`) has no menu entry: it opens only from a block or a saved workout.
 
 ### Workout domain — HIIT feed
-`HIITWorkoutViewModel` (`Core/HIIT/HIITWorkoutViewModel.swift`, singleton `.shared`) is the center of the app:
+Note: the feed UI (filters, Generate, the `.shared` instance) no longer has an entry point — `MetconView` always builds a `HIITWorkoutViewModel(preloaded:advancesAfterCompletion: false)`. The feed-fetching logic below still exists in the view model but is unused by any screen.
+
+`HIITWorkoutViewModel` (`Core/HIIT/HIITWorkoutViewModel.swift`, singleton `.shared`) was the center of the app:
 - Holds one `currentWorkout: HIITWorkoutItem?` at a time, fetched via `HIITWorkoutsQuery` and swapped via `GenerateHiitWorkoutMutation(skipWorkoutId:tagIds:)`.
 - `selectedTags`/`availableTags` drive tag filtering; changing `selectedTags` debounces 500ms then auto-calls `nextWorkout()`.
 - Save (`SaveHiitWorkoutMutation`/`UnsaveHiitWorkoutMutation`) and like/dislike (`LikeHiitWorkoutMutation`, -1/0/1 score) are separate from the workout fetch and update local state optimistically, rolling back on failure.

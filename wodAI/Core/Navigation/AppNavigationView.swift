@@ -6,7 +6,7 @@
 import SwiftUI
 
 enum AppDestination {
-    case workout, saved, activity, equipment, skills, assistant
+    case workout, saved, activity, equipment, skills
 }
 
 struct AppNavigationView: View {
@@ -59,7 +59,9 @@ struct AppNavigationView: View {
     private var contentView: some View {
         switch destination {
         case .workout:
-            HIITWorkoutView()
+            // The week's sessions. Metcons open only from a session block
+            // (or a saved workout), never from the menu.
+            AssistantView()
         case .saved:
             SavedWorkoutsView()
         case .activity:
@@ -68,8 +70,6 @@ struct AppNavigationView: View {
             GymProfilesView()
         case .skills:
             SkillsView()
-        case .assistant:
-            AssistantView()
         }
     }
 }
@@ -134,14 +134,6 @@ struct SideMenuView: View {
                     isSelected: destination == .skills
                 ) {
                     navigate(to: .skills)
-                }
-
-                MenuRow(
-                    icon: "sparkles",
-                    label: "Assistant",
-                    isSelected: destination == .assistant
-                ) {
-                    navigate(to: .assistant)
                 }
             }
             .padding(.top, 16)
