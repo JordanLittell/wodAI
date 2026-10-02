@@ -2,7 +2,8 @@
 //  WorkoutGenerationStream.swift
 //  wodAI
 //
-//  Streams a new session from the backend's `workoutGeneration` subscription.
+//  Streams a new session from the backend's `workoutGeneration` subscription,
+//  or from `whiteboardImport`, which sends the same events for a photo.
 //  The agent writes one block at a time and the server forwards each as soon
 //  as it's written, so the Assistant can draw the session piece by piece
 //  instead of waiting on the whole plan.
@@ -43,7 +44,7 @@ enum WorkoutGenerationError: LocalizedError {
         case let .server(message):
             return message
         case .stalled:
-            return "Generating your workout is taking too long. Please try again."
+            return "This is taking longer than expected. Please try again."
         }
     }
 }
@@ -64,6 +65,48 @@ struct WorkoutGenerationStream {
     /// the server starts over with a fresh `session` event;
     /// `GenerationProgress` treats that as a restart.
     func events() -> AsyncThrowingStream<GenerationEvent, Error> {
+        run(
+            WorkoutGenerationSubscription(),
+            operation: "WorkoutGeneration",
+            fallbackMessage: "Unable to generate a workout."
+        ) { data in
+            let event = data.workoutGeneration
+            if let failed = event.asGenerationFailed { return .failed(failed.message) }
+            return Self.event(from: event).map(Step.event) ?? .skip
+        }
+    }
+
+    /// Reads a whiteboard photo into a session on the server, streamed the
+    /// same way as `events()`. HIIT blocks arrive as drafts with no saved id
+    /// until `complete`.
+    func whiteboardEvents(_ input: WhiteboardImportInput) -> AsyncThrowingStream<GenerationEvent, Error> {
+        run(
+            WhiteboardImportSubscription(input: input),
+            operation: "WhiteboardImport",
+            fallbackMessage: "Unable to read that whiteboard."
+        ) { data in
+            let event = data.whiteboardImport
+            if let failed = event.asGenerationFailed { return .failed(failed.message) }
+            return Self.event(from: event).map(Step.event) ?? .skip
+        }
+    }
+
+    /// What one subscription result means for the stream.
+    private enum Step {
+        case event(GenerationEvent)
+        case failed(String)
+        /// An event type this build doesn't know; skipped rather than failing.
+        case skip
+    }
+
+    /// Turns `subscription` into a stream of events that always ends: after
+    /// `complete`, on a failure, or when nothing arrives for `stallTimeout`.
+    private func run<Subscription: GraphQLSubscription>(
+        _ subscription: Subscription,
+        operation: String,
+        fallbackMessage: String,
+        step: @escaping (Subscription.Data) -> Step
+    ) -> AsyncThrowingStream<GenerationEvent, Error> {
         AsyncThrowingStream { continuation in
             // Results and the stall timer share one serial queue, so a late
             // result can't race the timer.
@@ -75,39 +118,37 @@ struct WorkoutGenerationStream {
             Network.shared.connectSubscriptions()
             stallTimer.reset()
 
-            let subscription = client.subscribe(
-                subscription: WorkoutGenerationSubscription(),
-                queue: queue
-            ) { result in
+            let cancellable = client.subscribe(subscription: subscription, queue: queue) { result in
                 stallTimer.reset()
                 switch result {
                 case let .success(graphQLResult):
                     if let errors = graphQLResult.errors, !errors.isEmpty {
                         let messages = errors.compactMap(\.message).joined(separator: "; ")
-                        TelemetryService.captureGraphQLErrors(messages: messages, operation: "WorkoutGeneration")
+                        TelemetryService.captureGraphQLErrors(messages: messages, operation: operation)
                         continuation.finish(throwing: WorkoutGenerationError.server(
-                            errors.first?.message ?? "Unable to generate a workout."
+                            errors.first?.message ?? fallbackMessage
                         ))
                         return
                     }
-                    guard let event = graphQLResult.data?.workoutGeneration else { return }
-                    if let failed = event.asGenerationFailed {
-                        continuation.finish(throwing: WorkoutGenerationError.server(failed.message))
-                    } else if let mapped = Self.event(from: event) {
-                        continuation.yield(mapped)
-                        if case .complete = mapped { continuation.finish() }
+                    guard let data = graphQLResult.data else { return }
+                    switch step(data) {
+                    case let .failed(message):
+                        continuation.finish(throwing: WorkoutGenerationError.server(message))
+                    case let .event(event):
+                        continuation.yield(event)
+                        if case .complete = event { continuation.finish() }
+                    case .skip:
+                        break
                     }
-                    // Anything else is an event type this build doesn't know;
-                    // skip it rather than fail the stream.
 
                 case let .failure(error):
-                    TelemetryService.captureError(error, tags: ["operation": "WorkoutGeneration"])
+                    TelemetryService.captureError(error, tags: ["operation": operation])
                     continuation.finish(throwing: error)
                 }
             }
 
             continuation.onTermination = { _ in
-                subscription.cancel()
+                cancellable.cancel()
                 stallTimer.cancel()
             }
         }
@@ -147,6 +188,47 @@ struct WorkoutGenerationStream {
                 timingScheme: hiit.timingScheme.flatMap { WodTimerConfig(fragment: $0) },
                 tags: [],
                 name: hiit.name
+            ))
+        }
+        if let complete = event.asGenerationComplete {
+            return .complete(AssistantViewModel.session(from: complete.workout.fragments.sessionDetails))
+        }
+        return nil
+    }
+
+    static func event(from event: WhiteboardImportSubscription.Data.WhiteboardImport) -> GenerationEvent? {
+        if let session = event.asGenerationSession {
+            return .session(name: session.name, description: session.description, stimulus: session.stimulus)
+        }
+        if let block = event.asGenerationStrengthBlock {
+            return .strengthBlock(order: block.order, name: block.name, instructions: block.instructions)
+        }
+        if let set = event.asGenerationStrengthSet {
+            return .strengthSet(order: set.order, component: StrengthComponent(
+                order: set.setOrder,
+                reps: set.reps,
+                weight: set.weight,
+                rpe: set.rpe,
+                exercise: ExerciseName(
+                    name: set.exercise.name,
+                    muscleGroups: ExerciseName.muscleGroups(fromCatalog: set.exercise.muscleGroups)
+                )
+            ))
+        }
+        if let draft = event.asGenerationDraftHiitBlock {
+            // Not saved yet, so no id or timing; enough to draw the card. The
+            // saved session in `complete` replaces it.
+            return .hiitBlock(order: draft.order, name: draft.name, workout: HIITWorkoutItem(
+                id: 0,
+                format: draft.format,
+                displayText: draft.displayText,
+                stimulus: draft.stimulus,
+                constraintType: "",
+                constraintMagnitude: 0,
+                timeCap: nil,
+                timingScheme: nil,
+                tags: [],
+                name: draft.name
             ))
         }
         if let complete = event.asGenerationComplete {
@@ -197,10 +279,17 @@ struct GenerationProgress {
         var sets: [StrengthComponent] = []
     }
 
+    /// The day the streamed session is for, until the saved one says.
+    let scheduledDate: Date
     private var header: Header?
     private var strength: [Int: Strength] = [:]
     private var hiit: [Int: (name: String, workout: HIITWorkoutItem)] = [:]
     private var saved: AssistantSession?
+
+    /// Generation programs today; a whiteboard import passes the day it's for.
+    init(scheduledDate: Date = Date()) {
+        self.scheduledDate = scheduledDate
+    }
 
     /// True once the saved session has arrived.
     var isComplete: Bool { saved != nil }
@@ -210,7 +299,7 @@ struct GenerationProgress {
         case let .session(name, description, stimulus):
             // A second header means the server restarted generation (the
             // socket reconnected); drop what the first attempt sent.
-            self = GenerationProgress()
+            self = GenerationProgress(scheduledDate: scheduledDate)
             header = Header(name: name, description: description, stimulus: stimulus)
         case let .strengthBlock(order, name, instructions):
             strength[order] = Strength(name: name, instructions: instructions)
@@ -252,8 +341,7 @@ struct GenerationProgress {
             description: header.description,
             stimulus: header.stimulus,
             coaching: nil,
-            // The server programs generated sessions for today.
-            scheduledDate: Date(),
+            scheduledDate: scheduledDate,
             blocks: blocks
         )
     }

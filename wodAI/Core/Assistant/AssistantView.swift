@@ -10,6 +10,8 @@ struct AssistantView: View {
     @State private var stimulusExpanded = false
     /// Where the incoming day slides in from: trailing when moving forward.
     @State private var slideEdge: Edge = .trailing
+    @State private var isMenuOpen = false
+    @State private var isScanning = false
 
     init() {
         self._viewModel = StateObject(wrappedValue: AssistantViewModel())
@@ -29,22 +31,49 @@ struct AssistantView: View {
             )
             Divider()
 
-            ScrollView {
-                dayContent
-                    // A new identity per day so changing days slides the old
-                    // day out and the new one in.
-                    .id(viewModel.selectedDay)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: slideEdge),
-                        removal: .move(edge: slideEdge == .trailing ? .leading : .trailing)
-                    ))
+            ScrollViewReader { proxy in
+                ScrollView {
+                    dayContent
+                        // A new identity per day so changing days slides the old
+                        // day out and the new one in.
+                        .id(viewModel.selectedDay)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: slideEdge),
+                            removal: .move(edge: slideEdge == .trailing ? .leading : .trailing)
+                        ))
+                }
+                // Room below the last block so the + button never covers it.
+                .contentMargins(.bottom, 96, for: .scrollContent)
+                // Simultaneous so vertical scrolling is untouched; only a clearly
+                // horizontal drag changes the day.
+                .simultaneousGesture(daySwipe)
+                .clipped()
+                // A new import scrolls into view as it starts.
+                .onChange(of: viewModel.focusedSessionId) { _, id in
+                    guard let id else { return }
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        proxy.scrollTo(id, anchor: .top)
+                    }
+                }
             }
-            // Simultaneous so vertical scrolling is untouched; only a clearly
-            // horizontal drag changes the day.
-            .simultaneousGesture(daySwipe)
-            .clipped()
         }
         .background(Color("Background").ignoresSafeArea())
+        .overlay { FloatingActionScrim(isOpen: $isMenuOpen) }
+        .overlay(alignment: .bottomTrailing) {
+            FloatingActionMenu(
+                isOpen: $isMenuOpen,
+                isEnabled: viewModel.hasLoaded && !viewModel.isImporting,
+                onSelect: perform
+            )
+            .padding(20)
+        }
+        .fullScreenCover(isPresented: $isScanning) {
+            WhiteboardScannerView { capture in
+                withAnimation(.spring(duration: 0.35)) {
+                    viewModel.importWhiteboard(capture)
+                }
+            }
+        }
         .task {
             viewModel.loadWeek()
         }
@@ -64,7 +93,7 @@ struct AssistantView: View {
         .navigationDestination(for: AssistantBlockRoute.self) { route in
             // Reads the live session, so blocks pick up later changes (ids,
             // sets logged and saved) and show their completion in the dots.
-            BlockPagerView(viewModel: viewModel, startingAt: route.blockId)
+            BlockPagerView(viewModel: viewModel, sessionId: route.sessionId, startingAt: route.blockId)
         }
     }
 
@@ -76,15 +105,37 @@ struct AssistantView: View {
 
     @ViewBuilder
     private var dayContent: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 24) {
             if let error = viewModel.errorMessage {
                 Text(error)
                     .foregroundColor(Color("Error"))
             }
 
-            if let session = viewModel.session {
-                ForEach(session.blocks) { block in
-                    blockLink(block)
+            if let importError = viewModel.importError {
+                importErrorBanner(importError)
+            }
+
+            let sessions = viewModel.daySessions
+            if !sessions.isEmpty {
+                ForEach(sessions) { session in
+                    SessionSectionView(
+                        session: session,
+                        isExpanded: viewModel.isExpanded(session),
+                        onToggle: {
+                            withAnimation(.spring(duration: 0.35)) {
+                                viewModel.toggleExpanded(session)
+                            }
+                        }
+                    ) {
+                        VStack(alignment: .leading, spacing: 20) {
+                            ForEach(session.blocks) { block in
+                                blockLink(block, in: session)
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
+                            }
+                        }
+                    }
+                    .id(session.id)
+                    .animation(.easeOut(duration: 0.25), value: session.blocks.map(\.id))
                 }
             } else if viewModel.isLoading || (!viewModel.hasLoaded && viewModel.errorMessage == nil) {
                 placeholder(icon: nil, title: "Loading this week…", detail: nil)
@@ -98,6 +149,45 @@ struct AssistantView: View {
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Quick actions
+
+    private func perform(_ action: QuickAction) {
+        switch action {
+        case .importWhiteboard:
+            viewModel.dismissImportError()
+            isScanning = true
+        }
+    }
+
+    /// Why the last import failed, with a way to try again.
+    private func importErrorBanner(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(Color("Warning"))
+            VStack(alignment: .leading, spacing: 8) {
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundColor(Color("PrimaryText"))
+                Button("Try again") { perform(.importWhiteboard) }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(Color.brandPrimary)
+            }
+            Spacer(minLength: 0)
+            Button {
+                withAnimation { viewModel.dismissImportError() }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.bold))
+                    .foregroundColor(Color("SecondaryText"))
+            }
+            .accessibilityLabel("Dismiss")
+        }
+        .padding()
+        .background(Color("Warning").opacity(0.12))
+        .cornerRadius(14)
+        .transition(.opacity)
     }
 
     // MARK: - Day navigation
@@ -241,11 +331,11 @@ struct AssistantView: View {
 
     /// Wraps a block in a `NavigationLink` that opens the block pager on it
     /// (strength → the strength screen, HIIT → the Metcon screen); `.other`
-    /// blocks aren't tappable.
+    /// blocks, and blocks of a session still streaming in, aren't tappable.
     @ViewBuilder
-    private func blockLink(_ block: AssistantBlock) -> some View {
-        if block.isOpenable {
-            NavigationLink(value: AssistantBlockRoute(blockId: block.id)) {
+    private func blockLink(_ block: AssistantBlock, in session: AssistantSession) -> some View {
+        if block.isOpenable && !session.isPending {
+            NavigationLink(value: AssistantBlockRoute(sessionId: session.id, blockId: block.id)) {
                 blockView(block)
             }
             .buttonStyle(.plain)

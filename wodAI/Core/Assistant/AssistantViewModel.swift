@@ -2,16 +2,54 @@
 //  AssistantViewModel.swift
 //  wodAI
 //
-//  Assistant: the current week's sessions, one day at a time, laid out block
-//  by block — "Block A - …", "Block B - …" in session order. Strength blocks
-//  are written like a whiteboard; HIIT blocks reuse the feed's WOD card and
-//  open in `MetconView`.
+//  Assistant: the current week's sessions, one day at a time. A day can hold
+//  several sessions (the programmed one plus any whiteboard imports), each
+//  laid out block by block — "Block A - …", "Block B - …" in session order.
+//  Strength blocks are written like a whiteboard; HIIT blocks reuse the feed's
+//  WOD card and open in `MetconView`.
 //
 
 import Foundation
 import WodAiAPI
 
-struct AssistantSession {
+/// How a session got onto the calendar; labels its section.
+enum SessionSource: Equatable {
+    case generated
+    case planned
+    case imported
+    case whiteboard
+
+    init(_ value: GraphQLEnum<WorkoutSource>) {
+        switch value.value {
+        case .planned: self = .planned
+        case .imported: self = .imported
+        case .whiteboard: self = .whiteboard
+        // Generated, or a source this build doesn't know.
+        default: self = .generated
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .generated, .planned: return "Programmed"
+        case .imported: return "Imported"
+        case .whiteboard: return "Whiteboard"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .generated, .planned: return "sparkles"
+        case .imported: return "square.and.arrow.down"
+        case .whiteboard: return "camera.viewfinder"
+        }
+    }
+}
+
+struct AssistantSession: Identifiable {
+    /// The server's Workout id. A whiteboard import still being read has a
+    /// temporary "pending-…" id until the saved session replaces it.
+    var id: String = UUID().uuidString
     let name: String
     let description: String
     let stimulus: String?
@@ -19,6 +57,16 @@ struct AssistantSession {
     /// The day the session is programmed for; nil if the server's value didn't parse.
     let scheduledDate: Date?
     var blocks: [AssistantBlock]
+    var source: SessionSource = .generated
+    /// True while the session streams in. Its blocks aren't saved yet, so
+    /// they can't be opened.
+    var isPending = false
+
+    /// True once every block that can be opened is done.
+    var isCompleted: Bool {
+        let openable = blocks.filter(\.isOpenable)
+        return !openable.isEmpty && openable.allSatisfy(\.isCompleted)
+    }
 }
 
 struct AssistantBlock: Identifiable {
@@ -60,9 +108,17 @@ struct AssistantBlock: Identifiable {
     }
 }
 
-/// Opens the block pager on the block with session identity `blockId`.
+/// Opens the block pager on block `blockId` of session `sessionId`.
 struct AssistantBlockRoute: Hashable {
+    let sessionId: String
     let blockId: Int
+}
+
+/// A whiteboard photo ready to send: JPEG bytes plus what on-device text
+/// recognition read, which the server uses as a hint.
+struct WhiteboardCapture {
+    let jpeg: Data
+    let recognizedText: String
 }
 
 /// The strength data carried to `StrengthWorkoutView`, decoupled from the
@@ -126,9 +182,10 @@ enum AssistantFormatting {
 
 @MainActor
 final class AssistantViewModel: ObservableObject {
-    /// This week's sessions, keyed by local start-of-day. Days with nothing
+    /// This week's sessions, keyed by local start-of-day, in the order the
+    /// server lists them (imports added later go last). Days with nothing
     /// scheduled have no entry.
-    @Published private(set) var sessions: [Date: AssistantSession]
+    @Published private(set) var sessions: [Date: [AssistantSession]]
     /// The day being shown. Always a day of `week`.
     @Published private(set) var selectedDay: Date
     @Published private(set) var isLoading = false
@@ -136,27 +193,79 @@ final class AssistantViewModel: ObservableObject {
     /// True once the week has come back, found or not. Lets the view tell
     /// "still looking" apart from "nothing scheduled".
     @Published private(set) var hasLoaded = false
+    /// True while a whiteboard import streams in. One at a time.
+    @Published private(set) var isImporting = false
+    /// Why the last whiteboard import failed, until the next one starts.
+    @Published private(set) var importError: String?
+    /// A session the page should scroll to (a new import).
+    @Published private(set) var focusedSessionId: String?
+    /// Sections the athlete opened or closed, by session id. Others follow
+    /// `isExpanded`'s defaults.
+    @Published private var expansion: [String: Bool] = [:]
 
     let week: AssistantWeek
     private let network = Network.shared
+    /// Starts a whiteboard import on the server. Swapped out in tests.
+    var whiteboardEvents: (WhiteboardImportInput) -> AsyncThrowingStream<GenerationEvent, Error> = {
+        // Reading the photo comes before the first event, so allow longer.
+        WorkoutGenerationStream(stallTimeout: 90).whiteboardEvents($0)
+    }
+    /// Only touched on the main actor, except to cancel it in `deinit`.
+    nonisolated(unsafe) private var importTask: Task<Void, Never>?
 
-    init(week: AssistantWeek = AssistantWeek(), sessions: [Date: AssistantSession] = [:]) {
+    init(week: AssistantWeek = AssistantWeek(), sessions: [Date: [AssistantSession]] = [:]) {
         self.week = week
         self.sessions = sessions
         self.selectedDay = week.today
         self.hasLoaded = !sessions.isEmpty
     }
 
+    /// Leaving the page stops an import in progress, which unsubscribes and
+    /// stops the server reading.
+    deinit {
+        importTask?.cancel()
+    }
+
     /// Seeds `session` as today's (previews and tests).
     convenience init(session: AssistantSession) {
         let week = AssistantWeek()
-        self.init(week: week, sessions: [week.today: session])
+        self.init(week: week, sessions: [week.today: [session]])
     }
 
-    /// The selected day's session, or nil when nothing is scheduled.
-    var session: AssistantSession? { sessions[selectedDay] }
+    /// The selected day's sessions; empty when nothing is scheduled.
+    var daySessions: [AssistantSession] { sessions[selectedDay] ?? [] }
 
-    func hasSession(on day: Date) -> Bool { sessions[day] != nil }
+    /// The selected day's session with this id.
+    func session(id: String) -> AssistantSession? {
+        daySessions.first { $0.id == id }
+    }
+
+    func hasSession(on day: Date) -> Bool { !(sessions[day]?.isEmpty ?? true) }
+
+    // MARK: - Expand / collapse
+
+    /// Whether a session's section shows its blocks. Until the athlete
+    /// toggles it: a day's only session is open; with several, the first one
+    /// not yet completed is open and the rest are closed, so the day reads as
+    /// a short list.
+    func isExpanded(_ session: AssistantSession) -> Bool {
+        if let chosen = expansion[session.id] { return chosen }
+        let day = daySessions
+        guard day.count > 1 else { return true }
+        return day.first(where: { !$0.isCompleted })?.id == session.id
+    }
+
+    func toggleExpanded(_ session: AssistantSession) {
+        expansion[session.id] = !isExpanded(session)
+    }
+
+    /// Opens one session on `day` and closes the rest.
+    private func expandOnly(_ id: String, on day: Date) {
+        for session in sessions[day] ?? [] {
+            expansion[session.id] = session.id == id
+        }
+        expansion[id] = true
+    }
 
     // MARK: - Navigation (clamped to this week)
 
@@ -212,13 +321,11 @@ final class AssistantViewModel: ObservableObject {
                         self.errorMessage = errors.first?.message ?? "Unable to load this week's workouts."
                         return
                     }
-                    var sessions: [Date: AssistantSession] = [:]
-                    // Ordered by scheduledDate, so with two on one day the
-                    // later one in the list wins.
+                    var sessions: [Date: [AssistantSession]] = [:]
                     for workout in graphQLResult.data?.getWorkoutsByDateRange ?? [] {
                         let details = workout.fragments.sessionDetails
                         guard let day = week.localDay(fromServer: details.scheduledDate), week.contains(day) else { continue }
-                        sessions[day] = Self.session(from: details)
+                        sessions[day, default: []].append(Self.session(from: details))
                     }
                     self.sessions = sessions
                     self.hasLoaded = true
@@ -230,44 +337,155 @@ final class AssistantViewModel: ObservableObject {
         }
     }
 
-    /// The current copy of the strength block with session identity `id`.
-    func strengthWorkout(id: Int) -> StrengthWorkout? {
-        for block in session?.blocks ?? [] {
+    /// The current copy of strength block `id` in session `sessionId`.
+    func strengthWorkout(sessionId: String, id: Int) -> StrengthWorkout? {
+        for block in session(id: sessionId)?.blocks ?? [] {
             if case let .strength(workout) = block.kind, workout.id == id { return workout }
         }
         return nil
     }
 
-    /// The selected day's blocks that the pager can show, in session order.
-    var openableBlocks: [AssistantBlock] {
-        session?.blocks.filter(\.isOpenable) ?? []
+    /// A session's blocks that the pager can show, in session order. None
+    /// while the session is still streaming in.
+    func openableBlocks(in sessionId: String) -> [AssistantBlock] {
+        guard let session = session(id: sessionId), !session.isPending else { return [] }
+        return session.blocks.filter(\.isOpenable)
     }
 
     /// Marks a HIIT block done after its result is saved in the pager.
-    func markHiitCompleted(blockId: Int) {
-        let day = selectedDay
-        guard var session = sessions[day],
-              let index = session.blocks.firstIndex(where: { $0.id == blockId }),
-              case .hiit = session.blocks[index].kind
-        else { return }
-        session.blocks[index].hiitCompleted = true
-        sessions[day] = session
+    func markHiitCompleted(sessionId: String, blockId: Int) {
+        updateSession(sessionId) { session in
+            guard let index = session.blocks.firstIndex(where: { $0.id == blockId }),
+                  case .hiit = session.blocks[index].kind
+            else { return }
+            session.blocks[index].hiitCompleted = true
+        }
     }
 
     /// Takes a strength block's latest set results (after a save in
     /// StrengthWorkoutView), so reopening the block shows what was logged.
     /// Applies to the selected day: the strength screen is pushed from it,
     /// and swiping is behind that screen.
-    func updateStrength(_ workout: StrengthWorkout) {
+    func updateStrength(_ workout: StrengthWorkout, sessionId: String) {
+        updateSession(sessionId) { session in
+            guard let index = session.blocks.firstIndex(where: {
+                if case let .strength(existing) = $0.kind { return existing.id == workout.id }
+                return false
+            }) else { return }
+            session.blocks[index].kind = .strength(workout)
+        }
+    }
+
+    /// Edits the selected day's session with this id in place.
+    private func updateSession(_ id: String, _ change: (inout AssistantSession) -> Void) {
         let day = selectedDay
-        guard var session = sessions[day],
-              let index = session.blocks.firstIndex(where: {
-                  if case let .strength(existing) = $0.kind { return existing.id == workout.id }
-                  return false
-              })
-        else { return }
-        session.blocks[index].kind = .strength(workout)
-        sessions[day] = session
+        guard var list = sessions[day], let index = list.firstIndex(where: { $0.id == id }) else { return }
+        change(&list[index])
+        sessions[day] = list
+    }
+
+    // MARK: - Whiteboard import
+
+    /// Reads a whiteboard photo into a new session on the selected day. The
+    /// session appears at once as a placeholder, fills in block by block as
+    /// the server reads the board, then becomes the saved session. On failure
+    /// the placeholder goes away and `importError` says why.
+    func importWhiteboard(_ capture: WhiteboardCapture) {
+        guard importTask == nil else { return }
+        let day = selectedDay
+        let pendingId = "pending-\(UUID().uuidString)"
+
+        importError = nil
+        isImporting = true
+        sessions[day, default: []].append(Self.pendingSession(id: pendingId, day: day))
+        expandOnly(pendingId, on: day)
+        focusedSessionId = pendingId
+
+        let text = capture.recognizedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let input = WhiteboardImportInput(
+            imageJpegBase64: capture.jpeg.base64EncodedString(),
+            recognizedText: text.isEmpty ? nil : .some(text),
+            scheduledDate: week.calendarDate(for: day)
+        )
+        let events = whiteboardEvents(input)
+
+        importTask = Task { [weak self] in
+            // The session's id: the placeholder's, then the saved one's.
+            var currentId = pendingId
+            var progress = GenerationProgress(scheduledDate: day)
+            do {
+                for try await event in events {
+                    progress.apply(event)
+                    guard let self, var session = progress.session else { continue }
+                    if progress.isComplete {
+                        session.source = .whiteboard
+                    } else {
+                        session.id = currentId
+                        session.source = .whiteboard
+                        session.isPending = true
+                    }
+                    self.replaceSession(currentId, with: session, on: day)
+                    currentId = session.id
+                }
+                guard let self else { return }
+                if !progress.isComplete {
+                    // A cancelled task ends the loop rather than throwing.
+                    self.failImport(currentId, on: day, message: Task.isCancelled
+                        ? nil
+                        : "The whiteboard import stopped early. Please try again.")
+                }
+            } catch {
+                guard let self else { return }
+                // Cancelled means the page went away; nothing to tell anyone.
+                self.failImport(currentId, on: day, message: error is CancellationError ? nil : error.localizedDescription)
+            }
+            self?.isImporting = false
+            self?.importTask = nil
+        }
+    }
+
+    /// Stops an import in progress; its placeholder is removed.
+    func cancelImport() {
+        importTask?.cancel()
+    }
+
+    func dismissImportError() {
+        importError = nil
+    }
+
+    /// Swaps session `id` on `day` for `session`, keeping its place and
+    /// whether it's open (the saved session arrives with a new id).
+    private func replaceSession(_ id: String, with session: AssistantSession, on day: Date) {
+        guard var list = sessions[day], let index = list.firstIndex(where: { $0.id == id }) else { return }
+        list[index] = session
+        sessions[day] = list
+        if session.id != id {
+            expansion[session.id] = expansion.removeValue(forKey: id)
+            if focusedSessionId == id { focusedSessionId = session.id }
+        }
+    }
+
+    private func failImport(_ id: String, on day: Date, message: String?) {
+        sessions[day]?.removeAll { $0.id == id && $0.isPending }
+        if sessions[day]?.isEmpty == true { sessions[day] = nil }
+        expansion[id] = nil
+        if focusedSessionId == id { focusedSessionId = nil }
+        importError = message
+    }
+
+    /// What shows before the server has read the board's title.
+    private static func pendingSession(id: String, day: Date) -> AssistantSession {
+        AssistantSession(
+            id: id,
+            name: "Reading whiteboard…",
+            description: "",
+            stimulus: nil,
+            coaching: nil,
+            scheduledDate: day,
+            blocks: [],
+            source: .whiteboard,
+            isPending: true
+        )
     }
 
     // MARK: - Mapping
@@ -337,13 +555,15 @@ final class AssistantViewModel: ObservableObject {
             }
 
         return AssistantSession(
+            id: workout.id,
             name: workout.name,
             description: workout.description,
             stimulus: workout.stimulus,
             coaching: workout.coaching,
             // The local calendar day, not the raw UTC-midnight instant.
             scheduledDate: AssistantWeek().localDay(fromServer: workout.scheduledDate),
-            blocks: blocks
+            blocks: blocks,
+            source: SessionSource(workout.source)
         )
     }
 

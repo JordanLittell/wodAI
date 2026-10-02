@@ -97,12 +97,12 @@ struct AssistantViewModelWeekTests {
 
     @Test func eachDayShowsItsOwnSession() {
         let week = AssistantWeek()
-        let viewModel = AssistantViewModel(week: week, sessions: [week.first: session("Day one")])
+        let viewModel = AssistantViewModel(week: week, sessions: [week.first: [session("Day one")]])
 
         viewModel.select(week.first)
-        #expect(viewModel.session?.name == "Day one")
+        #expect(viewModel.daySessions.map(\.name) == ["Day one"])
         viewModel.goForward()
-        #expect(viewModel.session == nil)
+        #expect(viewModel.daySessions.isEmpty)
         #expect(viewModel.hasSession(on: week.first))
     }
 
@@ -126,15 +126,16 @@ struct AssistantViewModelWeekTests {
         let week = AssistantWeek()
         let squat = StrengthComponent(order: 0, reps: 5, weight: 225, rpe: nil, exercise: ExerciseName(name: "Back Squat"), id: 7)
         let block = StrengthWorkout(id: 0, name: "Squat", instructions: "", components: [squat], serverId: 3)
-        let viewModel = AssistantViewModel(week: week, sessions: [week.first: session("Day one", strength: block)])
+        let day = session("Day one", strength: block)
+        let viewModel = AssistantViewModel(week: week, sessions: [week.first: [day]])
         viewModel.select(week.first)
 
         var logged = block
         logged.components[0].completed = CompletedSet(weightUsed: 230, reps: 5)
-        viewModel.updateStrength(logged)
+        viewModel.updateStrength(logged, sessionId: day.id)
         viewModel.goForward()
         viewModel.goBack()
 
-        #expect(viewModel.strengthWorkout(id: 0)?.components[0].completed == CompletedSet(weightUsed: 230, reps: 5))
+        #expect(viewModel.strengthWorkout(sessionId: day.id, id: 0)?.components[0].completed == CompletedSet(weightUsed: 230, reps: 5))
     }
 }

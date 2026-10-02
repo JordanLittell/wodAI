@@ -74,20 +74,21 @@ struct BlockPagerTests {
 
     @Test func pagerSkipsBlocksThatCantOpen() {
         let viewModel = viewModelWithBlocks()
-        #expect(viewModel.openableBlocks.map(\.id) == [0, 2])
+        #expect(viewModel.openableBlocks(in: sessionId).map(\.id) == [0, 2])
     }
 
     @Test func savingAHiitResultCompletesOnlyThatBlock() {
         let viewModel = viewModelWithBlocks()
-        #expect(!(viewModel.session?.blocks[2].isCompleted ?? true))
+        let blocks = { viewModel.session(id: sessionId)?.blocks ?? [] }
+        #expect(!blocks()[2].isCompleted)
 
-        viewModel.markHiitCompleted(blockId: 2)
-        #expect(viewModel.session?.blocks[2].isCompleted == true)
-        #expect(viewModel.session?.blocks[0].isCompleted == false)
+        viewModel.markHiitCompleted(sessionId: sessionId, blockId: 2)
+        #expect(blocks()[2].isCompleted)
+        #expect(!blocks()[0].isCompleted)
 
         // Not a HIIT block: ignored.
-        viewModel.markHiitCompleted(blockId: 0)
-        #expect(viewModel.session?.blocks[0].isCompleted == false)
+        viewModel.markHiitCompleted(sessionId: sessionId, blockId: 0)
+        #expect(!blocks()[0].isCompleted)
     }
 
     // MARK: - Server completion
@@ -120,13 +121,15 @@ struct BlockPagerTests {
         return try SessionDetails(data: [
             "__typename": "Workout", "id": "w1", "name": "Day", "description": "",
             "stimulus": NSNull(), "coaching": NSNull(), "scheduledDate": "2026-10-05",
-            "blocks": blocks,
+            "source": "GENERATED", "blocks": blocks,
         ])
     }
 
+    private let sessionId = "w1"
+
     private func viewModelWithBlocks() -> AssistantViewModel {
         AssistantViewModel(session: AssistantSession(
-            name: "Day", description: "", stimulus: nil, coaching: nil, scheduledDate: nil,
+            id: sessionId, name: "Day", description: "", stimulus: nil, coaching: nil, scheduledDate: nil,
             blocks: blocks
         ))
     }

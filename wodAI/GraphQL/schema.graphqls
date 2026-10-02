@@ -92,6 +92,7 @@ type Workout {
   scheduledDate: DateTime!
   completed: Boolean!
   completedAt: DateTime
+  source: WorkoutSource!
   components: [Component!]!
   strengthWorkouts: [StrengthWorkout!]!
   hiitPieces: [WorkoutHiitPiece!]!
@@ -141,6 +142,13 @@ type WorkoutHiitPiece implements WorkoutBlock {
   order: Int!
   hiitWorkout: HIITWorkout!
   completion: CompletedHIITWorkout
+}
+
+enum WorkoutSource {
+  GENERATED
+  PLANNED
+  IMPORTED
+  WHITEBOARD
 }
 
 enum WorkoutPieceType {
@@ -420,9 +428,16 @@ type Subscription {
   agentResponse(wodId: String!): AgentResponse!
   workoutGeneration: WorkoutGenerationEvent!
   weeklyPlanGeneration(timezone: String!): WeeklyPlanGenerationEvent!
+  whiteboardImport(input: WhiteboardImportInput!): WorkoutGenerationEvent!
 }
 
-union WorkoutGenerationEvent = GenerationSession | GenerationStrengthBlock | GenerationStrengthSet | GenerationHiitBlock | GenerationComplete | GenerationFailed
+input WhiteboardImportInput {
+  imageJpegBase64: String!
+  recognizedText: String
+  scheduledDate: String!
+}
+
+union WorkoutGenerationEvent = GenerationSession | GenerationStrengthBlock | GenerationStrengthSet | GenerationHiitBlock | GenerationDraftHiitBlock | GenerationComplete | GenerationFailed
 
 type GenerationSession {
   name: String!
@@ -450,6 +465,14 @@ type GenerationStrengthSet {
 type GenerationHiitBlock {
   order: Int!
   hiitWorkout: HIITWorkout!
+}
+
+type GenerationDraftHiitBlock {
+  order: Int!
+  name: String!
+  format: String!
+  displayText: String!
+  stimulus: String!
 }
 
 type GenerationComplete {

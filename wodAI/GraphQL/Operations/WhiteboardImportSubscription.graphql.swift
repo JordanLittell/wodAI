@@ -4,16 +4,22 @@
 @_exported import ApolloAPI
 import WodAiAPI
 
-public class WorkoutGenerationSubscription: GraphQLSubscription {
-  public static let operationName: String = "WorkoutGeneration"
+public class WhiteboardImportSubscription: GraphQLSubscription {
+  public static let operationName: String = "WhiteboardImport"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "139c5023655700e90abe3836c3bfc8ccfb5e269dd203c3bc66e214036495db40",
+    operationIdentifier: "ecca2f006c82b6e8696a60c34ba494f75f4aeb1e9def18ee18df89df298a9af6",
     definition: .init(
-      #"subscription WorkoutGeneration { workoutGeneration { __typename ... on GenerationSession { name description stimulus } ... on GenerationStrengthBlock { order name instructions } ... on GenerationStrengthSet { order setOrder reps weight rpe exercise { __typename name muscleGroups } } ... on GenerationHiitBlock { order hiitWorkout { __typename ...GeneratedHiitWorkout } } ... on GenerationComplete { workout { __typename ...SessionDetails } } ... on GenerationFailed { message } } }"#,
-      fragments: [GeneratedHiitWorkout.self, SessionDetails.self]
+      #"subscription WhiteboardImport($input: WhiteboardImportInput!) { whiteboardImport(input: $input) { __typename ... on GenerationSession { name description stimulus } ... on GenerationStrengthBlock { order name instructions } ... on GenerationStrengthSet { order setOrder reps weight rpe exercise { __typename name muscleGroups } } ... on GenerationDraftHiitBlock { order name format displayText stimulus } ... on GenerationComplete { workout { __typename ...SessionDetails } } ... on GenerationFailed { message } } }"#,
+      fragments: [SessionDetails.self]
     ))
 
-  public init() {}
+  public var input: WodAiAPI.WhiteboardImportInput
+
+  public init(input: WodAiAPI.WhiteboardImportInput) {
+    self.input = input
+  }
+
+  public var __variables: Variables? { ["input": input] }
 
   public struct Data: WodAiAPI.SelectionSet {
     public let __data: DataDict
@@ -21,15 +27,15 @@ public class WorkoutGenerationSubscription: GraphQLSubscription {
 
     public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.Subscription }
     public static var __selections: [ApolloAPI.Selection] { [
-      .field("workoutGeneration", WorkoutGeneration.self),
+      .field("whiteboardImport", WhiteboardImport.self, arguments: ["input": .variable("input")]),
     ] }
 
-    public var workoutGeneration: WorkoutGeneration { __data["workoutGeneration"] }
+    public var whiteboardImport: WhiteboardImport { __data["whiteboardImport"] }
 
-    /// WorkoutGeneration
+    /// WhiteboardImport
     ///
     /// Parent Type: `WorkoutGenerationEvent`
-    public struct WorkoutGeneration: WodAiAPI.SelectionSet {
+    public struct WhiteboardImport: WodAiAPI.SelectionSet {
       public let __data: DataDict
       public init(_dataDict: DataDict) { __data = _dataDict }
 
@@ -39,7 +45,7 @@ public class WorkoutGenerationSubscription: GraphQLSubscription {
         .inlineFragment(AsGenerationSession.self),
         .inlineFragment(AsGenerationStrengthBlock.self),
         .inlineFragment(AsGenerationStrengthSet.self),
-        .inlineFragment(AsGenerationHiitBlock.self),
+        .inlineFragment(AsGenerationDraftHiitBlock.self),
         .inlineFragment(AsGenerationComplete.self),
         .inlineFragment(AsGenerationFailed.self),
       ] }
@@ -47,18 +53,18 @@ public class WorkoutGenerationSubscription: GraphQLSubscription {
       public var asGenerationSession: AsGenerationSession? { _asInlineFragment() }
       public var asGenerationStrengthBlock: AsGenerationStrengthBlock? { _asInlineFragment() }
       public var asGenerationStrengthSet: AsGenerationStrengthSet? { _asInlineFragment() }
-      public var asGenerationHiitBlock: AsGenerationHiitBlock? { _asInlineFragment() }
+      public var asGenerationDraftHiitBlock: AsGenerationDraftHiitBlock? { _asInlineFragment() }
       public var asGenerationComplete: AsGenerationComplete? { _asInlineFragment() }
       public var asGenerationFailed: AsGenerationFailed? { _asInlineFragment() }
 
-      /// WorkoutGeneration.AsGenerationSession
+      /// WhiteboardImport.AsGenerationSession
       ///
       /// Parent Type: `GenerationSession`
       public struct AsGenerationSession: WodAiAPI.InlineFragment {
         public let __data: DataDict
         public init(_dataDict: DataDict) { __data = _dataDict }
 
-        public typealias RootEntityType = WorkoutGenerationSubscription.Data.WorkoutGeneration
+        public typealias RootEntityType = WhiteboardImportSubscription.Data.WhiteboardImport
         public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.GenerationSession }
         public static var __selections: [ApolloAPI.Selection] { [
           .field("name", String.self),
@@ -71,14 +77,14 @@ public class WorkoutGenerationSubscription: GraphQLSubscription {
         public var stimulus: String { __data["stimulus"] }
       }
 
-      /// WorkoutGeneration.AsGenerationStrengthBlock
+      /// WhiteboardImport.AsGenerationStrengthBlock
       ///
       /// Parent Type: `GenerationStrengthBlock`
       public struct AsGenerationStrengthBlock: WodAiAPI.InlineFragment {
         public let __data: DataDict
         public init(_dataDict: DataDict) { __data = _dataDict }
 
-        public typealias RootEntityType = WorkoutGenerationSubscription.Data.WorkoutGeneration
+        public typealias RootEntityType = WhiteboardImportSubscription.Data.WhiteboardImport
         public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.GenerationStrengthBlock }
         public static var __selections: [ApolloAPI.Selection] { [
           .field("order", Int.self),
@@ -91,14 +97,14 @@ public class WorkoutGenerationSubscription: GraphQLSubscription {
         public var instructions: String { __data["instructions"] }
       }
 
-      /// WorkoutGeneration.AsGenerationStrengthSet
+      /// WhiteboardImport.AsGenerationStrengthSet
       ///
       /// Parent Type: `GenerationStrengthSet`
       public struct AsGenerationStrengthSet: WodAiAPI.InlineFragment {
         public let __data: DataDict
         public init(_dataDict: DataDict) { __data = _dataDict }
 
-        public typealias RootEntityType = WorkoutGenerationSubscription.Data.WorkoutGeneration
+        public typealias RootEntityType = WhiteboardImportSubscription.Data.WhiteboardImport
         public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.GenerationStrengthSet }
         public static var __selections: [ApolloAPI.Selection] { [
           .field("order", Int.self),
@@ -116,7 +122,7 @@ public class WorkoutGenerationSubscription: GraphQLSubscription {
         public var rpe: Int? { __data["rpe"] }
         public var exercise: Exercise { __data["exercise"] }
 
-        /// WorkoutGeneration.AsGenerationStrengthSet.Exercise
+        /// WhiteboardImport.AsGenerationStrengthSet.Exercise
         ///
         /// Parent Type: `HIITExercise`
         public struct Exercise: WodAiAPI.SelectionSet {
@@ -135,65 +141,38 @@ public class WorkoutGenerationSubscription: GraphQLSubscription {
         }
       }
 
-      /// WorkoutGeneration.AsGenerationHiitBlock
+      /// WhiteboardImport.AsGenerationDraftHiitBlock
       ///
-      /// Parent Type: `GenerationHiitBlock`
-      public struct AsGenerationHiitBlock: WodAiAPI.InlineFragment {
+      /// Parent Type: `GenerationDraftHiitBlock`
+      public struct AsGenerationDraftHiitBlock: WodAiAPI.InlineFragment {
         public let __data: DataDict
         public init(_dataDict: DataDict) { __data = _dataDict }
 
-        public typealias RootEntityType = WorkoutGenerationSubscription.Data.WorkoutGeneration
-        public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.GenerationHiitBlock }
+        public typealias RootEntityType = WhiteboardImportSubscription.Data.WhiteboardImport
+        public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.GenerationDraftHiitBlock }
         public static var __selections: [ApolloAPI.Selection] { [
           .field("order", Int.self),
-          .field("hiitWorkout", HiitWorkout.self),
+          .field("name", String.self),
+          .field("format", String.self),
+          .field("displayText", String.self),
+          .field("stimulus", String.self),
         ] }
 
         public var order: Int { __data["order"] }
-        public var hiitWorkout: HiitWorkout { __data["hiitWorkout"] }
-
-        /// WorkoutGeneration.AsGenerationHiitBlock.HiitWorkout
-        ///
-        /// Parent Type: `HIITWorkout`
-        public struct HiitWorkout: WodAiAPI.SelectionSet {
-          public let __data: DataDict
-          public init(_dataDict: DataDict) { __data = _dataDict }
-
-          public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.HIITWorkout }
-          public static var __selections: [ApolloAPI.Selection] { [
-            .field("__typename", String.self),
-            .fragment(GeneratedHiitWorkout.self),
-          ] }
-
-          public var id: Int { __data["id"] }
-          public var name: String? { __data["name"] }
-          public var format: String? { __data["format"] }
-          public var stimulus: String { __data["stimulus"] }
-          public var displayText: String { __data["displayText"] }
-          public var constraintType: String { __data["constraintType"] }
-          public var constraintMagnitude: Int { __data["constraintMagnitude"] }
-          public var timeCap: Int? { __data["timeCap"] }
-          public var timingScheme: TimingScheme? { __data["timingScheme"] }
-
-          public struct Fragments: FragmentContainer {
-            public let __data: DataDict
-            public init(_dataDict: DataDict) { __data = _dataDict }
-
-            public var generatedHiitWorkout: GeneratedHiitWorkout { _toFragment() }
-          }
-
-          public typealias TimingScheme = GeneratedHiitWorkout.TimingScheme
-        }
+        public var name: String { __data["name"] }
+        public var format: String { __data["format"] }
+        public var displayText: String { __data["displayText"] }
+        public var stimulus: String { __data["stimulus"] }
       }
 
-      /// WorkoutGeneration.AsGenerationComplete
+      /// WhiteboardImport.AsGenerationComplete
       ///
       /// Parent Type: `GenerationComplete`
       public struct AsGenerationComplete: WodAiAPI.InlineFragment {
         public let __data: DataDict
         public init(_dataDict: DataDict) { __data = _dataDict }
 
-        public typealias RootEntityType = WorkoutGenerationSubscription.Data.WorkoutGeneration
+        public typealias RootEntityType = WhiteboardImportSubscription.Data.WhiteboardImport
         public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.GenerationComplete }
         public static var __selections: [ApolloAPI.Selection] { [
           .field("workout", Workout.self),
@@ -201,7 +180,7 @@ public class WorkoutGenerationSubscription: GraphQLSubscription {
 
         public var workout: Workout { __data["workout"] }
 
-        /// WorkoutGeneration.AsGenerationComplete.Workout
+        /// WhiteboardImport.AsGenerationComplete.Workout
         ///
         /// Parent Type: `Workout`
         public struct Workout: WodAiAPI.SelectionSet {
@@ -234,14 +213,14 @@ public class WorkoutGenerationSubscription: GraphQLSubscription {
         }
       }
 
-      /// WorkoutGeneration.AsGenerationFailed
+      /// WhiteboardImport.AsGenerationFailed
       ///
       /// Parent Type: `GenerationFailed`
       public struct AsGenerationFailed: WodAiAPI.InlineFragment {
         public let __data: DataDict
         public init(_dataDict: DataDict) { __data = _dataDict }
 
-        public typealias RootEntityType = WorkoutGenerationSubscription.Data.WorkoutGeneration
+        public typealias RootEntityType = WhiteboardImportSubscription.Data.WhiteboardImport
         public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.GenerationFailed }
         public static var __selections: [ApolloAPI.Selection] { [
           .field("message", String.self),

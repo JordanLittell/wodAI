@@ -3,8 +3,8 @@
 //  wodAI
 //
 //  Opened by tapping a block on the Assistant page: one block at a time, as
-//  its full strength or HIIT screen, with a row of dots for the session's
-//  blocks. Swipe left for the next block, right for the previous one. Once a
+//  its full strength or HIIT screen, with a row of dots for that session's
+//  blocks (other sessions on the same day aren't included). Swipe left for the next block, right for the previous one. Once a
 //  block is finished (last set logged, or a HIIT result saved) it moves on
 //  to the next by itself.
 //
@@ -41,6 +41,7 @@ enum BlockNavigation {
 
 struct BlockPagerView: View {
     @ObservedObject var viewModel: AssistantViewModel
+    let sessionId: String
     @State private var currentId: Int
     /// Where the incoming block slides in from: trailing when moving forward.
     @State private var slideEdge: Edge = .trailing
@@ -49,12 +50,13 @@ struct BlockPagerView: View {
     /// last check mark (or the dismissing result screen) is seen.
     private static let autoAdvanceDelay: TimeInterval = 0.8
 
-    init(viewModel: AssistantViewModel, startingAt blockId: Int) {
+    init(viewModel: AssistantViewModel, sessionId: String, startingAt blockId: Int) {
         self.viewModel = viewModel
+        self.sessionId = sessionId
         self._currentId = State(initialValue: blockId)
     }
 
-    private var blocks: [AssistantBlock] { viewModel.openableBlocks }
+    private var blocks: [AssistantBlock] { viewModel.openableBlocks(in: sessionId) }
 
     private var currentBlock: AssistantBlock? {
         blocks.first { $0.id == currentId }
@@ -97,7 +99,7 @@ struct BlockPagerView: View {
         case let .strength(workout):
             StrengthWorkoutView(
                 workout: workout,
-                onChange: viewModel.updateStrength,
+                onChange: { viewModel.updateStrength($0, sessionId: sessionId) },
                 onFinished: { advance(after: block.id) }
             )
         case let .hiit(workout):
@@ -105,7 +107,7 @@ struct BlockPagerView: View {
                 preloaded: workout,
                 pieceId: block.hiitPieceId,
                 onCompleted: {
-                    viewModel.markHiitCompleted(blockId: block.id)
+                    viewModel.markHiitCompleted(sessionId: sessionId, blockId: block.id)
                     advance(after: block.id)
                 }
             )
@@ -198,6 +200,6 @@ private struct BlockDots: View {
 #Preview {
     let viewModel = AssistantViewModel.preview()
     return NavigationStack {
-        BlockPagerView(viewModel: viewModel, startingAt: 0)
+        BlockPagerView(viewModel: viewModel, sessionId: viewModel.daySessions[0].id, startingAt: 0)
     }
 }

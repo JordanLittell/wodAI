@@ -6,7 +6,7 @@ import WodAiAPI
 
 public struct SessionDetails: WodAiAPI.SelectionSet, Fragment {
   public static var fragmentDefinition: StaticString {
-    #"fragment SessionDetails on Workout { __typename id name description stimulus coaching scheduledDate blocks { __typename order ... on StrengthWorkout { id name stimulus instructions components { __typename id order reps weight rpe completedAt completedReps completedWeight completedRpe exercise { __typename name muscleGroups } } } ... on WorkoutHiitPiece { id completion { __typename id completedAt } hiitWorkout { __typename id name format stimulus displayText constraintType constraintMagnitude timeCap timingScheme { __typename version segments { __typename rounds phases { __typename durationSeconds direction label } } phases { __typename durationSeconds direction label } } } } } }"#
+    #"fragment SessionDetails on Workout { __typename id name description stimulus coaching scheduledDate source blocks { __typename order ... on StrengthWorkout { id name stimulus instructions components { __typename id order reps weight rpe completedAt completedReps completedWeight completedRpe exercise { __typename name muscleGroups } } } ... on WorkoutHiitPiece { id completion { __typename id completedAt } hiitWorkout { __typename id name format stimulus displayText constraintType constraintMagnitude timeCap timingScheme { __typename version segments { __typename rounds phases { __typename durationSeconds direction label } } phases { __typename durationSeconds direction label } } } } } }"#
   }
 
   public let __data: DataDict
@@ -21,6 +21,7 @@ public struct SessionDetails: WodAiAPI.SelectionSet, Fragment {
     .field("stimulus", String?.self),
     .field("coaching", String?.self),
     .field("scheduledDate", WodAiAPI.DateTime.self),
+    .field("source", GraphQLEnum<WodAiAPI.WorkoutSource>.self),
     .field("blocks", [Block].self),
   ] }
 
@@ -30,6 +31,7 @@ public struct SessionDetails: WodAiAPI.SelectionSet, Fragment {
   public var stimulus: String? { __data["stimulus"] }
   public var coaching: String? { __data["coaching"] }
   public var scheduledDate: WodAiAPI.DateTime { __data["scheduledDate"] }
+  public var source: GraphQLEnum<WodAiAPI.WorkoutSource> { __data["source"] }
   public var blocks: [Block] { __data["blocks"] }
 
   /// Block

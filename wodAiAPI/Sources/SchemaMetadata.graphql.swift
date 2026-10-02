@@ -28,6 +28,7 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "Component": return WodAiAPI.Objects.Component
     case "Equipment": return WodAiAPI.Objects.Equipment
     case "GenerationComplete": return WodAiAPI.Objects.GenerationComplete
+    case "GenerationDraftHiitBlock": return WodAiAPI.Objects.GenerationDraftHiitBlock
     case "GenerationFailed": return WodAiAPI.Objects.GenerationFailed
     case "GenerationHiitBlock": return WodAiAPI.Objects.GenerationHiitBlock
     case "GenerationSession": return WodAiAPI.Objects.GenerationSession

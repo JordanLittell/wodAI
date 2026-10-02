@@ -65,4 +65,11 @@ struct AssistantWeek: Equatable {
         let parts = calendar.dateComponents([.year, .month, .day], from: day)
         return String(format: "%04d-%02d-%02dT12:00:00.000Z", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
+
+    /// A local day as the athlete's calendar date, "YYYY-MM-DD", for
+    /// arguments the server stores as-is.
+    func calendarDate(for day: Date) -> String {
+        let parts = calendar.dateComponents([.year, .month, .day], from: day)
+        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    }
 }

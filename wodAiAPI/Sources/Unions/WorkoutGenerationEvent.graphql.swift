@@ -11,6 +11,7 @@ public extension Unions {
       Objects.GenerationStrengthBlock.self,
       Objects.GenerationStrengthSet.self,
       Objects.GenerationHiitBlock.self,
+      Objects.GenerationDraftHiitBlock.self,
       Objects.GenerationComplete.self,
       Objects.GenerationFailed.self
     ]
