@@ -34,6 +34,7 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "GenerationSession": return WodAiAPI.Objects.GenerationSession
     case "GenerationStrengthBlock": return WodAiAPI.Objects.GenerationStrengthBlock
     case "GenerationStrengthSet": return WodAiAPI.Objects.GenerationStrengthSet
+    case "GymPreset": return WodAiAPI.Objects.GymPreset
     case "GymProfile": return WodAiAPI.Objects.GymProfile
     case "HIITExercise": return WodAiAPI.Objects.HIITExercise
     case "HIITPaginatedResponse": return WodAiAPI.Objects.HIITPaginatedResponse
@@ -41,12 +42,16 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "HIITWorkout": return WodAiAPI.Objects.HIITWorkout
     case "HeartRateSummary": return WodAiAPI.Objects.HeartRateSummary
     case "Mutation": return WodAiAPI.Objects.Mutation
-    case "ProvisionUserResponse": return WodAiAPI.Objects.ProvisionUserResponse
+    case "PlanningRun": return WodAiAPI.Objects.PlanningRun
     case "Query": return WodAiAPI.Objects.Query
     case "RecoveryStatus": return WodAiAPI.Objects.RecoveryStatus
     case "SavedHIITWorkout": return WodAiAPI.Objects.SavedHIITWorkout
     case "SeriesPoint": return WodAiAPI.Objects.SeriesPoint
     case "SeriesStat": return WodAiAPI.Objects.SeriesStat
+    case "SkillDomain": return WodAiAPI.Objects.SkillDomain
+    case "SkillLadder": return WodAiAPI.Objects.SkillLadder
+    case "SkillRung": return WodAiAPI.Objects.SkillRung
+    case "StrengthBenchmark": return WodAiAPI.Objects.StrengthBenchmark
     case "StrengthComponent": return WodAiAPI.Objects.StrengthComponent
     case "StrengthWorkout": return WodAiAPI.Objects.StrengthWorkout
     case "Subscription": return WodAiAPI.Objects.Subscription

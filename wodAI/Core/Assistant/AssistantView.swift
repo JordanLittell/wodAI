@@ -141,6 +141,10 @@ struct AssistantView: View {
     @ViewBuilder
     private var dayContent: some View {
         VStack(alignment: .leading, spacing: 24) {
+            if let notice = viewModel.planningNotice {
+                planningBanner(notice)
+            }
+
             if let error = viewModel.errorMessage {
                 Text(error)
                     .foregroundColor(Color("Error"))
@@ -213,6 +217,28 @@ struct AssistantView: View {
         case .whiteboard, nil:
             perform(.importWhiteboard)
         }
+    }
+
+    /// While the server plans the rest of the week after onboarding.
+    private func planningBanner(_ notice: PlanningNotice) -> some View {
+        HStack(spacing: 12) {
+            switch notice {
+            case .planning:
+                ProgressView().tint(Color.brandPrimary)
+                Text("Planning the rest of your week…")
+            case let .failed(message):
+                Image(systemName: "exclamationmark.triangle.fill").foregroundColor(Color("Warning"))
+                Text(message)
+            }
+            Spacer(minLength: 0)
+        }
+        .font(.subheadline.weight(.medium))
+        .foregroundColor(Color("PrimaryText"))
+        .padding()
+        .background(Color.brandPrimary.opacity(0.08))
+        .cornerRadius(14)
+        .transition(.opacity)
+        .animation(.easeInOut, value: notice)
     }
 
     /// Why the last new session failed, with a way to try again.

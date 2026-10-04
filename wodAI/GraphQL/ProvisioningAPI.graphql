@@ -1,16 +1,3 @@
 query IsUserProvisioned {
   isUserProvisioned
 }
-
-mutation ProvisionUser($input: ProvisionUserInput!) {
-  provisionUser(input: $input) {
-    success
-    message
-    user {
-      id
-      email
-      firstName
-      lastName
-    }
-  }
-}

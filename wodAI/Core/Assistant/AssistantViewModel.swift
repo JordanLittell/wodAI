@@ -232,6 +232,12 @@ enum AssistantFormatting {
 }
 
 @MainActor
+/// The banner shown while the server plans the rest of the week.
+enum PlanningNotice: Equatable {
+    case planning
+    case failed(String)
+}
+
 final class AssistantViewModel: ObservableObject {
     /// This week's sessions, keyed by local start-of-day, in the order the
     /// server lists them (imports added later go last). Days with nothing
@@ -259,6 +265,9 @@ final class AssistantViewModel: ObservableObject {
     @Published private(set) var focusedSessionId: String?
     /// The session whose Delete button is showing; at most one at a time.
     @Published private(set) var revealedSessionId: String?
+    /// Shown while the server is still planning this athlete's week (right
+    /// after onboarding), or briefly if that planning failed.
+    @Published private(set) var planningNotice: PlanningNotice?
     /// Sections the athlete opened or closed, by session id. Others follow
     /// `isExpanded`'s defaults.
     @Published private var expansion: [String: Bool] = [:]
@@ -278,6 +287,14 @@ final class AssistantViewModel: ObservableObject {
     }
     /// Deletes a session on the server.
     var deleteWorkout: (_ id: String) async throws -> Void = AssistantViewModel.performDelete
+    /// The latest background planning run; nil when there's never been one.
+    var planStatus: () async throws -> PlanStatus? = { try await ApolloOnboardingAPI().planStatus() }
+    /// How often to check on a run that's still planning.
+    var planPollInterval: Duration = .seconds(5)
+    /// Only touched on the main actor, except to cancel it in `deinit`.
+    nonisolated(unsafe) private var planTask: Task<Void, Never>?
+    /// A reload that had to wait for a new session to finish streaming in.
+    private var reloadAfterAdding = false
     /// Only touched on the main actor, except to cancel it in `deinit`.
     nonisolated(unsafe) private var importTask: Task<Void, Never>?
 
@@ -292,6 +309,7 @@ final class AssistantViewModel: ObservableObject {
     /// and stops the server.
     deinit {
         importTask?.cancel()
+        planTask?.cancel()
     }
 
     /// Seeds `session` as today's (previews and tests).
@@ -369,7 +387,22 @@ final class AssistantViewModel: ObservableObject {
         guard !hasLoaded, !isLoading else { return }
         isLoading = true
         errorMessage = nil
+        fetchWeek(quietly: false)
+        watchPlanning()
+    }
 
+    /// Fetches the week again without a spinner, keeping the selected day.
+    /// Waits while a new session streams in, since the fetch replaces them all.
+    func reloadWeek() {
+        guard importTask == nil else {
+            reloadAfterAdding = true
+            return
+        }
+        fetchWeek(quietly: true)
+    }
+
+    /// `quietly`: a background refresh, which shows no spinner and no error.
+    private func fetchWeek(quietly: Bool) {
         let week = week
         network.client.fetch(
             query: WeekSessionsQuery(
@@ -380,13 +413,13 @@ final class AssistantViewModel: ObservableObject {
         ) { [weak self] result in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.isLoading = false
+                if !quietly { self.isLoading = false }
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors, !errors.isEmpty {
                         let messages = errors.compactMap { $0.message }.joined(separator: "; ")
                         TelemetryService.captureGraphQLErrors(messages: messages, operation: "WeekSessions")
-                        self.errorMessage = errors.first?.message ?? "Unable to load this week's workouts."
+                        if !quietly { self.errorMessage = errors.first?.message ?? "Unable to load this week's workouts." }
                         return
                     }
                     var sessions: [Date: [AssistantSession]] = [:]
@@ -399,7 +432,7 @@ final class AssistantViewModel: ObservableObject {
                     self.hasLoaded = true
                 case .failure(let networkError):
                     TelemetryService.captureError(networkError, tags: ["operation": "WeekSessions"])
-                    self.errorMessage = networkError.localizedDescription
+                    if !quietly { self.errorMessage = networkError.localizedDescription }
                 }
             }
         }
@@ -523,6 +556,49 @@ final class AssistantViewModel: ObservableObject {
             }
             self?.isAddingSession = false
             self?.importTask = nil
+            if self?.reloadAfterAdding == true {
+                self?.reloadAfterAdding = false
+                self?.reloadWeek()
+            }
+        }
+    }
+
+    // MARK: - Planning still under way
+
+    /// Right after onboarding the server is still planning the rest of the
+    /// week. While it is, show a notice and reload whenever another day lands.
+    /// Does nothing for an athlete whose planning finished long ago.
+    func watchPlanning() {
+        guard planTask == nil else { return }
+        planTask = Task { [weak self] in
+            var known: Set<String>?
+            while !Task.isCancelled {
+                guard let self else { return }
+                guard let status = try? await self.planStatus() else {
+                    self.planningNotice = nil
+                    break
+                }
+                if let known, status.plannedDates != known { self.reloadWeek() }
+                known = status.plannedDates
+                switch status.state {
+                case .running:
+                    self.planningNotice = .planning
+                    let interval = self.planPollInterval
+                    try? await Task.sleep(for: interval)
+                    continue
+                case .done:
+                    self.planningNotice = nil
+                case .failed:
+                    // Only worth saying if this run was the one just watched.
+                    if self.planningNotice != nil {
+                        self.planningNotice = .failed(status.message ?? "We couldn't plan the rest of your week.")
+                        try? await Task.sleep(for: .seconds(6))
+                        self.planningNotice = nil
+                    }
+                }
+                break
+            }
+            self?.planTask = nil
         }
     }
 

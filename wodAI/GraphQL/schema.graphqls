@@ -53,6 +53,18 @@ type User {
   restDays: [RestDay!]!
   trainingNotes: String
   timezone: String
+  primaryGoal: TrainingGoal
+  trainingYears: Int
+}
+
+enum TrainingGoal {
+  GENERAL_FITNESS
+  BUILD_STRENGTH
+  BUILD_ENGINE
+  LOSE_FAT
+  SKILL_DEVELOPMENT
+  COMPETE
+  RETURN_FROM_BREAK
 }
 
 type UserContext {
@@ -69,6 +81,25 @@ input UpdateUserContextInput {
   sessionLengthMinutes: Int
   restDays: [RestDay!]
   trainingNotes: String
+}
+
+type SkillDomain {
+  key: String!
+  name: String!
+  ladders: [SkillLadder!]!
+}
+
+type SkillLadder {
+  key: String!
+  name: String!
+  rungs: [SkillRung!]!
+  assessed: Boolean!
+  level: String
+}
+
+type SkillRung {
+  key: String!
+  question: String!
 }
 
 type Program {
@@ -356,6 +387,8 @@ type Query {
   programSchema: ProgramSchema!
   gymProfiles: [GymProfile!]!
   activeGymProfile: GymProfile
+  gymPresets: [GymPreset!]!
+  strengthBenchmarks: [StrengthBenchmark!]!
   equipment: [Equipment!]!
   equipmentById(id: Int!): Equipment
   isUserProvisioned: Boolean!
@@ -369,6 +402,8 @@ type Query {
   isSaved(workoutId: Int!): Boolean!
   hiitWorkoutLike(workoutId: Int!): Int
   movements(search: String): [HIITExercise!]!
+  weeklyPlanStatus: PlanningRun
+  skillAssessment: [SkillDomain!]!
   listExercises(search: String): [HIITExercise!]!
   tags: [Tag!]!
   availableTags(selectedTagIds: [Int!]): [TagFacet!]!
@@ -400,6 +435,10 @@ type Mutation {
   deleteGymProfile(id: Int!): Boolean!
   toggleGymProfile(id: Int!): GymProfile!
   provisionUser(input: ProvisionUserInput!): ProvisionUserResponse!
+  completeOnboarding(timezone: String!): User!
+  startWeeklyPlan(timezone: String!): PlanningRun!
+  setStrengthBenchmark(exerciseId: Int!, weight: Float!, reps: Int!): StrengthBenchmark!
+  deleteStrengthBenchmark(id: Int!): Boolean!
   sendAgentMessage(wodId: String!, message: String!): SendAgentMessageResponse!
   approveWorkoutModification(wodId: String!, conversationId: String!): Workout!
   generateHiitWorkout(tagIds: [Int!], skipWorkoutId: Int, timezone: String): HIITWorkout
@@ -418,6 +457,7 @@ type Mutation {
   completeHIITSession(sessionId: ID!, endedAt: DateTime!, movementIntervals: [MovementIntervalInput!]!): HIITSession!
   abandonHIITSession(sessionId: ID!): Boolean!
   setMovementExcluded(exerciseId: Int!, excluded: Boolean!): HIITExercise!
+  setSkillLevel(ladder: String!, level: String): SkillLadder!
   createTag(name: String!, description: String!, category: String): Tag!
   setTagDisabled(id: Int!, disabled: Boolean!): Tag!
   setTagCategory(id: Int!, category: String!): Tag!
@@ -517,6 +557,8 @@ input UpdateUserInput {
   activeDaysPerWeek: Int
   sessionLengthMinutes: Int
   restDays: [RestDay!]
+  primaryGoal: TrainingGoal
+  trainingYears: Int
 }
 
 type AuthPayload {
@@ -530,6 +572,34 @@ type Equipment {
   description: String
   category: String
   createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum PlanningRunStatus {
+  RUNNING
+  DONE
+  FAILED
+}
+
+type PlanningRun {
+  id: Int!
+  status: PlanningRunStatus!
+  plannedDates: [String!]!
+  message: String
+  startedAt: DateTime!
+}
+
+type GymPreset {
+  key: String!
+  name: String!
+  equipment: [Equipment!]!
+}
+
+type StrengthBenchmark {
+  id: Int!
+  exercise: HIITExercise!
+  weight: Float!
+  reps: Int!
   updatedAt: DateTime!
 }
 

@@ -30,9 +30,7 @@ To add a new operation: write a `.graphql` file anywhere under `wodAI/GraphQL/`,
 
 ### Configuration
 Build settings live in `Configurations/*.xcconfig` (`Base`, `Debug`, `Release`), referenced by the Xcode project (the root-level `Base.xcconfig`/`Debug.xcconfig`/`Release.xcconfig` are stale duplicates left over from an earlier layout — don't edit those, edit the ones in `Configurations/`).
-- `GRAPHQL_ENDPOINT` is set per-config and piped into `Info.plist` at build time (`INFOPLIST_KEY_GRAPHQL_ENDPOINT`); `AppConfig.graphQLEndpoint` reads it back out at runtime.
-  - Debug → `http://localhost:3000/graphql`
-  - Release → `https://move-adapt.com/graphql`
+- `GRAPHQL_ENDPOINT` is set per-config (Debug `http://localhost:3000/graphql`, Release `https://move-adapt.com/graphql`), but **it never reaches the app**: Xcode only copies Apple's own `INFOPLIST_KEY_*` keys into the generated `Info.plist`, so `AppConfig.graphQLEndpoint` always falls back to `https://api.wodai.run` — the live backend — in Debug builds too. To run against a local backend, add `GRAPHQL_ENDPOINT` to the built app's `Info.plist` (or fix the plist wiring) — otherwise a Debug run writes to prod.
 - Sentry DSN is wired the same way (`SENTRY_DSN` → `INFOPLIST_KEY_SENTRY_DSN` → `AppConfig.sentryDSN`), currently blank in `Base.xcconfig`.
 
 ## Architecture
@@ -42,7 +40,7 @@ There is no tab bar. `wodAIApp` → `ContentView` routes on `AuthState.shared`:
 ```
 ContentView
 ├── unauthenticated              → AuthenticationView (Login/SignUp toggle)
-├── authenticated + needsProvisioning → ProvisioningView (onboarding)
+├── authenticated + needsProvisioning → OnboardingView
 └── authenticated + provisioned  → RootAppView → AppNavigationView
 ```
 `AppNavigationView` is a single `NavigationStack` with a hamburger-triggered side menu (`SideMenuView`), not a `TabView`. Destinations are switched by local `@State`, no deep-link/notification-based tab switching:
@@ -91,7 +89,10 @@ Three sign-in paths converge on one call: `AuthState.shared.authenticate(token:u
 
 - **`AuthState.shared`** (`Core/Auth/AuthState.swift`) is the actual source of truth: `@Published isAuthenticated/currentToken/currentUserId/isProvisioned/needsProvisioning/sessionExpiredMessage`, all auto-persisted to `UserDefaults` via Combine `.sink`. Conforms to `TokenProvider`/`AuthenticationProvider`/`ProvisioningProvider` protocols used by the network layer.
 - **`AuthManager`** (`Core/AuthManager.swift`) is a thinner `ObservableObject` kept around for view convenience/back-compat (`@EnvironmentObject`); don't add new state here, add it to `AuthState`.
-- Post-auth, `authenticate()` kicks off `checkProvisioningStatus()` (`IsUserProvisionedQuery`), which flips `ContentView`'s routing between `ProvisioningView` and `RootAppView`.
+- Post-auth, `authenticate()` kicks off `checkProvisioningStatus()` (`IsUserProvisionedQuery`), which flips `ContentView`'s routing between `OnboardingView` and `RootAppView`.
+
+### Onboarding
+New athletes (`needsProvisioning`) go through `Core/Onboarding/`: one short question per screen under a progress bar — goal, experience, schedule, gym preset, equipment, skill questions, lifts, about you. `OnboardingFlow` is the Apollo-free step order and progress math (tested in `wodAITests/OnboardingFlowTests.swift`). Skill questions come from the backend's skill ladders, hardest first: the athlete is asked down a ladder until their first yes (`setSkillLevel` saves that rung; "no" to all saves none). Moving on never waits for the network: each answer is saved in the background, one save at a time in order (`OnboardingAPI`: `UpdateUser`, gym create/update, `SetSkillLevel`, `SetStrengthBenchmark` — lifts are always 1RMs), and Finish waits for every save, retrying failures, then calls `CompleteOnboarding(timezone:)`, which starts planning the athlete's first week on the server. The last screen (`OnboardingPlanningView`, "Hang tight") polls `WeeklyPlanStatus` until today's date is planned (or the run finishes), then `AuthState.completeProvisioning()` hands off to the Workout page; `PlanWait` decides waiting/slow/failed/ready. An athlete who leaves mid-planning resumes on that screen (`load()` checks `IsUserProvisioned` first). On the Workout page, `AssistantViewModel.watchPlanning()` shows "Planning the rest of your week…" and quietly reloads (`reloadWeek()`, no spinner) as more days land. Single-choice steps advance on tap; the rest only from their button. Every view-model action names its step and is ignored unless that step is current, so a tap landing on a screen as it slides away can't answer twice or skip ahead (`wodAITests/OnboardingViewModelTests.swift`).
 - Session expiry: `AuthorizationInterceptor` (in `Network.swift`) scans every GraphQL response for error text containing "unauthorized"/"auth"/"token" → calls `AuthState.handleSessionExpired()` → posts `.userDidLogout`. `ContentView` observes that notification and force-signs-out on the main thread.
 - `AppleSignInService.shared.checkCredentialState()` runs on every launch (from `ContentView.onAppear`) to revoke local auth if the Apple credential was revoked externally.
 
