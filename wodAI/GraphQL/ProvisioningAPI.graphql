@@ -1,3 +1,0 @@
-query IsUserProvisioned {
-  isUserProvisioned
-}

@@ -1,6 +1,0 @@
-mutation SetMovementExcludedMutation($exerciseId: Int!, $excluded: Boolean!) {
-  setMovementExcluded(exerciseId: $exerciseId, excluded: $excluded) {
-    id
-    excluded
-  }
-}

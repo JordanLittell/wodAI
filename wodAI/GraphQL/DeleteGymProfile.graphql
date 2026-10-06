@@ -1,4 +1,0 @@
-mutation DeleteGymProfile($deleteGymProfileId: Int!) {
-  deleteGymProfile(id: $deleteGymProfileId)
-}
-

@@ -1,3 +1,0 @@
-mutation UnsaveHiitWorkoutMutation($id: Int!) {
-  unsaveHiitWorkout(id: $id)
-}

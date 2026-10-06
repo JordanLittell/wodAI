@@ -78,41 +78,17 @@
 		C1D1BA402DBEDAC300932818 /* Exceptions for "wodAI" folder in "wodAI" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				GraphQL/CompletedWods.graphql,
-				GraphQL/CreateGymProfile.graphql,
-				GraphQL/DeleteGymProfile.graphql,
-				GraphQL/GymProfile.graphql,
-				GraphQL/SetActiveGymProfile.graphql,
-				GraphQL/SignInWithGoogle.graphql,
-				GraphQL/UpdateGymProfile.graphql,
 				Info.plist,
 			);
 			target = C19950502DB0B9F800786544 /* wodAI */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
-/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		C1D1BA412DBEDAC300932818 /* Exceptions for "wodAI" folder in "Compile Sources" phase from "wodAI" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			buildPhase = C199504D2DB0B9F800786544 /* Sources */;
-			membershipExceptions = (
-				GraphQL/CompletedWods.graphql,
-				GraphQL/CreateGymProfile.graphql,
-				GraphQL/DeleteGymProfile.graphql,
-				GraphQL/GymProfile.graphql,
-				GraphQL/SetActiveGymProfile.graphql,
-				GraphQL/SignInWithGoogle.graphql,
-				GraphQL/UpdateGymProfile.graphql,
-			);
-		};
-/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		C19950532DB0B9F800786544 /* wodAI */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				C1D1BA402DBEDAC300932818 /* Exceptions for "wodAI" folder in "wodAI" target */,
-				C1D1BA412DBEDAC300932818 /* Exceptions for "wodAI" folder in "Compile Sources" phase from "wodAI" target */,
 			);
 			path = wodAI;
 			sourceTree = "<group>";
