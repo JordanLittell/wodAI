@@ -1,0 +1,70 @@
+# Everything the Assistant page renders for a session. Shared by the
+# generate mutation and the latest-session query so both map the same way.
+fragment SessionDetails on Workout {
+  id
+  name
+  description
+  stimulus
+  coaching
+  scheduledDate
+  source
+  blocks {
+    __typename
+    order
+    ... on StrengthWorkout {
+      id
+      name
+      stimulus
+      instructions
+      components {
+        id
+        order
+        reps
+        weight
+        rpe
+        completedAt
+        completedReps
+        completedWeight
+        completedRpe
+        exercise {
+          name
+          muscleGroups
+        }
+      }
+    }
+    ... on WorkoutHiitPiece {
+      id
+      # Null until a result is logged for this piece (or for this WOD that day).
+      completion {
+        id
+        completedAt
+      }
+      hiitWorkout {
+        id
+        name
+        format
+        stimulus
+        displayText
+        constraintType
+        constraintMagnitude
+        timeCap
+        timingScheme {
+          version
+          segments {
+            rounds
+            phases {
+              durationSeconds
+              direction
+              label
+            }
+          }
+          phases {
+            durationSeconds
+            direction
+            label
+          }
+        }
+      }
+    }
+  }
+}

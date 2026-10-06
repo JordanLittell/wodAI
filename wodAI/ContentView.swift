@@ -16,7 +16,7 @@ struct ContentView: View {
         Group {
             if authState.isAuthenticated {
                 if authState.needsProvisioning {
-                    ProvisioningView()
+                    OnboardingView()
                 } else {
                     RootAppView()
                 }

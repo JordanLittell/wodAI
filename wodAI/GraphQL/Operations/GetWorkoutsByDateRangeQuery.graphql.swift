@@ -7,9 +7,9 @@ import WodAiAPI
 public class GetWorkoutsByDateRangeQuery: GraphQLQuery {
   public static let operationName: String = "GetWorkoutsByDateRange"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "e9ce357b61d5029d2518b333f6f87cbf79277e6309b66268c5568cdbef738195",
+    operationIdentifier: "e0ccfafc1b6640d27b7bf8783fb7b25e603d471fff83439fec960812e3810cf3",
     definition: .init(
-      #"query GetWorkoutsByDateRange($startDate: DateTime!, $endDate: DateTime!) { getWorkoutsByDateRange(startDate: $startDate, endDate: $endDate) { __typename id name description coaching stimulus scheduledDate status completed completedAt components { __typename id name definition description muscles movements order } } }"#
+      #"query GetWorkoutsByDateRange($startDate: DateTime!, $endDate: DateTime!) { getWorkoutsByDateRange(startDate: $startDate, endDate: $endDate) { __typename id name description coaching stimulus scheduledDate completed completedAt components { __typename id name definition description muscles movements order } } }"#
     ))
 
   public var startDate: WodAiAPI.DateTime
@@ -58,7 +58,6 @@ public class GetWorkoutsByDateRangeQuery: GraphQLQuery {
         .field("coaching", String?.self),
         .field("stimulus", String?.self),
         .field("scheduledDate", WodAiAPI.DateTime.self),
-        .field("status", GraphQLEnum<WodAiAPI.WorkoutStatus>.self),
         .field("completed", Bool.self),
         .field("completedAt", WodAiAPI.DateTime?.self),
         .field("components", [Component].self),
@@ -70,7 +69,6 @@ public class GetWorkoutsByDateRangeQuery: GraphQLQuery {
       public var coaching: String? { __data["coaching"] }
       public var stimulus: String? { __data["stimulus"] }
       public var scheduledDate: WodAiAPI.DateTime { __data["scheduledDate"] }
-      public var status: GraphQLEnum<WodAiAPI.WorkoutStatus> { __data["status"] }
       public var completed: Bool { __data["completed"] }
       public var completedAt: WodAiAPI.DateTime? { __data["completedAt"] }
       public var components: [Component] { __data["components"] }

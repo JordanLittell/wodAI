@@ -7,9 +7,9 @@ import WodAiAPI
 public class CompleteHiitWorkoutMutation: GraphQLMutation {
   public static let operationName: String = "CompleteHiitWorkoutMutation"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "ced269631ce8aa8e3f511ba7984f4faac16e323a353c0f88987c0d5a4c377705",
+    operationIdentifier: "0f888c706efe11970668e16fbadd3fb4dd13daa8a6af8566da4a622d3348e906",
     definition: .init(
-      #"mutation CompleteHiitWorkoutMutation($id: Int!, $durationSeconds: Int, $roundsCompleted: Int, $repsCompleted: Int, $perceivedEffort: Int, $notes: String) { completeHiitWorkout( id: $id durationSeconds: $durationSeconds roundsCompleted: $roundsCompleted repsCompleted: $repsCompleted perceivedEffort: $perceivedEffort notes: $notes ) { __typename id completedAt durationSeconds roundsCompleted repsCompleted perceivedEffort notes } }"#
+      #"mutation CompleteHiitWorkoutMutation($id: Int!, $durationSeconds: Int, $roundsCompleted: Int, $repsCompleted: Int, $perceivedEffort: Int, $notes: String, $sessionId: ID, $pieceId: Int) { completeHiitWorkout( id: $id durationSeconds: $durationSeconds roundsCompleted: $roundsCompleted repsCompleted: $repsCompleted perceivedEffort: $perceivedEffort notes: $notes sessionId: $sessionId pieceId: $pieceId ) { __typename id completedAt durationSeconds roundsCompleted repsCompleted perceivedEffort notes } }"#
     ))
 
   public var id: Int
@@ -18,6 +18,8 @@ public class CompleteHiitWorkoutMutation: GraphQLMutation {
   public var repsCompleted: GraphQLNullable<Int>
   public var perceivedEffort: GraphQLNullable<Int>
   public var notes: GraphQLNullable<String>
+  public var sessionId: GraphQLNullable<WodAiAPI.ID>
+  public var pieceId: GraphQLNullable<Int>
 
   public init(
     id: Int,
@@ -25,7 +27,9 @@ public class CompleteHiitWorkoutMutation: GraphQLMutation {
     roundsCompleted: GraphQLNullable<Int>,
     repsCompleted: GraphQLNullable<Int>,
     perceivedEffort: GraphQLNullable<Int>,
-    notes: GraphQLNullable<String>
+    notes: GraphQLNullable<String>,
+    sessionId: GraphQLNullable<WodAiAPI.ID>,
+    pieceId: GraphQLNullable<Int>
   ) {
     self.id = id
     self.durationSeconds = durationSeconds
@@ -33,6 +37,8 @@ public class CompleteHiitWorkoutMutation: GraphQLMutation {
     self.repsCompleted = repsCompleted
     self.perceivedEffort = perceivedEffort
     self.notes = notes
+    self.sessionId = sessionId
+    self.pieceId = pieceId
   }
 
   public var __variables: Variables? { [
@@ -41,7 +47,9 @@ public class CompleteHiitWorkoutMutation: GraphQLMutation {
     "roundsCompleted": roundsCompleted,
     "repsCompleted": repsCompleted,
     "perceivedEffort": perceivedEffort,
-    "notes": notes
+    "notes": notes,
+    "sessionId": sessionId,
+    "pieceId": pieceId
   ] }
 
   public struct Data: WodAiAPI.SelectionSet {
@@ -56,7 +64,9 @@ public class CompleteHiitWorkoutMutation: GraphQLMutation {
         "roundsCompleted": .variable("roundsCompleted"),
         "repsCompleted": .variable("repsCompleted"),
         "perceivedEffort": .variable("perceivedEffort"),
-        "notes": .variable("notes")
+        "notes": .variable("notes"),
+        "sessionId": .variable("sessionId"),
+        "pieceId": .variable("pieceId")
       ]),
     ] }
 

@@ -72,7 +72,7 @@ struct SavedWorkoutsView: View {
         .navigationTitle("Saved")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: HIITWorkoutItem.self) { workout in
-            HIITWorkoutView(preloaded: workout)
+            MetconView(preloaded: workout)
         }
         .onAppear { loadSaved() }
     }
@@ -102,7 +102,8 @@ struct SavedWorkoutsView: View {
                                 constraintType: item.workout.constraintType,
                                 constraintMagnitude: item.workout.constraintMagnitude,
                                 timeCap: item.workout.timeCap,
-                                timingScheme: item.workout.timingScheme.flatMap { WodTimerConfig(fragment: $0) }
+                                timingScheme: item.workout.timingScheme.flatMap { WodTimerConfig(fragment: $0) },
+                                name: item.workout.name
                             )
                         }
                         .sorted { $0.savedAt > $1.savedAt }
@@ -133,6 +134,7 @@ struct SavedHiitEntry: Identifiable {
     let constraintMagnitude: Int
     let timeCap: Int?
     let timingScheme: WodTimerConfig?
+    let name: String?
 }
 
 struct SavedHiitCard: View {
@@ -202,7 +204,8 @@ extension SavedHiitEntry {
             constraintMagnitude: constraintMagnitude,
             timeCap: timeCap,
             timingScheme: timingScheme,
-            tags: []
+            tags: [],
+            name: name
         )
     }
 }

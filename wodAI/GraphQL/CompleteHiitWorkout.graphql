@@ -5,6 +5,8 @@ mutation CompleteHiitWorkoutMutation(
   $repsCompleted: Int
   $perceivedEffort: Int
   $notes: String
+  $sessionId: ID
+  $pieceId: Int
 ) {
   completeHiitWorkout(
     id: $id
@@ -13,6 +15,8 @@ mutation CompleteHiitWorkoutMutation(
     repsCompleted: $repsCompleted
     perceivedEffort: $perceivedEffort
     notes: $notes
+    sessionId: $sessionId
+    pieceId: $pieceId
   ) {
     id
     completedAt

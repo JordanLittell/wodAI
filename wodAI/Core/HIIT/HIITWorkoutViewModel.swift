@@ -22,6 +22,15 @@ struct HIITWorkoutItem: Identifiable, Hashable {
     let timeCap: Int?
     let timingScheme: WodTimerConfig?
     let tags: [HIITWorkoutTag]
+    /// The workout's own name, e.g. "Fran". Most generated metcons have none.
+    var name: String? = nil
+
+    /// What to call it on screen: its name when it has one, otherwise
+    /// "Metcon". A named workout implies it's a metcon, so the name wins.
+    var title: String {
+        let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? "Metcon" : trimmed
+    }
 
     static func == (lhs: HIITWorkoutItem, rhs: HIITWorkoutItem) -> Bool {
         lhs.id == rhs.id
@@ -30,6 +39,16 @@ struct HIITWorkoutItem: Identifiable, Hashable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
+}
+
+/// Heart rate on the completion screen: being summarized, summarized, or
+/// recorded but not summarizable (the server call failed or nothing valid
+/// arrived). `.none` when no device was recording.
+enum CompletionHeartRate: Equatable {
+    case none
+    case analyzing
+    case ready(HeartRateSummary, [HeartRatePoint])
+    case unavailable
 }
 
 enum WorkoutExecutionState {
@@ -65,6 +84,13 @@ class HIITWorkoutViewModel: ObservableObject {
     /// True while the completion mutation is in flight (disables Done/Skip).
     @Published var isSubmittingCompletion = false
 
+    /// Heart rate for the completion screen. Separate from `completionDraft`
+    /// because it arrives after the screen is already up.
+    @Published var completionHeartRate: CompletionHeartRate = .none
+    /// bpm where zones 1–5 start, once the sensor session is open; empty
+    /// without a device. Drives the live zone on the timer.
+    @Published var heartRateZoneThresholds: [Int] = []
+
     /// User-editable time cap (seconds) for For-Time workouts, seeded from the
     /// workout's `timeCap`. `nil` means no cap (count up).
     @Published var editableTimeCap: Int?
@@ -87,17 +113,46 @@ class HIITWorkoutViewModel: ObservableObject {
     static let getReadySeconds: TimeInterval = 10
 
     private let network = Network.shared
+    /// Completing (or discarding) a feed workout serves the next one. A workout
+    /// that is a fixed part of something else (an Assistant session block)
+    /// stays put instead.
+    private let advancesAfterCompletion: Bool
+    /// Called once a result is saved on the server (Done or Skip, not
+    /// Discard), so an owner such as the block pager can move on.
+    private let onCompleted: (() -> Void)?
+
     private var timerCancellable: AnyCancellable?
+    /// Records heart rate for the current run; nil without a device.
+    private var sensorRecorder: WorkoutSensorRecorder?
+    /// The finished run's sensor session, linked to the completion on submit.
+    private var completionSessionId: String?
+    /// The scheduled session piece this metcon was opened from, if any, and
+    /// the WOD it holds. A result for that WOD is logged against the piece so
+    /// the session shows it done after a reload.
+    private let scheduledPiece: (pieceId: Int, workoutId: Int)?
     private var cancellables = Set<AnyCancellable>()
     private let countdownFeedback = CountdownFeedback()
     private var lastCountdownTick: Int?
 
     init() {
+        self.advancesAfterCompletion = true
+        self.onCompleted = nil
+        self.scheduledPiece = nil
         setupFilterSubscription()
     }
 
-    init(preloaded: HIITWorkoutItem) {
+    /// `pieceId` is the session's WorkoutHiitPiece id when the metcon is
+    /// opened from a scheduled session; nil elsewhere (e.g. saved workouts).
+    init(
+        preloaded: HIITWorkoutItem,
+        pieceId: Int? = nil,
+        advancesAfterCompletion: Bool = true,
+        onCompleted: (() -> Void)? = nil
+    ) {
         self.currentWorkout = preloaded
+        self.advancesAfterCompletion = advancesAfterCompletion
+        self.onCompleted = onCompleted
+        self.scheduledPiece = pieceId.map { (pieceId: $0, workoutId: preloaded.id) }
         self.editableTimeCap = preloaded.timeCap
         self.isFavorited = true
         setupFilterSubscription()
@@ -450,6 +505,9 @@ class HIITWorkoutViewModel: ObservableObject {
     // MARK: - Execution control
 
     func startExecution() {
+        setScreenAwake(true)
+        // Give the remembered device the countdown to reconnect.
+        Task { @MainActor in SensorManager.shared.prepareForWorkout() }
         countdownFeedback.prepare()
         lastCountdownTick = nil
         executionState = .countingDown(endTime: Date().addingTimeInterval(Self.getReadySeconds))
@@ -458,6 +516,7 @@ class HIITWorkoutViewModel: ObservableObject {
 
     /// Cancel the get-ready countdown and return to idle (e.g. a mis-tap).
     func cancelCountdown() {
+        setScreenAwake(false)
         timerCancellable?.cancel()
         countdownFeedback.reset()
         executionState = .idle
@@ -468,6 +527,7 @@ class HIITWorkoutViewModel: ObservableObject {
         timerCancellable?.cancel()
         executionState = .running(startTime: Date(), priorElapsed: 0)
         startTimer()
+        startSensorRecording()
     }
 
     private func startCountdownTimer() {
@@ -510,6 +570,8 @@ class HIITWorkoutViewModel: ObservableObject {
     func exitExecution() {
         timerCancellable?.cancel()
         executionState = .idle
+        setScreenAwake(false)
+        abandonSensorRecording()
     }
 
     func finishExecution() {
@@ -517,11 +579,14 @@ class HIITWorkoutViewModel: ObservableObject {
         // Capture the finished workout + elapsed time BEFORE resetting to idle,
         // so the completion screen can seed the recorded result.
         let captured = elapsedSeconds
+        setScreenAwake(false)
         guard let workout = currentWorkout else {
             executionState = .idle
+            abandonSensorRecording()
             return
         }
         executionState = .idle
+        finishSensorRecording()
 
         var draft = WorkoutCompletionDraft(
             id: workout.id,
@@ -577,6 +642,9 @@ class HIITWorkoutViewModel: ObservableObject {
 
         // A blank or whitespace-only note is "no note", not an empty string.
         let trimmedNotes = draft.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Only a result for the piece's own WOD belongs to the piece; the
+        // server rejects any other pairing.
+        let pieceId = scheduledPiece.flatMap { $0.workoutId == draft.id ? $0.pieceId : nil }
 
         do {
             let result = try await withCheckedThrowingContinuation { continuation in
@@ -587,7 +655,9 @@ class HIITWorkoutViewModel: ObservableObject {
                         roundsCompleted: draft.roundsCompleted.map { .some($0) } ?? .none,
                         repsCompleted: draft.repsCompleted.map { .some($0) } ?? .none,
                         perceivedEffort: draft.perceivedEffort.map { .some($0) } ?? .none,
-                        notes: trimmedNotes.isEmpty ? .none : .some(trimmedNotes)
+                        notes: trimmedNotes.isEmpty ? .none : .some(trimmedNotes),
+                        sessionId: completionSessionId.map { .some($0) } ?? .none,
+                        pieceId: pieceId.map { .some($0) } ?? .none
                     )
                 ) { result in
                     continuation.resume(with: result)
@@ -609,7 +679,9 @@ class HIITWorkoutViewModel: ObservableObject {
 
         // Only past this point is the result safely on the server.
         completionDraft = nil
-        nextWorkout()
+        clearCompletionHeartRate()
+        onCompleted?()
+        if advancesAfterCompletion { nextWorkout() }
     }
 
     /// Abandon an unsaved completion result after a failure. Used by the "Discard"
@@ -617,7 +689,73 @@ class HIITWorkoutViewModel: ObservableObject {
     func discardCompletion() {
         completionError = nil
         completionDraft = nil
-        nextWorkout()
+        clearCompletionHeartRate()
+        if advancesAfterCompletion { nextWorkout() }
+    }
+
+    // MARK: - Heart rate
+
+    /// Opens a sensor session when the clock starts, if the user has a device
+    /// and tracking on. The device may still be connecting; readings are
+    /// recorded from whenever it arrives.
+    private func startSensorRecording() {
+        guard let workoutId = currentWorkout?.id else { return }
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let sensors = SensorManager.shared
+            guard sensors.isTrackingConfigured, let source = sensors.currentSource else { return }
+            let recorder = WorkoutSensorRecorder(uploader: ApolloSessionTelemetryUploader(), samples: sensors.samples)
+            self.sensorRecorder = recorder
+            await recorder.start(workoutId: workoutId, source: source)
+            // Still this run's recorder (not finished or exited meanwhile).
+            if self.sensorRecorder === recorder {
+                self.heartRateZoneThresholds = recorder.zoneThresholds
+            }
+        }
+    }
+
+    /// Closes the session; the completion screen shows "analyzing" until the
+    /// server's summary comes back.
+    private func finishSensorRecording() {
+        heartRateZoneThresholds = []
+        guard let recorder = sensorRecorder else {
+            completionHeartRate = .none
+            return
+        }
+        sensorRecorder = nil
+        completionHeartRate = .analyzing
+        Task { @MainActor [weak self] in
+            // Known before the summary: Done may be tapped while it's pending,
+            // and the completion still links the session.
+            self?.completionSessionId = recorder.sessionId
+            let summary = await recorder.finish()
+            guard let self else { return }
+            if recorder.sessionId == nil {
+                self.completionHeartRate = .none
+            } else if let summary {
+                self.completionHeartRate = .ready(summary, recorder.points)
+            } else {
+                self.completionHeartRate = .unavailable
+            }
+        }
+    }
+
+    private func abandonSensorRecording() {
+        heartRateZoneThresholds = []
+        guard let recorder = sensorRecorder else { return }
+        sensorRecorder = nil
+        Task { @MainActor in await recorder.abandon() }
+    }
+
+    private func clearCompletionHeartRate() {
+        completionSessionId = nil
+        completionHeartRate = .none
+    }
+
+    /// Keeps the phone from locking mid-workout, which would also pause
+    /// on-screen readings.
+    private func setScreenAwake(_ awake: Bool) {
+        Task { @MainActor in UIApplication.shared.isIdleTimerDisabled = awake }
     }
 
     // MARK: - Preview factory

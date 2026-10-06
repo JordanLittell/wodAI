@@ -67,6 +67,9 @@ struct WodTimerView: View {
         let showHours = viewModel.activeConfig.hasHourLongPhase || readout.displaySeconds >= 3600
 
         return VStack(spacing: 0) {
+            HeartRateHUD(zoneThresholds: viewModel.heartRateZoneThresholds)
+                .padding(.top, 12)
+
             Spacer()
 
             VStack(spacing: 12) {

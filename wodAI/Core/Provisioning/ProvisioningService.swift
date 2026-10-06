@@ -55,46 +55,7 @@ class ProvisioningService {
             }
         }
     }
-    
-    func provisionUser(request: ProvisionUserInput) async throws -> ProvisionUserResponse {
-        
-        let mutation = ProvisionUserMutation(input: ProvisionUserInput(
-            age: request.age,
-            heightInches: request.heightInches,
-            weight: request.weight,
-            gender: request.gender,
-            fitnessLevel: request.fitnessLevel,
-            workoutDuration: request.workoutDuration,
-            benchmarks: request.benchmarks,
-            injuries: request.injuries,
-            availableEquipment: request.availableEquipment,
-            sessionDurationMinutes: request.sessionDurationMinutes,
-            restDays: request.restDays
-        ))
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            networkClient.perform(mutation: mutation) { result in
-                switch result {
-                case .success(let graphQLResult):
-                    if let data = graphQLResult.data?.provisionUser {
-                        let response = ProvisionUserResponse(
-                            success: data.success,
-                            message: data.message,
-                            userId: data.user?.id.description
-                        )
-                        continuation.resume(returning: response)
-                    } else if let errors = graphQLResult.errors {
-                        continuation.resume(throwing: errors.first ?? ProvisioningError.unknownError)
-                    } else {
-                        continuation.resume(throwing: ProvisioningError.noDataReturned)
-                    }
-                case .failure(let error):
-                    continuation.resume(throwing: error)
-                }
-            }
-        }
-    }
-    
+
 }
 
 // MARK: - Custom Errors

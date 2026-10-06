@@ -30,9 +30,7 @@ To add a new operation: write a `.graphql` file anywhere under `wodAI/GraphQL/`,
 
 ### Configuration
 Build settings live in `Configurations/*.xcconfig` (`Base`, `Debug`, `Release`), referenced by the Xcode project (the root-level `Base.xcconfig`/`Debug.xcconfig`/`Release.xcconfig` are stale duplicates left over from an earlier layout — don't edit those, edit the ones in `Configurations/`).
-- `GRAPHQL_ENDPOINT` is set per-config and piped into `Info.plist` at build time (`INFOPLIST_KEY_GRAPHQL_ENDPOINT`); `AppConfig.graphQLEndpoint` reads it back out at runtime.
-  - Debug → `http://localhost:3000/graphql`
-  - Release → `https://move-adapt.com/graphql`
+- `GRAPHQL_ENDPOINT` is set per-config (Debug `http://localhost:3000/graphql`, Release `https://move-adapt.com/graphql`), but **it never reaches the app**: Xcode only copies Apple's own `INFOPLIST_KEY_*` keys into the generated `Info.plist`, so `AppConfig.graphQLEndpoint` always falls back to `https://api.wodai.run` — the live backend — in Debug builds too. To run against a local backend, add `GRAPHQL_ENDPOINT` to the built app's `Info.plist` (or fix the plist wiring) — otherwise a Debug run writes to prod.
 - Sentry DSN is wired the same way (`SENTRY_DSN` → `INFOPLIST_KEY_SENTRY_DSN` → `AppConfig.sentryDSN`), currently blank in `Base.xcconfig`.
 
 ## Architecture
@@ -42,17 +40,32 @@ There is no tab bar. `wodAIApp` → `ContentView` routes on `AuthState.shared`:
 ```
 ContentView
 ├── unauthenticated              → AuthenticationView (Login/SignUp toggle)
-├── authenticated + needsProvisioning → ProvisioningView (onboarding)
+├── authenticated + needsProvisioning → OnboardingView
 └── authenticated + provisioned  → RootAppView → AppNavigationView
 ```
-`AppNavigationView` is a single `NavigationStack` with a hamburger-triggered side menu (`SideMenuView`), not a `TabView`. Four destinations, switched by local `@State`, no deep-link/notification-based tab switching:
-- `.workout` → `HIITWorkoutView` (default landing screen)
+`AppNavigationView` is a single `NavigationStack` with a hamburger-triggered side menu (`SideMenuView`), not a `TabView`. Destinations are switched by local `@State`, no deep-link/notification-based tab switching:
+- `.workout` → `AssistantView` (default landing screen; the week's sessions, block by block, menu label "Workout")
 - `.saved` → `SavedWorkoutsView`
-- `.activity` → `ActivityView` (completed-workout history)
+- `.activity` → `ActivityView` (weekly stats and completed-workout history, menu label "Stats")
 - `.equipment` → `GymProfilesView`
+- `.skills` → `SkillsView`
+- `.devices` → `HeartRateDevicesView` (menu label "Heart Rate Monitor")
+
+Tapping a session block pushes `BlockPagerView` (swipe between blocks, dot indicator, auto-advance on completion), which shows `StrengthWorkoutView` or `MetconView`. `MetconView` (formerly `HIITWorkoutView`) has no menu entry: it opens only from a block or a saved workout.
+
+A day can hold several sessions (`AssistantViewModel.sessions: [Date: [AssistantSession]]`): the programmed one plus any imports. Each renders as a collapsible `SessionSectionView` (source chip, done count, colored rail). Anything block-addressed is scoped by session id (`AssistantBlockRoute(sessionId:blockId:)`, `openableBlocks(in:)`, `markHiitCompleted(sessionId:blockId:)`, `updateStrength(_:sessionId:)`), and the pager only pages within one session.
+
+**Deleting a session:** swipe its header left to reveal Delete (`SessionSectionView`), then confirm. Deletion is optimistic (`AssistantViewModel.deleteSession`, `DeleteWorkoutMutation`) and restores the session if the server refuses. `DaySwipeGuard` stops the page's day swipe from also firing during a header swipe. Sessions still streaming in can't be deleted.
+
+**Create with AI:** a + menu action opening `CreateSessionSheet`. `AssistantViewModel.createSession(request:)` streams `workoutGeneration(request:scheduledDate:)` into the selected day through the same pending → streamed → saved flow as the whiteboard import (`streamNewSession`).
+
+### Whiteboard import
+The floating + on the Workout page (`Core/Components/FloatingActionMenu.swift`; add actions as `QuickAction` cases) opens `WhiteboardScannerView` (`Core/Import/`). VisionKit live text runs on the phone. When `WhiteboardHeuristic.looksLikeWorkout` passes and holds for about 1s (`WhiteboardStabilityGate`), it captures, downscales (`WhiteboardImageEncoder`) and closes. Where the live camera is unavailable (the Simulator, camera access denied) it falls back to the photo library plus Vision OCR. `AssistantViewModel.importWhiteboard` then streams the backend's `whiteboardImport` subscription into the selected day: a pending placeholder, then blocks via `GenerationProgress`, then the saved session. The server has the final say: a non-workout comes back as `GenerationFailed`, shown in a banner with Try again.
 
 ### Workout domain — HIIT feed
-`HIITWorkoutViewModel` (`Core/HIIT/HIITWorkoutViewModel.swift`, singleton `.shared`) is the center of the app:
+Note: the feed UI (filters, Generate, the `.shared` instance) no longer has an entry point — `MetconView` always builds a `HIITWorkoutViewModel(preloaded:advancesAfterCompletion: false)`. The feed-fetching logic below still exists in the view model but is unused by any screen.
+
+`HIITWorkoutViewModel` (`Core/HIIT/HIITWorkoutViewModel.swift`, singleton `.shared`) was the center of the app:
 - Holds one `currentWorkout: HIITWorkoutItem?` at a time, fetched via `HIITWorkoutsQuery` and swapped via `GenerateHiitWorkoutMutation(skipWorkoutId:tagIds:)`.
 - `selectedTags`/`availableTags` drive tag filtering; changing `selectedTags` debounces 500ms then auto-calls `nextWorkout()`.
 - Save (`SaveHiitWorkoutMutation`/`UnsaveHiitWorkoutMutation`) and like/dislike (`LikeHiitWorkoutMutation`, -1/0/1 score) are separate from the workout fetch and update local state optimistically, rolling back on failure.
@@ -76,7 +89,10 @@ Three sign-in paths converge on one call: `AuthState.shared.authenticate(token:u
 
 - **`AuthState.shared`** (`Core/Auth/AuthState.swift`) is the actual source of truth: `@Published isAuthenticated/currentToken/currentUserId/isProvisioned/needsProvisioning/sessionExpiredMessage`, all auto-persisted to `UserDefaults` via Combine `.sink`. Conforms to `TokenProvider`/`AuthenticationProvider`/`ProvisioningProvider` protocols used by the network layer.
 - **`AuthManager`** (`Core/AuthManager.swift`) is a thinner `ObservableObject` kept around for view convenience/back-compat (`@EnvironmentObject`); don't add new state here, add it to `AuthState`.
-- Post-auth, `authenticate()` kicks off `checkProvisioningStatus()` (`IsUserProvisionedQuery`), which flips `ContentView`'s routing between `ProvisioningView` and `RootAppView`.
+- Post-auth, `authenticate()` kicks off `checkProvisioningStatus()` (`IsUserProvisionedQuery`), which flips `ContentView`'s routing between `OnboardingView` and `RootAppView`.
+
+### Onboarding
+New athletes (`needsProvisioning`) go through `Core/Onboarding/`: one short question per screen under a progress bar — goal, experience, schedule, gym preset, equipment, skill questions, lifts, about you. `OnboardingFlow` is the Apollo-free step order and progress math (tested in `wodAITests/OnboardingFlowTests.swift`). Skill questions come from the backend's skill ladders, hardest first: the athlete is asked down a ladder until their first yes (`setSkillLevel` saves that rung; "no" to all saves none). Moving on never waits for the network: each answer is saved in the background, one save at a time in order (`OnboardingAPI`: `UpdateUser`, gym create/update, `SetSkillLevel`, `SetStrengthBenchmark` — lifts are always 1RMs), and Finish waits for every save, retrying failures, then calls `CompleteOnboarding(timezone:)`, which starts planning the athlete's first week on the server. The last screen (`OnboardingPlanningView`, "Hang tight") polls `WeeklyPlanStatus` until today's date is planned (or the run finishes), then `AuthState.completeProvisioning()` hands off to the Workout page; `PlanWait` decides waiting/slow/failed/ready. An athlete who leaves mid-planning resumes on that screen (`load()` checks `IsUserProvisioned` first). On the Workout page, `AssistantViewModel.watchPlanning()` shows "Planning the rest of your week…" and quietly reloads (`reloadWeek()`, no spinner) as more days land. Single-choice steps advance on tap; the rest only from their button. Every view-model action names its step and is ignored unless that step is current, so a tap landing on a screen as it slides away can't answer twice or skip ahead (`wodAITests/OnboardingViewModelTests.swift`).
 - Session expiry: `AuthorizationInterceptor` (in `Network.swift`) scans every GraphQL response for error text containing "unauthorized"/"auth"/"token" → calls `AuthState.handleSessionExpired()` → posts `.userDidLogout`. `ContentView` observes that notification and force-signs-out on the main thread.
 - `AppleSignInService.shared.checkCredentialState()` runs on every launch (from `ContentView.onAppear`) to revoke local auth if the Apple credential was revoked externally.
 
@@ -97,10 +113,18 @@ ViewModels call `Network.shared.client.fetch(query:)` / `.perform(mutation:)` di
 | `HIITWorkoutViewModel.shared` | Current workout, execution state, tags, save/like state |
 | `GymProfileManager.shared` | `[GymProfile]`, active profile, CRUD via `*GymProfileMutation` operations |
 | `EquipmentManager.shared` | `[Equipment]` catalog, 24h `UserDefaults` cache (`fetchEquipment(forceRefresh:)`) |
+| `SensorManager.shared` | Remembered heart-rate device, connection state, latest reading (see Heart rate below) |
 | `AuthState.shared` | see Authentication above |
 | `Network.shared` | Apollo client |
 
 `AuthState` and `AuthManager` are the only two injected as `@EnvironmentObject` (from `wodAIApp`/`ContentView`); everything else is reached via `.shared`.
+
+### Heart rate / wearables
+`Core/Sensors/` records heart rate during a metcon. Everything except `ApolloSessionTelemetryUploader.swift` and the views is Apollo-free and unit-tested (`wodAITests/HeartRateSensorTests.swift`, `WorkoutSensorRecorderTests.swift`).
+- **Device layer**: `SensorProvider` is one way of connecting. `BluetoothHeartRateProvider` handles the standard BLE Heart Rate Service (0x180D/0x2A37, parsed by `HeartRateMeasurementParser`): chest straps, and Garmin/Polar/etc. watches in heart-rate broadcast mode. They connect in-app, never through iPhone Settings. Its `CBCentralManager` is created lazily because creating it shows the Bluetooth prompt. Debug builds also register `SimulatedHeartRateProvider` so the flow works in the Simulator. A new device type (Apple Watch app, vendor SDK) is a new provider plus a `SensorProviderKind` case.
+- **Brand setup**: `DeviceBrand` detects the brand from the advertised name and carries a per-brand `DeviceSetupGuide` shown in `DeviceConnectSheet`. Brand-specific setup goes here.
+- **Recording**: `HIITWorkoutViewModel` starts a `WorkoutSensorRecorder` when the clock starts. It opens a backend `HIITSession`, batches frames every 15 s (retry-safe; the server dedups on timestamp), and on finish returns the server-computed `HeartRateSummary`. `completeHiitWorkout(sessionId:)` links it to the completion. Heart rate never blocks a workout: without a device, or if the session fails to open, the run just isn't recorded.
+- **Analytics are server-side** (`workout-generator/src/lib/trainingLoad.ts`): zones, Edwards TRIMP load, calories, and `recoveryStatus` (7- vs 28-day load). The client only shows the live zone from the thresholds the session returns.
 
 ### Error monitoring
 `TelemetryService` (`Core/Services/TelemetryService.swift`) wraps Sentry: `initialize()` (called once from `wodAIApp.init()`), `identify`/`clearIdentity` on login/logout, `captureError`, `captureMessage`, `captureGraphQLErrors`, and breadcrumbs per GraphQL operation from the interceptor. Prefer routing new error paths through this rather than `print()`.

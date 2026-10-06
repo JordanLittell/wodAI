@@ -1,0 +1,8 @@
+# Every session scheduled in [startDate, endDate], for the Assistant page's
+# week navigator. Dates are calendar days; send them as noon UTC so the
+# server's date-only conversion lands on the intended day.
+query WeekSessions($startDate: DateTime!, $endDate: DateTime!) {
+  getWorkoutsByDateRange(startDate: $startDate, endDate: $endDate) {
+    ...SessionDetails
+  }
+}

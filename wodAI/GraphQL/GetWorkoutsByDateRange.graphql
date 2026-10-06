@@ -6,7 +6,6 @@ query GetWorkoutsByDateRange($startDate: DateTime!, $endDate: DateTime!) {
     coaching
     stimulus
     scheduledDate
-    status
     completed
     completedAt
     components {

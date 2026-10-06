@@ -1,0 +1,6 @@
+# The user's newest session that isn't completed yet (null if there is none).
+query CurrentWorkout {
+  currentWorkout {
+    ...SessionDetails
+  }
+}

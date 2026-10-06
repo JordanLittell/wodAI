@@ -1,0 +1,9 @@
+query RecoveryStatus($timezone: String) {
+  recoveryStatus(timezone: $timezone) {
+    status
+    acuteLoad
+    chronicLoad
+    ratio
+    lastHardSessionAt
+  }
+}

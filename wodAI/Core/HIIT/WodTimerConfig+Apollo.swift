@@ -30,3 +30,17 @@ extension SavedHiitWorkoutsQuery.Data.SavedHiitWorkout.Workout.TimingScheme.Segm
 extension SavedHiitWorkoutsQuery.Data.SavedHiitWorkout.Workout.TimingScheme.Segment: TimingSegmentFragment {}
 extension SavedHiitWorkoutsQuery.Data.SavedHiitWorkout.Workout.TimingScheme.Phase: TimingPhaseFragment {}
 extension SavedHiitWorkoutsQuery.Data.SavedHiitWorkout.Workout.TimingScheme: TimingSchemeFragment {}
+
+// MARK: - SessionDetails (GenerateWorkout, CurrentWorkout)
+
+extension SessionDetails.Block.AsWorkoutHiitPiece.HiitWorkout.TimingScheme.Segment.Phase: TimingPhaseFragment {}
+extension SessionDetails.Block.AsWorkoutHiitPiece.HiitWorkout.TimingScheme.Segment: TimingSegmentFragment {}
+extension SessionDetails.Block.AsWorkoutHiitPiece.HiitWorkout.TimingScheme.Phase: TimingPhaseFragment {}
+extension SessionDetails.Block.AsWorkoutHiitPiece.HiitWorkout.TimingScheme: TimingSchemeFragment {}
+
+// MARK: - GeneratedHiitWorkout (WorkoutGeneration)
+
+extension GeneratedHiitWorkout.TimingScheme.Segment.Phase: TimingPhaseFragment {}
+extension GeneratedHiitWorkout.TimingScheme.Segment: TimingSegmentFragment {}
+extension GeneratedHiitWorkout.TimingScheme.Phase: TimingPhaseFragment {}
+extension GeneratedHiitWorkout.TimingScheme: TimingSchemeFragment {}
