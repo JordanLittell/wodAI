@@ -23,7 +23,9 @@ public struct UpdateUserInput: InputObject {
     height: GraphQLNullable<Int> = nil,
     activeDaysPerWeek: GraphQLNullable<Int> = nil,
     sessionLengthMinutes: GraphQLNullable<Int> = nil,
-    restDays: GraphQLNullable<[GraphQLEnum<WodAiAPI.RestDay>]> = nil
+    restDays: GraphQLNullable<[GraphQLEnum<WodAiAPI.RestDay>]> = nil,
+    primaryGoal: GraphQLNullable<GraphQLEnum<WodAiAPI.TrainingGoal>> = nil,
+    trainingYears: GraphQLNullable<Int> = nil
   ) {
     __data = InputDict([
       "firstName": firstName,
@@ -38,7 +40,9 @@ public struct UpdateUserInput: InputObject {
       "height": height,
       "activeDaysPerWeek": activeDaysPerWeek,
       "sessionLengthMinutes": sessionLengthMinutes,
-      "restDays": restDays
+      "restDays": restDays,
+      "primaryGoal": primaryGoal,
+      "trainingYears": trainingYears
     ])
   }
 
@@ -105,5 +109,15 @@ public struct UpdateUserInput: InputObject {
   public var restDays: GraphQLNullable<[GraphQLEnum<WodAiAPI.RestDay>]> {
     get { __data["restDays"] }
     set { __data["restDays"] = newValue }
+  }
+
+  public var primaryGoal: GraphQLNullable<GraphQLEnum<WodAiAPI.TrainingGoal>> {
+    get { __data["primaryGoal"] }
+    set { __data["primaryGoal"] = newValue }
+  }
+
+  public var trainingYears: GraphQLNullable<Int> {
+    get { __data["trainingYears"] }
+    set { __data["trainingYears"] = newValue }
   }
 }

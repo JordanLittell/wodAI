@@ -4,8 +4,8 @@
 import ApolloAPI
 
 public extension Objects {
-  static let ProvisionUserResponse = ApolloAPI.Object(
-    typename: "ProvisionUserResponse",
+  static let SkillDomain = ApolloAPI.Object(
+    typename: "SkillDomain",
     implementedInterfaces: [],
     keyFields: nil
   )
