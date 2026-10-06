@@ -3,10 +3,35 @@
 //  wodAI
 //
 //  Small heart-rate pieces shared across screens: the pre-start chip on a
-//  metcon, the live readout on the timer, and zone colors.
+//  metcon, the live readout on the timer, zone colors, and the heart-rate
+//  curve drawn on the completion screen and the Stats feed.
 //
 
 import SwiftUI
+import Charts
+
+/// A session's heart rate over time as a smooth red line. `showsAxes` false
+/// gives a bare sparkline for small cards.
+struct HeartRateSparkline: View {
+    let points: [HeartRatePoint]
+    var showsAxes = true
+
+    var body: some View {
+        Chart(points) { point in
+            LineMark(
+                x: .value("Minutes", point.seconds / 60),
+                y: .value("bpm", point.bpm)
+            )
+            .interpolationMethod(.catmullRom)
+            .foregroundStyle(.red)
+        }
+        .chartYScale(domain: .automatic(includesZero: false))
+        .chartXAxis(showsAxes ? .automatic : .hidden)
+        .chartYAxis(showsAxes ? .automatic : .hidden)
+        .chartXAxisLabel(showsAxes ? "min" : "")
+        .accessibilityLabel("Heart rate over time")
+    }
+}
 
 enum HeartRateZoneStyle {
     static func color(for zone: Int?) -> Color {

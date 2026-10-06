@@ -24,6 +24,7 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "CategoricalStat": return WodAiAPI.Objects.CategoricalStat
     case "CategoryPoint": return WodAiAPI.Objects.CategoryPoint
     case "CompletedHIITWorkout": return WodAiAPI.Objects.CompletedHIITWorkout
+    case "CompletedStrengthWorkout": return WodAiAPI.Objects.CompletedStrengthWorkout
     case "CompletedWodsResponse": return WodAiAPI.Objects.CompletedWodsResponse
     case "Component": return WodAiAPI.Objects.Component
     case "Equipment": return WodAiAPI.Objects.Equipment
@@ -40,9 +41,9 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "HIITPaginatedResponse": return WodAiAPI.Objects.HIITPaginatedResponse
     case "HIITSession": return WodAiAPI.Objects.HIITSession
     case "HIITWorkout": return WodAiAPI.Objects.HIITWorkout
+    case "HeartRateSample": return WodAiAPI.Objects.HeartRateSample
     case "HeartRateSummary": return WodAiAPI.Objects.HeartRateSummary
     case "Mutation": return WodAiAPI.Objects.Mutation
-    case "PlanningRun": return WodAiAPI.Objects.PlanningRun
     case "Query": return WodAiAPI.Objects.Query
     case "RecoveryStatus": return WodAiAPI.Objects.RecoveryStatus
     case "SavedHIITWorkout": return WodAiAPI.Objects.SavedHIITWorkout
@@ -60,6 +61,7 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "TimerPhase": return WodAiAPI.Objects.TimerPhase
     case "TimerSegment": return WodAiAPI.Objects.TimerSegment
     case "User": return WodAiAPI.Objects.User
+    case "WeeklyPlanJob": return WodAiAPI.Objects.WeeklyPlanJob
     case "WodTimerConfig": return WodAiAPI.Objects.WodTimerConfig
     case "Workout": return WodAiAPI.Objects.Workout
     case "WorkoutHiitPiece": return WodAiAPI.Objects.WorkoutHiitPiece

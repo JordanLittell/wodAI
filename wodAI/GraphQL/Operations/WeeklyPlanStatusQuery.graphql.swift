@@ -27,22 +27,22 @@ public class WeeklyPlanStatusQuery: GraphQLQuery {
 
     /// WeeklyPlanStatus
     ///
-    /// Parent Type: `PlanningRun`
+    /// Parent Type: `WeeklyPlanJob`
     public struct WeeklyPlanStatus: WodAiAPI.SelectionSet {
       public let __data: DataDict
       public init(_dataDict: DataDict) { __data = _dataDict }
 
-      public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.PlanningRun }
+      public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.WeeklyPlanJob }
       public static var __selections: [ApolloAPI.Selection] { [
         .field("__typename", String.self),
-        .field("id", Int.self),
-        .field("status", GraphQLEnum<WodAiAPI.PlanningRunStatus>.self),
+        .field("id", WodAiAPI.ID.self),
+        .field("status", GraphQLEnum<WodAiAPI.JobStatus>.self),
         .field("plannedDates", [String].self),
         .field("message", String?.self),
       ] }
 
-      public var id: Int { __data["id"] }
-      public var status: GraphQLEnum<WodAiAPI.PlanningRunStatus> { __data["status"] }
+      public var id: WodAiAPI.ID { __data["id"] }
+      public var status: GraphQLEnum<WodAiAPI.JobStatus> { __data["status"] }
       public var plannedDates: [String] { __data["plannedDates"] }
       public var message: String? { __data["message"] }
     }

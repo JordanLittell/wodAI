@@ -124,6 +124,7 @@ type Workout {
   completed: Boolean!
   completedAt: DateTime
   source: WorkoutSource!
+  optional: Boolean!
   components: [Component!]!
   strengthWorkouts: [StrengthWorkout!]!
   hiitPieces: [WorkoutHiitPiece!]!
@@ -396,13 +397,14 @@ type Query {
   hiitWorkouts(page: Int, limit: Int, tagIds: [Int!]): HIITPaginatedResponse!
   hiitWorkout(id: Int!): HIITWorkout
   similarHiitWorkouts(id: Int!): [HIITSimilarResult!]!
-  completedHiitWorkouts: [CompletedHIITWorkout!]!
+  completedHiitWorkouts(startDate: DateTime, endDate: DateTime): [CompletedHIITWorkout!]!
+  completedStrengthWorkouts(startDate: DateTime!, endDate: DateTime!): [CompletedStrengthWorkout!]!
   recoveryStatus(timezone: String): RecoveryStatus!
   savedHiitWorkouts: [SavedHIITWorkout!]!
   isSaved(workoutId: Int!): Boolean!
   hiitWorkoutLike(workoutId: Int!): Int
   movements(search: String): [HIITExercise!]!
-  weeklyPlanStatus: PlanningRun
+  weeklyPlanStatus: WeeklyPlanJob
   skillAssessment: [SkillDomain!]!
   listExercises(search: String): [HIITExercise!]!
   tags: [Tag!]!
@@ -436,7 +438,7 @@ type Mutation {
   toggleGymProfile(id: Int!): GymProfile!
   provisionUser(input: ProvisionUserInput!): ProvisionUserResponse!
   completeOnboarding(timezone: String!): User!
-  startWeeklyPlan(timezone: String!): PlanningRun!
+  startWeeklyPlan(timezone: String!): WeeklyPlanJob!
   setStrengthBenchmark(exerciseId: Int!, weight: Float!, reps: Int!): StrengthBenchmark!
   deleteStrengthBenchmark(id: Int!): Boolean!
   sendAgentMessage(wodId: String!, message: String!): SendAgentMessageResponse!
@@ -525,7 +527,7 @@ type GenerationFailed {
   message: String!
 }
 
-union WeeklyPlanGenerationEvent = GenerationScheduledSession | GenerationStrengthBlock | GenerationStrengthSet | GenerationHiitBlock | GenerationSessionSaved | WeeklyPlanComplete | GenerationFailed
+union WeeklyPlanGenerationEvent = GenerationScheduledSession | GenerationStrengthBlock | GenerationStrengthSet | GenerationHiitBlock | GenerationDraftHiitBlock | GenerationSessionSaved | WeeklyPlanComplete | GenerationFailed
 
 type GenerationScheduledSession {
   scheduledDate: String!
@@ -575,18 +577,20 @@ type Equipment {
   updatedAt: DateTime!
 }
 
-enum PlanningRunStatus {
+enum JobStatus {
   RUNNING
-  DONE
   FAILED
+  CANCELED
+  COMPLETE
 }
 
-type PlanningRun {
-  id: Int!
-  status: PlanningRunStatus!
+type WeeklyPlanJob {
+  id: ID!
+  status: JobStatus!
   plannedDates: [String!]!
   message: String
   startedAt: DateTime!
+  finishedAt: DateTime
 }
 
 type GymPreset {
@@ -806,6 +810,17 @@ type CompletedHIITWorkout {
   heartRate: HeartRateSummary
   trainingLoad: Float
   trainingLoadSource: TrainingLoadSource
+  heartRateSeries: [HeartRateSample!]!
+}
+
+type HeartRateSample {
+  seconds: Float!
+  bpm: Float!
+}
+
+type CompletedStrengthWorkout {
+  completedAt: DateTime!
+  strengthWorkout: StrengthWorkout!
 }
 
 type SavedHIITWorkout {

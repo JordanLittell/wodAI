@@ -4,8 +4,8 @@
 import ApolloAPI
 
 public extension Objects {
-  static let PlanningRun = ApolloAPI.Object(
-    typename: "PlanningRun",
+  static let CompletedStrengthWorkout = ApolloAPI.Object(
+    typename: "CompletedStrengthWorkout",
     implementedInterfaces: [],
     keyFields: nil
   )

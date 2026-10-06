@@ -7,7 +7,6 @@
 //
 
 import SwiftUI
-import Charts
 
 struct HeartRateSummaryCard: View {
     let state: CompletionHeartRate
@@ -48,17 +47,8 @@ struct HeartRateSummaryCard: View {
         }
 
         if points.count > 1 {
-            Chart(points) { point in
-                LineMark(
-                    x: .value("Minutes", point.seconds / 60),
-                    y: .value("bpm", point.bpm)
-                )
-                .interpolationMethod(.catmullRom)
-                .foregroundStyle(.red)
-            }
-            .chartYScale(domain: .automatic(includesZero: false))
-            .chartXAxisLabel("min")
-            .frame(height: 120)
+            HeartRateSparkline(points: points)
+                .frame(height: 120)
         }
 
         VStack(spacing: 6) {

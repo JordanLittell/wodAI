@@ -91,6 +91,29 @@ struct BlockPagerTests {
         #expect(!blocks()[0].isCompleted)
     }
 
+    @Test func finishingTheLastOpenBlockCompletesTheSession() {
+        let viewModel = viewModelWithBlocks()
+        let openable = { viewModel.openableBlocks(in: sessionId) }
+
+        // The strength block is still undone, so finishing the metcon moves on.
+        #expect(!BlockNavigation.completesSession(finishing: 2, in: openable()))
+
+        viewModel.markHiitCompleted(sessionId: sessionId, blockId: 2)
+        // Only the strength block is left: finishing it ends the session,
+        // whichever order the blocks were done in.
+        #expect(BlockNavigation.completesSession(finishing: 0, in: openable()))
+        #expect(!BlockNavigation.completesSession(finishing: 0, in: []))
+    }
+
+    @Test func collapsingASessionOverridesItsDefault() throws {
+        let viewModel = viewModelWithBlocks()
+        let session = try #require(viewModel.session(id: sessionId))
+        #expect(viewModel.isExpanded(session))  // a day's only session starts open
+
+        viewModel.collapse(sessionId: sessionId)
+        #expect(!viewModel.isExpanded(session))
+    }
+
     // MARK: - Server completion
 
     @Test func hiitPieceCompletionFromTheServerSurvivesAReload() throws {
@@ -121,7 +144,7 @@ struct BlockPagerTests {
         return try SessionDetails(data: [
             "__typename": "Workout", "id": "w1", "name": "Day", "description": "",
             "stimulus": NSNull(), "coaching": NSNull(), "scheduledDate": "2026-10-05",
-            "source": "GENERATED", "blocks": blocks,
+            "source": "GENERATED", "optional": false, "blocks": blocks,
         ])
     }
 

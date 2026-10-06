@@ -8,6 +8,7 @@ fragment SessionDetails on Workout {
   coaching
   scheduledDate
   source
+  optional
   blocks {
     __typename
     order

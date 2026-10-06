@@ -34,7 +34,6 @@ struct WorkoutCompletionDraft: Identifiable {
     var roundsCompleted: Int?   // AMRAP
     var repsCompleted: Int?     // AMRAP
     var perceivedEffort: Int?   // RPE 1–10
-    var notes: String = ""      // private note; sent as nil when blank
 
     /// Classifier resolution order (see the plan's format→editor matrix):
     /// 1. `format` contains "amrap"                       → .amrap
@@ -66,13 +65,12 @@ struct HIITWorkoutCompletionView: View {
     @State private var draft: WorkoutCompletionDraft
     /// For-Time only: user hit the cap without finishing all the work.
     @State private var didNotFinish = false
-    @FocusState private var notesFocused: Bool
     /// Celebration fires once, on first presentation only.
     @State private var showConfetti = true
 
     private let onDone: (WorkoutCompletionDraft) -> Void
     /// Takes the live draft, not a bare callback: the edits the user made on
-    /// this screen (RPE, notes) live in the view's own @State, so a no-argument
+    /// this screen (RPE) live in the view's own @State, so a no-argument
     /// skip would silently submit the un-edited seed draft instead.
     private let onSkip: (WorkoutCompletionDraft) -> Void
     /// The run's heart rate; arrives after the screen is up, so it's passed in
@@ -130,26 +128,15 @@ struct HIITWorkoutCompletionView: View {
                         .animation(.easeInOut(duration: 0.3), value: heartRate)
                     resultEditor
                     effortSelector
-                    notesEditor
                 }
                 .padding(.horizontal)
                 .padding(.top, 32)
                 .padding(.bottom, 140)
             }
-            .scrollDismissesKeyboard(.interactively)
 
             VStack {
                 Spacer()
-                // The bottom bar floats over the scroll view, so while the notes
-                // keyboard is up it would sit on top of the field. Hide it and
-                // let the keyboard's own Done button return the user to it.
-                if !notesFocused { bottomBar }
-            }
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") { notesFocused = false }
+                bottomBar
             }
         }
         .overlay {
@@ -399,63 +386,6 @@ struct HIITWorkoutCompletionView: View {
                     .foregroundColor(Color("PrimaryText"))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .animation(.easeInOut(duration: 0.2), value: score)
-            }
-        }
-    }
-
-    // MARK: - Notes (private, free text)
-
-    /// Mirrors the server's `MAX_NOTES_LENGTH`. Enforced here too so an
-    /// over-long note is stopped at the keyboard rather than by a failed
-    /// mutation after the user has already tapped Done.
-    private static let maxNotesLength = 2000
-
-    private var notesEditor: some View {
-        sectionCard(title: "Notes") {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Private to you — how did it feel, what did you scale?")
-                    .font(.caption)
-                    .foregroundColor(Color("SecondaryText"))
-
-                ZStack(alignment: .topLeading) {
-                    // TextEditor has no placeholder of its own.
-                    if draft.notes.isEmpty {
-                        Text("e.g. Scaled pull-ups to bands, legs gone by round 3")
-                            .font(.subheadline)
-                            .foregroundColor(Color("PlaceholderColor"))
-                            .padding(.top, 8)
-                            .padding(.leading, 5)
-                            .allowsHitTesting(false)
-                    }
-
-                    TextEditor(text: $draft.notes)
-                        .font(.subheadline)
-                        .foregroundColor(Color("PrimaryText"))
-                        .scrollContentBackground(.hidden)
-                        .frame(minHeight: 88)
-                        .focused($notesFocused)
-                        .onChange(of: draft.notes) { _, new in
-                            if new.count > Self.maxNotesLength {
-                                draft.notes = String(new.prefix(Self.maxNotesLength))
-                            }
-                        }
-                }
-                .padding(6)
-                .background(Color("Surface2"))
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color("Border"), lineWidth: 1)
-                )
-
-                // Only surfaced as the cap approaches — a counter on an empty
-                // field just makes an optional note feel like a form.
-                if draft.notes.count > Self.maxNotesLength - 200 {
-                    Text("\(Self.maxNotesLength - draft.notes.count) characters left")
-                        .font(.caption2)
-                        .foregroundColor(Color("SecondaryText"))
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                }
             }
         }
     }
@@ -721,7 +651,6 @@ private func sampleWorkout(
     )
     var draft = WorkoutCompletionDraft(id: workout.id, workout: workout, capturedElapsed: 387)
     draft.perceivedEffort = 8
-    draft.notes = "Grip went early — broke the last set of pull-ups into threes."
     return HIITWorkoutCompletionView(
         draft: draft,
         errorMessage: "We couldn't save your result. Check your connection and try again.",

@@ -63,10 +63,11 @@ struct PlanStatus: Equatable {
         self.message = message
     }
 
-    init(status: GraphQLEnum<PlanningRunStatus>, plannedDates: [String], message: String?) {
+    init(status: GraphQLEnum<JobStatus>, plannedDates: [String], message: String?) {
         switch status {
-        case .case(.done): state = .done
-        case .case(.failed): state = .failed
+        case .case(.complete): state = .done
+        // A canceled run plans nothing more, the same as a failed one.
+        case .case(.failed), .case(.canceled): state = .failed
         default: state = .running
         }
         self.plannedDates = Set(plannedDates)

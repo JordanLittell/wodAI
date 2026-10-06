@@ -3,8 +3,9 @@
 
 import ApolloAPI
 
-public enum PlanningRunStatus: String, EnumType {
+public enum JobStatus: String, EnumType {
   case running = "RUNNING"
-  case done = "DONE"
   case failed = "FAILED"
+  case canceled = "CANCELED"
+  case complete = "COMPLETE"
 }

@@ -625,7 +625,7 @@ class HIITWorkoutViewModel: ObservableObject {
     /// Dismiss the completion screen without recording numeric results, sending
     /// only the perceived-effort score if the user set one, then advance.
     func skipCompletion(_ draft: WorkoutCompletionDraft) {
-        // Preserve RPE and notes on skip; drop only the numeric result edits.
+        // Preserve RPE on skip; drop only the numeric result edits.
         var effortOnly = draft
         effortOnly.durationSeconds = nil
         effortOnly.roundsCompleted = nil
@@ -640,8 +640,6 @@ class HIITWorkoutViewModel: ObservableObject {
         completionError = nil
         defer { isSubmittingCompletion = false }
 
-        // A blank or whitespace-only note is "no note", not an empty string.
-        let trimmedNotes = draft.notes.trimmingCharacters(in: .whitespacesAndNewlines)
         // Only a result for the piece's own WOD belongs to the piece; the
         // server rejects any other pairing.
         let pieceId = scheduledPiece.flatMap { $0.workoutId == draft.id ? $0.pieceId : nil }
@@ -655,7 +653,7 @@ class HIITWorkoutViewModel: ObservableObject {
                         roundsCompleted: draft.roundsCompleted.map { .some($0) } ?? .none,
                         repsCompleted: draft.repsCompleted.map { .some($0) } ?? .none,
                         perceivedEffort: draft.perceivedEffort.map { .some($0) } ?? .none,
-                        notes: trimmedNotes.isEmpty ? .none : .some(trimmedNotes),
+                        notes: .none,
                         sessionId: completionSessionId.map { .some($0) } ?? .none,
                         pieceId: pieceId.map { .some($0) } ?? .none
                     )

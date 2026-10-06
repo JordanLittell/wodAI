@@ -141,7 +141,9 @@ struct AssistantView: View {
     @ViewBuilder
     private var dayContent: some View {
         VStack(alignment: .leading, spacing: 24) {
-            if let notice = viewModel.planningNotice {
+            let isGenerating = viewModel.isGenerating(viewModel.selectedDay)
+            // The generating card says the same for this day.
+            if let notice = viewModel.planningNotice, !(isGenerating && notice == .planning) {
                 planningBanner(notice)
             }
 
@@ -182,6 +184,8 @@ struct AssistantView: View {
                 }
             } else if viewModel.isLoading || (!viewModel.hasLoaded && viewModel.errorMessage == nil) {
                 placeholder(icon: nil, title: "Loading this week…", detail: nil)
+            } else if isGenerating {
+                generatingCard
             } else if viewModel.hasLoaded {
                 Text("No workout scheduled")
                     .font(.subheadline)
@@ -239,6 +243,32 @@ struct AssistantView: View {
         .cornerRadius(14)
         .transition(.opacity)
         .animation(.easeInOut, value: notice)
+    }
+
+    /// Stands in for a day's session while the server is still planning the
+    /// week; it may yet turn out to be a rest day.
+    private var generatingCard: some View {
+        HStack(alignment: .top, spacing: 14) {
+            ProgressView()
+                .tint(Color.brandPrimary)
+                .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Building this session…")
+                    .font(.headline)
+                    .foregroundColor(Color("PrimaryText"))
+                Text("Your coach is programming the rest of your week. This day fills in as soon as it's ready.")
+                    .font(.subheadline)
+                    .foregroundColor(Color("SecondaryText"))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.brandPrimary.opacity(0.08))
+        .cornerRadius(14)
+        .transition(.opacity)
+        .accessibilityElement(children: .combine)
     }
 
     /// Why the last new session failed, with a way to try again.

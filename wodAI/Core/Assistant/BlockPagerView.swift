@@ -6,7 +6,8 @@
 //  its full strength or HIIT screen, with a row of dots for that session's
 //  blocks (other sessions on the same day aren't included). Swipe left for the next block, right for the previous one. Once a
 //  block is finished (last set logged, or a HIIT result saved) it moves on
-//  to the next by itself.
+//  to the next by itself. Finishing the session's last open block instead
+//  goes back to the Workout page, with the session collapsed and checked off.
 //
 
 import SwiftUI
@@ -37,6 +38,12 @@ enum BlockNavigation {
         let next = forward ? index + 1 : index - 1
         return blocks.indices.contains(next) ? blocks[next].id : nil
     }
+
+    /// True when finishing `id` leaves nothing in `blocks` undone, so the
+    /// pager should leave rather than move on.
+    static func completesSession(finishing id: Int, in blocks: [AssistantBlock]) -> Bool {
+        !blocks.isEmpty && blocks.allSatisfy { $0.id == id || $0.isCompleted }
+    }
 }
 
 struct BlockPagerView: View {
@@ -45,6 +52,9 @@ struct BlockPagerView: View {
     @State private var currentId: Int
     /// Where the incoming block slides in from: trailing when moving forward.
     @State private var slideEdge: Edge = .trailing
+    /// Set once the session is done and the pager is on its way back.
+    @State private var isLeaving = false
+    @Environment(\.dismiss) private var dismiss
 
     /// How long a just-finished block stays up before moving on, so the
     /// last check mark (or the dismissing result screen) is seen.
@@ -60,6 +70,10 @@ struct BlockPagerView: View {
 
     private var currentBlock: AssistantBlock? {
         blocks.first { $0.id == currentId }
+    }
+
+    private var isSessionCompleted: Bool {
+        viewModel.session(id: sessionId)?.isCompleted ?? false
     }
 
     var body: some View {
@@ -91,6 +105,12 @@ struct BlockPagerView: View {
             }
         }
         .background(Color("Background").ignoresSafeArea())
+        // Watches the session rather than the finish callbacks: a strength
+        // block reports finished before its last set's save lands, and the
+        // session only reads complete once it has.
+        .onChange(of: isSessionCompleted) { wasCompleted, isCompleted in
+            if !wasCompleted && isCompleted { leaveCompletedSession() }
+        }
     }
 
     @ViewBuilder
@@ -143,14 +163,29 @@ struct BlockPagerView: View {
     }
 
     /// Moves on from a block that was just finished, unless the athlete has
-    /// already moved elsewhere. The last block stays put.
+    /// already moved elsewhere. The last block stays put, and one that
+    /// finishes the session leaves it to `leaveCompletedSession`.
     private func advance(after blockId: Int) {
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.autoAdvanceDelay) {
             guard currentId == blockId,
+                  !isLeaving,
+                  !BlockNavigation.completesSession(finishing: blockId, in: blocks),
                   BlockNavigation.neighbor(of: blockId, in: blocks, forward: true) != nil
             else { return }
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             move(forward: true)
+        }
+    }
+
+    /// Every block is done: after the same pause as moving on, go back to the
+    /// Workout page with this session collapsed, where it shows as completed.
+    private func leaveCompletedSession() {
+        guard !isLeaving else { return }
+        isLeaving = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.autoAdvanceDelay) {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            viewModel.collapse(sessionId: sessionId)
+            dismiss()
         }
     }
 }

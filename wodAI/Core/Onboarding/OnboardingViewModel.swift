@@ -112,7 +112,6 @@ enum OnboardingSex: CaseIterable {
 final class OnboardingViewModel: ObservableObject {
     enum Phase { case loading, failed, ready, planning }
 
-    static let daysPerWeekOptions = Array(1...7)
     static let sessionLengthOptions = [30, 45, 60, 90]
 
     @Published private(set) var phase: Phase = .loading
@@ -129,7 +128,9 @@ final class OnboardingViewModel: ObservableObject {
     // Answers
     @Published private(set) var goal: TrainingGoal?
     @Published private(set) var experience: OnboardingExperience?
-    @Published var daysPerWeek = 4
+    /// Days off. Every other day is a training day, and how often they train
+    /// follows from these (the server derives it).
+    @Published private(set) var restDays: Set<RestDay> = []
     @Published var sessionLength = 60
     @Published private(set) var gymPreset: OnboardingGymPreset?
     @Published var equipmentIds: Set<Int> = []
@@ -271,9 +272,21 @@ final class OnboardingViewModel: ObservableObject {
         advance()
     }
 
+    /// Picks or unpicks a rest day. At least one day stays a training day.
+    func toggleRestDay(_ day: RestDay) {
+        guard flow.current == .schedule else { return }
+        if restDays.contains(day) {
+            restDays.remove(day)
+        } else if restDays.count < RestDay.allCases.count - 1 {
+            restDays.insert(day)
+        }
+    }
+
     func saveSchedule() {
         guard flow.current == .schedule else { return }
-        let input = UpdateUserInput(activeDaysPerWeek: .some(daysPerWeek), sessionLengthMinutes: .some(sessionLength))
+        // Monday first, the order the week is shown in.
+        let days = RestDay.allCases.filter(restDays.contains).map { GraphQLEnum<WodAiAPI.RestDay>(rawValue: $0.rawValue) }
+        let input = UpdateUserInput(sessionLengthMinutes: .some(sessionLength), restDays: .some(days))
         save("schedule") { [api] in try await api.updateProfile(input) }
         advance()
     }

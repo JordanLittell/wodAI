@@ -14,6 +14,10 @@ import WodAiAPI
 /// Records calls; each can be slowed down or made to fail.
 private actor FakeOnboardingAPI: OnboardingAPI {
     var calls: [String] = []
+    /// The rest days each profile save sent (raw values), when it sent any.
+    var restDaysSent: [[String]] = []
+    /// Whether any profile save sent a days-per-week.
+    var sentDaysPerWeek = false
     var gymIdsSeen: [Int?] = []
     var profileDelay: Duration = .zero
     var gymDelays: [Duration] = []
@@ -43,6 +47,8 @@ private actor FakeOnboardingAPI: OnboardingAPI {
     func updateProfile(_ input: UpdateUserInput) async throws {
         try await Task.sleep(for: profileDelay)
         calls.append("profile")
+        if case let .some(days) = input.restDays { restDaysSent.append(days.map(\.rawValue)) }
+        if case .some = input.activeDaysPerWeek { sentDaysPerWeek = true }
     }
 
     func saveGym(id: Int?, name: String, equipmentIds: [Int]) async throws -> Int {
@@ -137,12 +143,41 @@ struct OnboardingViewModelTests {
         vm.choose(.buildStrength)
         vm.choose(.twoToFive)
 
-        vm.daysPerWeek = 5
+        vm.toggleRestDay(.wednesday)
         vm.sessionLength = 45
         #expect(vm.flow.current == .schedule)
 
         vm.saveSchedule()
         #expect(vm.flow.current == .gym)
+    }
+
+    @Test func scheduleSendsTheRestDaysInWeekOrder() async throws {
+        let api = FakeOnboardingAPI()
+        let vm = await ready(api)
+        vm.choose(.buildStrength)
+        vm.choose(.twoToFive)
+
+        vm.toggleRestDay(.sunday)
+        vm.toggleRestDay(.wednesday)
+        vm.toggleRestDay(.friday)
+        vm.toggleRestDay(.friday) // changed their mind
+        vm.saveSchedule()
+
+        try await waitUntil { await api.restDaysSent.count == 1 }
+        #expect(await api.restDaysSent == [["WEDNESDAY", "SUNDAY"]])
+        // How often they train follows from the rest days on the server.
+        #expect(await api.sentDaysPerWeek == false)
+    }
+
+    @Test func atLeastOneDayStaysATrainingDay() async {
+        let vm = await ready(FakeOnboardingAPI())
+        vm.choose(.buildStrength)
+        vm.choose(.twoToFive)
+
+        for day in wodAI.RestDay.allCases { vm.toggleRestDay(day) }
+
+        #expect(vm.restDays.count == wodAI.RestDay.allCases.count - 1)
+        #expect(!vm.restDays.contains(.sunday))
     }
 
     @Test func anAnswerToAnEarlierQuestionIsIgnored() async {
@@ -284,6 +319,7 @@ struct AssistantPlanningNoticeTests {
         let vm = AssistantViewModel(week: AssistantWeek())
         vm.planPollInterval = .milliseconds(5)
         vm.planStatus = { statuses.count > 1 ? statuses.removeFirst() : statuses[0] }
+        vm.refetchWeek = { $0() }
 
         vm.watchPlanning()
         for _ in 0..<100 where vm.planningNotice != .planning { try await Task.sleep(for: .milliseconds(5)) }
@@ -295,8 +331,99 @@ struct AssistantPlanningNoticeTests {
     @Test func saysNothingAboutAnOldFailedRun() async throws {
         let vm = AssistantViewModel(week: AssistantWeek())
         vm.planStatus = { PlanStatus(state: .failed, message: "Old news.") }
+        vm.refetchWeek = { $0() }
         vm.watchPlanning()
         try await Task.sleep(for: .milliseconds(50))
         #expect(vm.planningNotice == nil)
+    }
+}
+
+/// While the week is still being planned, the empty days to come read as
+/// generating rather than "No workout scheduled".
+@MainActor
+struct AssistantGeneratingDayTests {
+    /// Midweek, so today has days on both sides whichever day the locale's
+    /// week starts on.
+    static let week = AssistantWeek(containing: ISO8601DateFormatter().date(from: "2026-10-07T12:00:00Z")!)
+    static var yesterday: Date { week.day(before: week.today)! }
+    static var today: Date { week.today }
+    static var tomorrow: Date { week.day(after: week.today)! }
+    static var lastDay: Date { week.last }
+
+    static func session(on day: Date) -> AssistantSession {
+        AssistantSession(name: "Squat day", description: "", stimulus: nil, coaching: nil, scheduledDate: day, blocks: [])
+    }
+
+    /// A view model watching a run whose status is `status()` on each poll,
+    /// with tomorrow already planned. Returns how many refetches it asked for.
+    private func watching(_ status: @escaping () -> PlanStatus?) -> (AssistantViewModel, () -> Int) {
+        let vm = AssistantViewModel(week: Self.week, sessions: [Self.tomorrow: [Self.session(on: Self.tomorrow)]])
+        vm.planPollInterval = .milliseconds(5)
+        vm.planStatus = status
+        var refetches = 0
+        vm.refetchWeek = { refetches += 1; $0() }
+        vm.watchPlanning()
+        return (vm, { refetches })
+    }
+
+    @Test func emptyDaysFromTodayOnAreGeneratingWhilePlanning() async throws {
+        let (vm, _) = watching { PlanStatus(state: .running) }
+        for _ in 0..<100 where vm.planningNotice != .planning { try await Task.sleep(for: .milliseconds(5)) }
+
+        #expect(vm.isGenerating(Self.today))
+        #expect(vm.isGenerating(Self.lastDay))
+        // Past days aren't being planned, and a planned day shows its session.
+        #expect(!vm.isGenerating(Self.yesterday))
+        #expect(!vm.isGenerating(Self.tomorrow))
+    }
+
+    @Test func skippedDaysAreEmptyOnceDone() async throws {
+        var status = PlanStatus(state: .running)
+        let (vm, refetches) = watching { status }
+        for _ in 0..<100 where vm.planningNotice != .planning { try await Task.sleep(for: .milliseconds(5)) }
+        #expect(vm.isGenerating(Self.lastDay))
+
+        status = PlanStatus(state: .done)
+        for _ in 0..<100 where vm.planningNotice != nil { try await Task.sleep(for: .milliseconds(5)) }
+
+        #expect(!vm.isGenerating(Self.lastDay))
+        #expect(!vm.isGenerating(Self.today))
+        // The last days were fetched before the cards cleared.
+        #expect(refetches() == 1)
+    }
+
+    @Test func nothingIsGeneratingAfterAFailure() async throws {
+        var status = PlanStatus(state: .running)
+        let (vm, _) = watching { status }
+        for _ in 0..<100 where vm.planningNotice != .planning { try await Task.sleep(for: .milliseconds(5)) }
+
+        status = PlanStatus(state: .failed, message: "Couldn't finish.")
+        for _ in 0..<100 where vm.planningNotice == .planning { try await Task.sleep(for: .milliseconds(5)) }
+
+        #expect(vm.planningNotice == .failed("Couldn't finish."))
+        #expect(!vm.isGenerating(Self.lastDay))
+    }
+
+    @Test func nothingIsGeneratingWithoutARun() async throws {
+        let (vm, _) = watching { nil }
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(!vm.isGenerating(Self.today))
+    }
+
+    @Test func aRestDaysLightActivityStartsClosed() {
+        var recovery = Self.session(on: Self.today)
+        recovery.isOptional = true
+        let vm = AssistantViewModel(week: Self.week, sessions: [Self.today: [recovery]])
+        #expect(!vm.isExpanded(recovery))
+        vm.toggleExpanded(recovery)
+        #expect(vm.isExpanded(recovery))
+    }
+
+    @Test func readsTheServersJobStatus() {
+        let state = { (status: JobStatus) in PlanStatus(status: .case(status), plannedDates: [], message: nil).state }
+        #expect(state(.running) == .running)
+        #expect(state(.complete) == .done)
+        #expect(state(.failed) == .failed)
+        #expect(state(.canceled) == .failed)
     }
 }

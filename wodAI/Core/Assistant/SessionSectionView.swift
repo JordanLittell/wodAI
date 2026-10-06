@@ -159,6 +159,9 @@ struct SessionSectionView<Blocks: View>: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
                     sourceChip
+                    if session.isOptional {
+                        optionalChip
+                    }
                     Spacer(minLength: 8)
                     progress
                     Image(systemName: "chevron.down")
@@ -203,6 +206,16 @@ struct SessionSectionView<Blocks: View>: View {
             .background(Capsule().fill(accent.opacity(0.12)))
     }
 
+    /// Marks a rest day's light activity as skippable.
+    private var optionalChip: some View {
+        Label("Optional", systemImage: "leaf")
+            .font(.caption.weight(.semibold))
+            .foregroundColor(Color("SecondaryText"))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(Color("SecondaryText").opacity(0.12)))
+    }
+
     @ViewBuilder
     private var progress: some View {
         let openable = session.blocks.filter(\.isOpenable)
@@ -241,6 +254,7 @@ struct SessionSectionView<Blocks: View>: View {
 
     private var accessibilityLabel: String {
         var parts = [session.name, session.source.label]
+        if session.isOptional { parts.append("Optional") }
         let openable = session.blocks.filter(\.isOpenable)
         if session.isPending {
             parts.append("Loading")

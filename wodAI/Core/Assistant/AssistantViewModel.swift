@@ -63,6 +63,8 @@ struct AssistantSession: Identifiable {
     let scheduledDate: Date?
     var blocks: [AssistantBlock]
     var source: SessionSource = .generated
+    /// A rest day's light activity, which the athlete may skip.
+    var isOptional = false
     /// True while the session streams in. Its blocks aren't saved yet, so
     /// they can't be opened.
     var isPending = false
@@ -291,6 +293,11 @@ final class AssistantViewModel: ObservableObject {
     var planStatus: () async throws -> PlanStatus? = { try await ApolloOnboardingAPI().planStatus() }
     /// How often to check on a run that's still planning.
     var planPollInterval: Duration = .seconds(5)
+    /// Refetches the week as planning lands days; `then` runs once it's back.
+    lazy var refetchWeek: (_ then: @escaping () -> Void) -> Void = { [weak self] then in
+        guard let self else { return then() }
+        self.reloadWeek(then: then)
+    }
     /// Only touched on the main actor, except to cancel it in `deinit`.
     nonisolated(unsafe) private var planTask: Task<Void, Never>?
     /// A reload that had to wait for a new session to finish streaming in.
@@ -321,6 +328,17 @@ final class AssistantViewModel: ObservableObject {
     /// The selected day's sessions; empty when nothing is scheduled.
     var daySessions: [AssistantSession] { sessions[selectedDay] ?? [] }
 
+    /// True for an empty day from today on while the server is still planning
+    /// the week. The planner picks its own rest days, so which days stay empty
+    /// is only known once it finishes; until then every one may be coming.
+    func isGenerating(_ day: Date) -> Bool {
+        let day = week.calendar.startOfDay(for: day)
+        return planningNotice == .planning
+            && week.contains(day)
+            && day >= week.today
+            && (sessions[day] ?? []).isEmpty
+    }
+
     /// The selected day's session with this id.
     func session(id: String) -> AssistantSession? {
         daySessions.first { $0.id == id }
@@ -336,6 +354,8 @@ final class AssistantViewModel: ObservableObject {
     /// a short list.
     func isExpanded(_ session: AssistantSession) -> Bool {
         if let chosen = expansion[session.id] { return chosen }
+        // A rest day's light activity stays closed until the athlete wants it.
+        if session.isOptional { return false }
         let day = daySessions
         guard day.count > 1 else { return true }
         return day.first(where: { !$0.isCompleted })?.id == session.id
@@ -343,6 +363,11 @@ final class AssistantViewModel: ObservableObject {
 
     func toggleExpanded(_ session: AssistantSession) {
         expansion[session.id] = !isExpanded(session)
+    }
+
+    /// Closes a session's section, e.g. once its last block is finished.
+    func collapse(sessionId: String) {
+        expansion[sessionId] = false
     }
 
     /// Opens one session on `day` and closes the rest.
@@ -393,16 +418,19 @@ final class AssistantViewModel: ObservableObject {
 
     /// Fetches the week again without a spinner, keeping the selected day.
     /// Waits while a new session streams in, since the fetch replaces them all.
-    func reloadWeek() {
+    /// `then` runs once the fetch is back (or at once, if it had to wait).
+    func reloadWeek(then: (() -> Void)? = nil) {
         guard importTask == nil else {
             reloadAfterAdding = true
+            then?()
             return
         }
-        fetchWeek(quietly: true)
+        fetchWeek(quietly: true, then: then)
     }
 
     /// `quietly`: a background refresh, which shows no spinner and no error.
-    private func fetchWeek(quietly: Bool) {
+    /// `then` runs on the main actor when the fetch is back, whatever it found.
+    private func fetchWeek(quietly: Bool, then: (() -> Void)? = nil) {
         let week = week
         network.client.fetch(
             query: WeekSessionsQuery(
@@ -412,6 +440,7 @@ final class AssistantViewModel: ObservableObject {
             cachePolicy: .fetchIgnoringCacheCompletely
         ) { [weak self] result in
             Task { @MainActor [weak self] in
+                defer { then?() }
                 guard let self else { return }
                 if !quietly { self.isLoading = false }
                 switch result {
@@ -566,7 +595,8 @@ final class AssistantViewModel: ObservableObject {
     // MARK: - Planning still under way
 
     /// Right after onboarding the server is still planning the rest of the
-    /// week. While it is, show a notice and reload whenever another day lands.
+    /// week. While it is, show a notice, mark the empty days still to come as
+    /// generating (`isGenerating`), and reload whenever another day lands.
     /// Does nothing for an athlete whose planning finished long ago.
     func watchPlanning() {
         guard planTask == nil else { return }
@@ -578,7 +608,7 @@ final class AssistantViewModel: ObservableObject {
                     self.planningNotice = nil
                     break
                 }
-                if let known, status.plannedDates != known { self.reloadWeek() }
+                if let known, status.plannedDates != known { self.refetchWeek {} }
                 known = status.plannedDates
                 switch status.state {
                 case .running:
@@ -587,10 +617,19 @@ final class AssistantViewModel: ObservableObject {
                     try? await Task.sleep(for: interval)
                     continue
                 case .done:
-                    self.planningNotice = nil
+                    if self.planningNotice == .planning {
+                        // Clear the generating cards only once the last days
+                        // are fetched, so none reads "No workout scheduled"
+                        // in between.
+                        self.refetchWeek { [weak self] in self?.planningNotice = nil }
+                    } else {
+                        self.planningNotice = nil
+                    }
                 case .failed:
                     // Only worth saying if this run was the one just watched.
                     if self.planningNotice != nil {
+                        // Show whatever was saved before it failed.
+                        self.refetchWeek {}
                         self.planningNotice = .failed(status.message ?? "We couldn't plan the rest of your week.")
                         try? await Task.sleep(for: .seconds(6))
                         self.planningNotice = nil
@@ -781,7 +820,8 @@ final class AssistantViewModel: ObservableObject {
             // The local calendar day, not the raw UTC-midnight instant.
             scheduledDate: AssistantWeek().localDay(fromServer: workout.scheduledDate),
             blocks: blocks,
-            source: SessionSource(workout.source)
+            source: SessionSource(workout.source),
+            isOptional: workout.optional
         )
     }
 

@@ -7,7 +7,7 @@ import WodAiAPI
 public class WorkoutGenerationSubscription: GraphQLSubscription {
   public static let operationName: String = "WorkoutGeneration"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "664729f90977ea466224c59486494e49cd6a0f73b38a24dca9bf868f778588f1",
+    operationIdentifier: "4ae963d7ca1b025bbce9e10125052575b0f3db2d9e3566eee4f7c3e426980ee1",
     definition: .init(
       #"subscription WorkoutGeneration($request: String, $scheduledDate: String) { workoutGeneration(request: $request, scheduledDate: $scheduledDate) { __typename ... on GenerationSession { name description stimulus } ... on GenerationStrengthBlock { order name instructions } ... on GenerationStrengthSet { order setOrder reps weight rpe exercise { __typename name muscleGroups } } ... on GenerationHiitBlock { order hiitWorkout { __typename ...GeneratedHiitWorkout } } ... on GenerationDraftHiitBlock { order name format displayText stimulus } ... on GenerationComplete { workout { __typename ...SessionDetails } } ... on GenerationFailed { message } } }"#,
       fragments: [GeneratedHiitWorkout.self, SessionDetails.self]
@@ -264,6 +264,7 @@ public class WorkoutGenerationSubscription: GraphQLSubscription {
           public var coaching: String? { __data["coaching"] }
           public var scheduledDate: WodAiAPI.DateTime { __data["scheduledDate"] }
           public var source: GraphQLEnum<WodAiAPI.WorkoutSource> { __data["source"] }
+          public var optional: Bool { __data["optional"] }
           public var blocks: [Block] { __data["blocks"] }
 
           public struct Fragments: FragmentContainer {

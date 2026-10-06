@@ -55,14 +55,17 @@ struct ScheduleStep: View {
     @ObservedObject var viewModel: OnboardingViewModel
 
     var body: some View {
-        OnboardingPage(title: "How often can you train?") {
+        OnboardingPage(title: "When do you want to rest?", subtitle: "We'll program every other day.") {
             VStack(alignment: .leading, spacing: 12) {
-                label("Days per week")
+                label("Rest days")
                 HStack(spacing: 4) {
-                    ForEach(OnboardingViewModel.daysPerWeekOptions, id: \.self) { days in
-                        dayButton(days)
+                    ForEach(RestDay.allCases, id: \.self) { day in
+                        dayButton(day)
                     }
                 }
+                Text("Rest days get an optional light activity.")
+                    .font(.footnote)
+                    .foregroundStyle(Color("SecondaryText"))
             }
             VStack(alignment: .leading, spacing: 12) {
                 label("Minutes per session")
@@ -79,10 +82,10 @@ struct ScheduleStep: View {
         }
     }
 
-    private func dayButton(_ days: Int) -> some View {
-        let isSelected = viewModel.daysPerWeek == days
-        return Button { viewModel.daysPerWeek = days } label: {
-            Text("\(days)")
+    private func dayButton(_ day: RestDay) -> some View {
+        let isSelected = viewModel.restDays.contains(day)
+        return Button { viewModel.toggleRestDay(day) } label: {
+            Text(day.displayName.prefix(1))
                 .font(.system(size: 17, weight: .semibold, design: .rounded))
                 .foregroundStyle(isSelected ? Color.white : Color("PrimaryText"))
                 .frame(width: 42, height: 42)
@@ -94,7 +97,7 @@ struct ScheduleStep: View {
         }
         .buttonStyle(OnboardingPressStyle())
         .animation(.easeOut(duration: 0.15), value: isSelected)
-        .accessibilityLabel("\(days) days per week")
+        .accessibilityLabel(isSelected ? "\(day.displayName), rest day" : day.displayName)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
