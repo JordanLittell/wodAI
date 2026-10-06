@@ -1,0 +1,30 @@
+# The Stats feed's HIIT results for one week (strength comes from
+# CompletedStrengthWorkouts). heartRateSeries is empty when no heart rate was
+# recorded.
+query CompletedHiitWorkoutsQuery($startDate: DateTime, $endDate: DateTime) {
+  completedHiitWorkouts(startDate: $startDate, endDate: $endDate) {
+    id
+    completedAt
+    durationSeconds
+    roundsCompleted
+    repsCompleted
+    perceivedEffort
+    trainingLoad
+    heartRate {
+      avg
+      max
+    }
+    heartRateSeries {
+      seconds
+      bpm
+    }
+    workout {
+      id
+      format
+      displayText
+      stimulus
+      constraintType
+      constraintMagnitude
+    }
+  }
+}

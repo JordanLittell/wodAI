@@ -1,0 +1,37 @@
+query HIITWorkoutsQuery($page: Int, $limit: Int) {
+  hiitWorkouts(page: $page, limit: $limit) {
+    data {
+      id
+      format
+      displayText
+      stimulus
+      constraintType
+      constraintMagnitude
+      timeCap
+      timingScheme {
+        version
+        segments {
+          rounds
+          phases {
+            durationSeconds
+            direction
+            label
+          }
+        }
+        phases {
+          durationSeconds
+          direction
+          label
+        }
+      }
+      tags {
+        id
+        name
+      }
+    }
+    total
+    page
+    limit
+    totalPages
+  }
+}

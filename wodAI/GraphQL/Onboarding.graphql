@@ -1,0 +1,74 @@
+# Onboarding (Core/Onboarding). Each step saves as the athlete advances;
+# goal, experience, schedule and body stats go through UpdateUser, and the gym
+# through CreateGymProfileMutation / UpdateGymProfile.
+
+query OnboardingSkillLadders {
+  skillAssessment {
+    key
+    name
+    ladders {
+      key
+      name
+      rungs {
+        key
+        question
+      }
+    }
+  }
+}
+
+mutation SetSkillLevel($ladder: String!, $level: String) {
+  setSkillLevel(ladder: $ladder, level: $level) {
+    key
+    level
+  }
+}
+
+query GymPresets {
+  gymPresets {
+    key
+    name
+    equipment {
+      id
+      name
+    }
+  }
+}
+
+mutation SetStrengthBenchmark($exerciseId: Int!, $weight: Float!, $reps: Int!) {
+  setStrengthBenchmark(exerciseId: $exerciseId, weight: $weight, reps: $reps) {
+    id
+    weight
+    reps
+  }
+}
+
+mutation DeleteStrengthBenchmark($id: Int!) {
+  deleteStrengthBenchmark(id: $id)
+}
+
+# Marks the athlete onboarded and starts planning their first week on the
+# server; poll WeeklyPlanStatus until today's date is planned.
+mutation CompleteOnboarding($timezone: String!) {
+  completeOnboarding(timezone: $timezone) {
+    id
+  }
+}
+
+query WeeklyPlanStatus {
+  weeklyPlanStatus {
+    id
+    status
+    plannedDates
+    message
+  }
+}
+
+mutation StartWeeklyPlan($timezone: String!) {
+  startWeeklyPlan(timezone: $timezone) {
+    id
+    status
+    plannedDates
+    message
+  }
+}

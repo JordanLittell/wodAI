@@ -1,0 +1,31 @@
+mutation GenerateHiitWorkoutMutation($skipWorkoutId: Int, $tagIds: [Int!]) {
+  generateHiitWorkout(skipWorkoutId: $skipWorkoutId, tagIds: $tagIds) {
+    id
+    format
+    displayText
+    stimulus
+    constraintType
+    constraintMagnitude
+    timeCap
+    timingScheme {
+      version
+      segments {
+        rounds
+        phases {
+          durationSeconds
+          direction
+          label
+        }
+      }
+      phases {
+        durationSeconds
+        direction
+        label
+      }
+    }
+    tags {
+      id
+      name
+    }
+  }
+}

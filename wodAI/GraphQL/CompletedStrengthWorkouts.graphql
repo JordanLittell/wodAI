@@ -1,0 +1,25 @@
+# The Stats feed's strength pieces for one week: each piece with at least one
+# set logged in the range, and the day it counts on (its latest logged set).
+query CompletedStrengthWorkouts($startDate: DateTime!, $endDate: DateTime!) {
+  completedStrengthWorkouts(startDate: $startDate, endDate: $endDate) {
+    completedAt
+    strengthWorkout {
+      id
+      name
+      stimulus
+      instructions
+      components {
+        id
+        order
+        reps
+        weight
+        completedAt
+        completedReps
+        completedWeight
+        exercise {
+          name
+        }
+      }
+    }
+  }
+}

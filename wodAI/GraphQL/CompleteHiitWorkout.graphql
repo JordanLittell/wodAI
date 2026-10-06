@@ -1,0 +1,29 @@
+mutation CompleteHiitWorkoutMutation(
+  $id: Int!
+  $durationSeconds: Int
+  $roundsCompleted: Int
+  $repsCompleted: Int
+  $perceivedEffort: Int
+  $notes: String
+  $sessionId: ID
+  $pieceId: Int
+) {
+  completeHiitWorkout(
+    id: $id
+    durationSeconds: $durationSeconds
+    roundsCompleted: $roundsCompleted
+    repsCompleted: $repsCompleted
+    perceivedEffort: $perceivedEffort
+    notes: $notes
+    sessionId: $sessionId
+    pieceId: $pieceId
+  ) {
+    id
+    completedAt
+    durationSeconds
+    roundsCompleted
+    repsCompleted
+    perceivedEffort
+    notes
+  }
+}

@@ -1,0 +1,21 @@
+query GetWorkoutByDate($date: DateTime!) {
+  getWorkoutByDate(date: $date) {
+    id
+    name
+    description
+    coaching
+    stimulus
+    scheduledDate
+    completed
+    completedAt
+    components {
+      id
+      name
+      definition
+      description
+      muscles
+      movements
+      order
+    }
+  }
+}

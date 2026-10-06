@@ -1,0 +1,11 @@
+mutation ToggleGymProfileMutation($id: Int!) {
+  toggleGymProfile(id: $id) {
+    id
+    name
+    isActive
+    equipment {
+      id
+      name
+    }
+  }
+}

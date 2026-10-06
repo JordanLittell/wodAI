@@ -1,0 +1,3 @@
+query HiitWorkoutLikeQuery($workoutId: Int!) {
+  hiitWorkoutLike(workoutId: $workoutId)
+}

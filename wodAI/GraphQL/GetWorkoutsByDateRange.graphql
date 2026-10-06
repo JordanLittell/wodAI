@@ -1,0 +1,21 @@
+query GetWorkoutsByDateRange($startDate: DateTime!, $endDate: DateTime!) {
+  getWorkoutsByDateRange(startDate: $startDate, endDate: $endDate) {
+    id
+    name
+    description
+    coaching
+    stimulus
+    scheduledDate
+    completed
+    completedAt
+    components {
+      id
+      name
+      definition
+      description
+      muscles
+      movements
+      order
+    }
+  }
+}

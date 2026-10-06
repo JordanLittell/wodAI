@@ -1,0 +1,6 @@
+query Equipment {
+  equipment {
+    name
+    id
+  }
+}

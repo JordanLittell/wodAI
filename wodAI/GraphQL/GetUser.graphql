@@ -1,0 +1,12 @@
+query User {
+  user {
+    age
+    fitnessLevel
+    gender
+    goal
+    height
+    weight
+    activeDaysPerWeek
+    sessionLengthMinutes
+  }
+}

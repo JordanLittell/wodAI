@@ -1,0 +1,992 @@
+directive @auth on FIELD_DEFINITION
+
+directive @admin on FIELD_DEFINITION
+
+"""
+A directive used by the Apollo iOS client to annotate operations or fragments that should be used exclusively for generating local cache mutations instead of as standard operations.
+"""
+directive @apollo_client_ios_localCacheMutation on QUERY | MUTATION | SUBSCRIPTION | FRAGMENT_DEFINITION
+
+"""
+A directive used by the Apollo iOS code generation engine to generate custom import statements in operation or fragment definition files. An import statement to import a module with the name provided in the `module` argument will be added to the generated definition file.
+"""
+directive @import(
+  """The name of the module to import."""
+  module: String!
+) repeatable on QUERY | MUTATION | SUBSCRIPTION | FRAGMENT_DEFINITION
+
+"""Attach extra information to a given type."""
+directive @typePolicy(
+  """
+  A selection set containing fields used to compute the cache key of an object. Referenced fields must have non-nullable scalar types. Order is important.
+  """
+  keyFields: String!
+) on OBJECT | INTERFACE
+
+"""
+Directs the executor to defer this fragment when the `if` argument is true or undefined.
+"""
+directive @defer(
+  """Deferred when true or undefined."""
+  if: Boolean
+
+  """Unique name"""
+  label: String
+) on FRAGMENT_SPREAD | INLINE_FRAGMENT
+
+type User {
+  id: Int!
+  sub: String!
+  firstName: String
+  lastName: String
+  email: String!
+  isAdmin: Boolean!
+  age: Int
+  gender: Gender
+  fitnessLevel: FitnessLevel!
+  threadId: String
+  goal: String
+  weight: Int
+  height: Int
+  activeDaysPerWeek: Int
+  sessionLengthMinutes: Int
+  restDays: [RestDay!]!
+  trainingNotes: String
+  timezone: String
+  primaryGoal: TrainingGoal
+  trainingYears: Int
+}
+
+enum TrainingGoal {
+  GENERAL_FITNESS
+  BUILD_STRENGTH
+  BUILD_ENGINE
+  LOSE_FAT
+  SKILL_DEVELOPMENT
+  COMPETE
+  RETURN_FROM_BREAK
+}
+
+type UserContext {
+  goal: String
+  activeDaysPerWeek: Int
+  sessionLengthMinutes: Int
+  restDays: [RestDay!]!
+  trainingNotes: String
+}
+
+input UpdateUserContextInput {
+  goal: String
+  activeDaysPerWeek: Int
+  sessionLengthMinutes: Int
+  restDays: [RestDay!]
+  trainingNotes: String
+}
+
+type SkillDomain {
+  key: String!
+  name: String!
+  ladders: [SkillLadder!]!
+}
+
+type SkillLadder {
+  key: String!
+  name: String!
+  rungs: [SkillRung!]!
+  assessed: Boolean!
+  level: String
+}
+
+type SkillRung {
+  key: String!
+  question: String!
+}
+
+type Program {
+  id: String!
+  name: String!
+  description: String!
+  workouts: [Workout!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Workout {
+  id: String!
+  name: String!
+  description: String!
+  user: User
+  program: Program
+  order: Int
+  stimulus: String
+  coaching: String
+  scheduledDate: DateTime!
+  completed: Boolean!
+  completedAt: DateTime
+  source: WorkoutSource!
+  optional: Boolean!
+  components: [Component!]!
+  strengthWorkouts: [StrengthWorkout!]!
+  hiitPieces: [WorkoutHiitPiece!]!
+  blocks: [WorkoutBlock!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+interface WorkoutBlock {
+  order: Int!
+}
+
+type StrengthWorkout implements WorkoutBlock {
+  id: Int!
+  name: String
+  stimulus: String!
+  instructions: String!
+  order: Int!
+  components: [StrengthComponent!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type StrengthComponent {
+  id: Int!
+  order: Int!
+  reps: Int!
+  weight: Float
+  rpe: Int
+  exerciseId: Int!
+  exercise: HIITExercise!
+  completedAt: DateTime
+  completedReps: Int
+  completedWeight: Float
+  completedRpe: Int
+}
+
+input StrengthComponentResultInput {
+  id: Int!
+  reps: Int!
+  weight: Float
+  rpe: Int
+}
+
+type WorkoutHiitPiece implements WorkoutBlock {
+  id: Int!
+  order: Int!
+  hiitWorkout: HIITWorkout!
+  completion: CompletedHIITWorkout
+}
+
+enum WorkoutSource {
+  GENERATED
+  PLANNED
+  IMPORTED
+  WHITEBOARD
+  CREATED
+}
+
+enum WorkoutPieceType {
+  STRENGTH
+  HIIT
+}
+
+input ImportStrengthComponentInput {
+  exerciseId: Int!
+  reps: Int!
+  weight: Float
+  rpe: Int
+}
+
+input ImportWorkoutPieceInput {
+  type: WorkoutPieceType!
+  name: String
+  stimulus: String
+  instructions: String
+  strengthComponents: [ImportStrengthComponentInput!]
+  hiit: CreateHIITWorkoutInput
+}
+
+input ImportWorkoutInput {
+  name: String!
+  scheduledDate: DateTime!
+  description: String
+  pieces: [ImportWorkoutPieceInput!]!
+}
+
+type Component {
+  id: String!
+  name: String!
+  order: Int!
+  definition: String!
+  description: String!
+  targetFitnessDomains: [String!]!
+  energySystems: [String!]!
+  muscles: [String!]!
+  movements: [String!]!
+  workoutId: String!
+  workout: Workout!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type CompletedWodsResponse {
+  wods: [Workout!]!
+  total: Int!
+  hasMore: Boolean!
+  currentPage: Int!
+  totalPages: Int!
+}
+
+type WorkoutStats {
+  completedSessionCount: Int!
+  strengthPieceCount: Int!
+  hiitPieceCount: Int!
+  strengthVolumeLb: Float!
+  intensityMinutes: Float!
+  distanceMeters: Int!
+}
+
+enum Gender {
+  male
+  female
+  other
+  prefer_not_to_say
+}
+
+enum FitnessLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  ELITE
+  PRO
+}
+
+enum FitnessEquipment {
+  Barbells
+  WeightPlates
+  Dumbbells
+  SquatRacks
+  FlatInclineDeclineBenches
+  SmithMachines
+  CableMachines
+  LegPressMachines
+  LatPullDownMachines
+  SeatedRowMachines
+  LegExtensionMachines
+  LegCurlMachines
+  HackSquatMachines
+  CalfRaiseMachines
+  ShoulderPressMachines
+  ChestPressMachines
+  AssistedPullUpDipMachines
+  PreacherCurlBenches
+  HyperextensionBenches
+  Kettlebells
+  MedicineBalls
+  ResistanceBands
+  TRXSuspensionTrainers
+  BattleRopes
+  PlyometricBoxes
+  MultiStationGyms
+  AbdominalCrunchMachines
+  PecDeckMachines
+  HammerStrengthMachines
+  GluteHamDevelopersGHD
+  SledsProwlers
+  FarmersWalkHandles
+  LandmineAttachments
+  TrapBarsHexBars
+  EZCurlBars
+  OlympicLiftingPlatforms
+  BumperPlates
+  StabilityBallsExerciseBalls
+  BosuBalls
+  MedicineBallRebounders
+  GripStrengtheners
+  PullUpBars
+  DipStations
+  TBarRowMachines
+  SeatedCalfRaiseMachines
+  AbRollers
+  ReverseHyperMachines
+  FunctionalTrainerMachines
+  SeatedLegPressMachines
+}
+
+enum RestDay {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum InjurySeverity {
+  MINOR
+  MODERATE
+  SEVERE
+}
+
+enum AgentMessageRole {
+  USER
+  ASSISTANT
+}
+
+input BenchmarkInput {
+  type: String!
+  value: Float!
+  unit: String!
+}
+
+input InjuryInput {
+  bodyPart: String!
+  severity: InjurySeverity!
+  description: String
+}
+
+input ProvisionUserInput {
+  age: Int!
+  heightInches: Int!
+  weight: Int!
+  gender: Gender!
+  fitnessLevel: FitnessLevel!
+  workoutDuration: Int!
+  benchmarks: [BenchmarkInput!]!
+  injuries: [InjuryInput!]
+  availableEquipment: [FitnessEquipment!]!
+  sessionDurationMinutes: Int!
+  restDays: [RestDay!]!
+}
+
+type ProvisionUserResponse {
+  success: Boolean!
+  message: String
+  user: User
+}
+
+scalar DateTime
+
+scalar JSON
+
+type Query {
+  user: User
+  users: [User!]!
+  workout(id: String!): Workout
+  workouts: [Workout!]!
+  currentWorkout: Workout
+  wod(id: String!): Workout
+  wods(searchText: String): [Workout!]!
+  completedWods(page: Int): CompletedWodsResponse!
+  currentWod: Workout
+  getWorkoutsByDateRange(startDate: DateTime!, endDate: DateTime!): [Workout!]!
+  getWorkoutByDate(date: DateTime!): Workout
+  workoutStats(startDate: DateTime!, endDate: DateTime!): WorkoutStats!
+  userContext: UserContext!
+  programs: [Program!]!
+  program(id: String!): Program
+  programSchema: ProgramSchema!
+  gymProfiles: [GymProfile!]!
+  activeGymProfile: GymProfile
+  gymPresets: [GymPreset!]!
+  strengthBenchmarks: [StrengthBenchmark!]!
+  equipment: [Equipment!]!
+  equipmentById(id: Int!): Equipment
+  isUserProvisioned: Boolean!
+  getConversation(wodId: String!): Conversation
+  hiitWorkouts(page: Int, limit: Int, tagIds: [Int!]): HIITPaginatedResponse!
+  hiitWorkout(id: Int!): HIITWorkout
+  similarHiitWorkouts(id: Int!): [HIITSimilarResult!]!
+  completedHiitWorkouts(startDate: DateTime, endDate: DateTime): [CompletedHIITWorkout!]!
+  completedStrengthWorkouts(startDate: DateTime!, endDate: DateTime!): [CompletedStrengthWorkout!]!
+  recoveryStatus(timezone: String): RecoveryStatus!
+  savedHiitWorkouts: [SavedHIITWorkout!]!
+  isSaved(workoutId: Int!): Boolean!
+  hiitWorkoutLike(workoutId: Int!): Int
+  movements(search: String): [HIITExercise!]!
+  weeklyPlanStatus: WeeklyPlanJob
+  skillAssessment: [SkillDomain!]!
+  listExercises(search: String): [HIITExercise!]!
+  tags: [Tag!]!
+  availableTags(selectedTagIds: [Int!]): [TagFacet!]!
+  stat(type: StatType!, startDate: DateTime!, endDate: DateTime!, timezone: String): StatResult!
+}
+
+type Mutation {
+  updateUser(input: UpdateUserInput!): User!
+  deleteUser: User!
+  generateWod(page: Int): Workout!
+  generate(page: Int): Workout!
+  completeWorkout(id: String!): Workout!
+  completeWod(id: String!): Workout!
+  updateWod(id: String!, instructions: String): Workout!
+  importWorkout(input: ImportWorkoutInput!): Workout!
+  deleteWorkout(id: String!): Boolean!
+  updateUserContext(input: UpdateUserContextInput!): UserContext!
+  updateUserRestDays(restDays: [RestDay!]!): User!
+  createProgram(input: CreateProgramInput!): Program!
+  deleteProgram(id: String!): Boolean!
+  uploadWorkoutToProgram(programId: String!, workout: CreateWorkoutInput!, order: Int): Workout!
+  assignProgramToUser(programId: String!, startDate: DateTime!, userId: Int!): AssignProgramResponse!
+  register(email: String!, password: String!, firstName: String, lastName: String): AuthPayload!
+  loginWithCredentials(email: String!, password: String!): AuthPayload!
+  loginWithGoogle(idToken: String!): AuthPayload!
+  loginWithApple(identityToken: String!, fullName: String, email: String, user: String!): AuthPayload!
+  createGymProfile(input: CreateGymProfileInput!): GymProfile!
+  updateGymProfile(id: Int!, input: UpdateGymProfileInput!): GymProfile!
+  deleteGymProfile(id: Int!): Boolean!
+  toggleGymProfile(id: Int!): GymProfile!
+  provisionUser(input: ProvisionUserInput!): ProvisionUserResponse!
+  completeOnboarding(timezone: String!): User!
+  startWeeklyPlan(timezone: String!): WeeklyPlanJob!
+  setStrengthBenchmark(exerciseId: Int!, weight: Float!, reps: Int!): StrengthBenchmark!
+  deleteStrengthBenchmark(id: Int!): Boolean!
+  sendAgentMessage(wodId: String!, message: String!): SendAgentMessageResponse!
+  approveWorkoutModification(wodId: String!, conversationId: String!): Workout!
+  generateHiitWorkout(tagIds: [Int!], skipWorkoutId: Int, timezone: String): HIITWorkout
+  generateHiitWorkouts(tagIds: [Int!], skipWorkoutId: Int, timezone: String): [HIITWorkout!]!
+  createHiitWorkout(input: CreateHIITWorkoutInput!): HIITWorkout!
+  deleteHiitWorkout(id: Int!): Boolean!
+  completeHiitWorkout(id: Int!, durationSeconds: Int, roundsCompleted: Int, repsCompleted: Int, perceivedEffort: Int, notes: String, sessionId: ID, pieceId: Int): CompletedHIITWorkout!
+  updateHiitCompletion(id: Int!, durationSeconds: Int, roundsCompleted: Int, repsCompleted: Int, perceivedEffort: Int, notes: String): CompletedHIITWorkout!
+  completeStrengthComponents(strengthWorkoutId: Int!, components: [StrengthComponentResultInput!]!): StrengthWorkout!
+  uncompleteStrengthComponents(strengthWorkoutId: Int!, componentIds: [Int!]!): StrengthWorkout!
+  saveHiitWorkout(id: Int!): Boolean!
+  unsaveHiitWorkout(id: Int!): Boolean!
+  likeHiitWorkout(workoutId: Int!, score: Int!): Boolean!
+  createHIITSession(wodId: ID!, startedAt: DateTime!, source: SensorSourceInput): HIITSession!
+  appendSensorFrames(sessionId: ID!, frames: [SensorFrameInput!]!): Boolean!
+  completeHIITSession(sessionId: ID!, endedAt: DateTime!, movementIntervals: [MovementIntervalInput!]!): HIITSession!
+  abandonHIITSession(sessionId: ID!): Boolean!
+  setMovementExcluded(exerciseId: Int!, excluded: Boolean!): HIITExercise!
+  setSkillLevel(ladder: String!, level: String): SkillLadder!
+  createTag(name: String!, description: String!, category: String): Tag!
+  setTagDisabled(id: Int!, disabled: Boolean!): Tag!
+  setTagCategory(id: Int!, category: String!): Tag!
+  tagHiitWorkout(workoutId: Int!, tagIds: [Int!]!): HIITWorkout!
+  untagHiitWorkout(workoutId: Int!, tagIds: [Int!]!): HIITWorkout!
+  setHiitWorkoutTags(workoutId: Int!, tagIds: [Int!]!): HIITWorkout!
+}
+
+type Subscription {
+  agentResponse(wodId: String!): AgentResponse!
+  workoutGeneration(request: String, scheduledDate: String): WorkoutGenerationEvent!
+  weeklyPlanGeneration(timezone: String!): WeeklyPlanGenerationEvent!
+  whiteboardImport(input: WhiteboardImportInput!): WorkoutGenerationEvent!
+}
+
+input WhiteboardImportInput {
+  imageJpegBase64: String!
+  recognizedText: String
+  scheduledDate: String!
+}
+
+union WorkoutGenerationEvent = GenerationSession | GenerationStrengthBlock | GenerationStrengthSet | GenerationHiitBlock | GenerationDraftHiitBlock | GenerationComplete | GenerationFailed
+
+type GenerationSession {
+  name: String!
+  description: String!
+  stimulus: String!
+}
+
+type GenerationStrengthBlock {
+  order: Int!
+  name: String!
+  stimulus: String!
+  instructions: String!
+}
+
+type GenerationStrengthSet {
+  order: Int!
+  setOrder: Int!
+  reps: Int!
+  weight: Float
+  rpe: Int
+  exerciseId: Int!
+  exercise: HIITExercise!
+}
+
+type GenerationHiitBlock {
+  order: Int!
+  hiitWorkout: HIITWorkout!
+}
+
+type GenerationDraftHiitBlock {
+  order: Int!
+  name: String!
+  format: String!
+  displayText: String!
+  stimulus: String!
+}
+
+type GenerationComplete {
+  workout: Workout!
+}
+
+type GenerationFailed {
+  message: String!
+}
+
+union WeeklyPlanGenerationEvent = GenerationScheduledSession | GenerationStrengthBlock | GenerationStrengthSet | GenerationHiitBlock | GenerationDraftHiitBlock | GenerationSessionSaved | WeeklyPlanComplete | GenerationFailed
+
+type GenerationScheduledSession {
+  scheduledDate: String!
+  name: String!
+  description: String!
+  stimulus: String!
+}
+
+type GenerationSessionSaved {
+  scheduledDate: String!
+  workout: Workout!
+}
+
+type WeeklyPlanComplete {
+  workouts: [Workout!]!
+}
+
+input UpdateUserInput {
+  firstName: String
+  lastName: String
+  email: String
+  age: Int
+  gender: Gender
+  fitnessLevel: FitnessLevel
+  equipment: [FitnessEquipment!]
+  goal: String
+  weight: Int
+  height: Int
+  activeDaysPerWeek: Int
+  sessionLengthMinutes: Int
+  restDays: [RestDay!]
+  primaryGoal: TrainingGoal
+  trainingYears: Int
+}
+
+type AuthPayload {
+  token: String!
+  user: User!
+}
+
+type Equipment {
+  id: Int!
+  name: String!
+  description: String
+  category: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum JobStatus {
+  RUNNING
+  FAILED
+  CANCELED
+  COMPLETE
+}
+
+type WeeklyPlanJob {
+  id: ID!
+  status: JobStatus!
+  plannedDates: [String!]!
+  message: String
+  startedAt: DateTime!
+  finishedAt: DateTime
+}
+
+type GymPreset {
+  key: String!
+  name: String!
+  equipment: [Equipment!]!
+}
+
+type StrengthBenchmark {
+  id: Int!
+  exercise: HIITExercise!
+  weight: Float!
+  reps: Int!
+  updatedAt: DateTime!
+}
+
+type GymProfile {
+  id: Int!
+  name: String!
+  equipment: [Equipment!]!
+  isDefault: Boolean!
+  isActive: Boolean!
+  userId: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+input CreateGymProfileInput {
+  name: String!
+  equipmentIds: [Int!]!
+}
+
+input UpdateGymProfileInput {
+  name: String
+  equipmentIds: [Int!]
+}
+
+input CreateProgramInput {
+  name: String!
+  description: String!
+}
+
+input CreateWorkoutInput {
+  name: String!
+  description: String!
+  stimulus: String
+  coaching: String
+  components: [CreateComponentInput!]!
+}
+
+input CreateComponentInput {
+  name: String!
+  targetFitnessDomains: [String!]!
+  energySystems: [String!]!
+  order: Int!
+  definition: String!
+  description: String!
+  equipment: [String!]!
+  muscles: [String!]!
+  movements: [String!]!
+}
+
+type AssignProgramResponse {
+  success: Boolean!
+  message: String!
+  userWorkouts: [Workout!]!
+}
+
+type ProgramSchema {
+  description: String!
+  programModel: JSON!
+  workoutModel: JSON!
+  componentModel: JSON!
+  examples: JSON!
+  apiEndpoints: JSON!
+  instructions: String!
+}
+
+type AgentMessage {
+  id: String!
+  role: AgentMessageRole!
+  content: String!
+  createdAt: DateTime!
+}
+
+type Conversation {
+  id: String!
+  resourceType: String!
+  resourceId: String!
+  messages: [AgentMessage!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type AgentResponse {
+  text: String!
+  isComplete: Boolean!
+  conversationId: String!
+}
+
+type SendAgentMessageResponse {
+  conversationId: String!
+  messageId: String!
+}
+
+type HIITExercise {
+  id: Int!
+  name: String!
+  description: String!
+  patterns: String!
+  equipment: String @deprecated(reason: "Legacy single-category value (barbell, dumbbell, …); exercises now link to multiple Equipment records.")
+  muscleGroups: String!
+  skillScore: Int
+  excluded: Boolean!
+  userOwned: Boolean!
+}
+
+type HIITComponent {
+  id: Int!
+  order: Int!
+  volumeMagnitude: Int!
+  volumeUnit: String!
+  weight: Float
+  exerciseId: Int!
+  exercise: HIITExercise!
+}
+
+type HIITWorkout {
+  id: Int!
+  name: String
+  constraintType: String!
+  constraintMagnitude: Int!
+  format: String
+  timeCap: Int
+  patternVector: String
+  rawText: String!
+  displayText: String!
+  stimulus: String!
+  components: [HIITComponent!]!
+  equipment: [Equipment]
+  tags: [Tag!]
+  timingScheme: WodTimerConfig
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum PhaseDirection {
+  UP
+  DOWN
+}
+
+type TimerPhase {
+  durationSeconds: Int
+  direction: PhaseDirection!
+  label: String
+}
+
+type TimerSegment {
+  rounds: Int!
+  phases: [TimerPhase!]!
+}
+
+type WodTimerConfig {
+  version: Int!
+  segments: [TimerSegment!]
+  phases: [TimerPhase!]
+}
+
+input TimerPhaseInput {
+  durationSeconds: Int
+  direction: PhaseDirection!
+  label: String
+}
+
+input TimerSegmentInput {
+  rounds: Int!
+  phases: [TimerPhaseInput!]!
+}
+
+input WodTimerConfigInput {
+  version: Int!
+  segments: [TimerSegmentInput!]
+  phases: [TimerPhaseInput!]
+}
+
+type Tag {
+  id: Int!
+  name: String!
+  description: String!
+  disabled: Boolean!
+  category: String
+  workoutCount: Int!
+}
+
+type TagFacet {
+  id: Int!
+  name: String!
+  description: String!
+  category: String
+  count: Int!
+}
+
+type HIITSimilarResult {
+  workout: HIITWorkout!
+  similarity: Float!
+}
+
+type CompletedHIITWorkout {
+  id: Int!
+  completedAt: DateTime!
+  workout: HIITWorkout!
+  durationSeconds: Int
+  roundsCompleted: Int
+  repsCompleted: Int
+  perceivedEffort: Int
+  notes: String
+  heartRate: HeartRateSummary
+  trainingLoad: Float
+  trainingLoadSource: TrainingLoadSource
+  heartRateSeries: [HeartRateSample!]!
+}
+
+type HeartRateSample {
+  seconds: Float!
+  bpm: Float!
+}
+
+type CompletedStrengthWorkout {
+  completedAt: DateTime!
+  strengthWorkout: StrengthWorkout!
+}
+
+type SavedHIITWorkout {
+  id: Int!
+  savedAt: DateTime!
+  workout: HIITWorkout!
+}
+
+type HIITPaginatedResponse {
+  data: [HIITWorkout!]!
+  total: Int!
+  page: Int!
+  limit: Int!
+  totalPages: Int!
+}
+
+input HIITVolumeInput {
+  magnitude: Int!
+  unit: String!
+}
+
+input CreateHIITComponentInput {
+  order: Int!
+  volume: HIITVolumeInput!
+  weight: Float
+  exerciseId: Int!
+}
+
+input CreateHIITWorkoutInput {
+  name: String
+  constraintType: String!
+  constraintMagnitude: Int!
+  format: String
+  timeCap: Int
+  components: [CreateHIITComponentInput!]!
+  rawText: String!
+  displayText: String!
+  stimulus: String!
+  equipmentIds: [Int!]
+  timingScheme: WodTimerConfigInput
+}
+
+input SensorSourceInput {
+  kind: String!
+  deviceName: String
+  brand: String
+}
+
+enum HIITSessionStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+}
+
+type HIITSession {
+  id: ID!
+  wodId: ID!
+  userId: ID!
+  startedAt: DateTime!
+  endedAt: DateTime
+  status: HIITSessionStatus!
+  durationSeconds: Float
+  totalFrames: Int
+  maxHeartRateUsed: Int!
+  zoneThresholds: [Int!]!
+  heartRate: HeartRateSummary
+}
+
+type HeartRateSummary {
+  avg: Float!
+  max: Float!
+  min: Float!
+  coverage: Float!
+  zoneSeconds: [Int!]!
+  trainingLoad: Float!
+  estimatedCalories: Float
+}
+
+enum TrainingLoadSource {
+  HEART_RATE
+  PERCEIVED_EFFORT
+}
+
+enum RecoveryLevel {
+  INSUFFICIENT_DATA
+  FRESH
+  OPTIMAL
+  ELEVATED
+  HIGH_STRAIN
+}
+
+type RecoveryStatus {
+  status: RecoveryLevel!
+  acuteLoad: Float!
+  chronicLoad: Float!
+  ratio: Float
+  lastHardSessionAt: DateTime
+}
+
+input SensorFrameInput {
+  timestamp: Float!
+  accelX: Float
+  accelY: Float
+  accelZ: Float
+  gyroX: Float
+  gyroY: Float
+  gyroZ: Float
+  heartRate: Float
+  rrIntervalsMs: [Float!]
+  relativeAltitude: Float
+  lat: Float
+  lng: Float
+  horizontalAccuracy: Float
+}
+
+input MovementIntervalInput {
+  movement: String!
+  startTimestamp: Float!
+  endTimestamp: Float!
+  repCount: Int
+  avgHeartRate: Float
+  peakAcceleration: Float
+  confidence: Float
+}
+
+enum StatType {
+  MUSCLE_LOAD
+  STRENGTH_VOLUME
+  INTENSITY_MINUTES
+  TRAINING_LOAD
+}
+
+enum StatShape {
+  CATEGORICAL
+  SERIES
+}
+
+interface StatResult {
+  type: StatType!
+  shape: StatShape!
+  unit: String!
+  total: Float
+}
+
+type CategoricalStat implements StatResult {
+  type: StatType!
+  shape: StatShape!
+  unit: String!
+  total: Float
+  categories: [CategoryPoint!]!
+}
+
+type SeriesStat implements StatResult {
+  type: StatType!
+  shape: StatShape!
+  unit: String!
+  total: Float
+  series: [SeriesPoint!]!
+}
+
+type CategoryPoint {
+  label: String!
+  value: Float!
+}
+
+type SeriesPoint {
+  x: String!
+  y: Float!
+}
