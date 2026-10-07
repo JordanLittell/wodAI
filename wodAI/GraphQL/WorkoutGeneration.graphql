@@ -26,6 +26,7 @@ subscription WorkoutGeneration($request: String, $scheduledDate: String) {
       exercise {
         name
         muscleGroups
+        videoUrl
       }
     }
     ... on GenerationHiitBlock {

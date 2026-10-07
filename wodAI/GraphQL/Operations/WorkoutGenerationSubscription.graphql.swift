@@ -7,9 +7,9 @@ import WodAiAPI
 public class WorkoutGenerationSubscription: GraphQLSubscription {
   public static let operationName: String = "WorkoutGeneration"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "4ae963d7ca1b025bbce9e10125052575b0f3db2d9e3566eee4f7c3e426980ee1",
+    operationIdentifier: "909517c9d5cc6a7b59462118ff3f12f2752665940dc3de9309f8d5d47fb4db46",
     definition: .init(
-      #"subscription WorkoutGeneration($request: String, $scheduledDate: String) { workoutGeneration(request: $request, scheduledDate: $scheduledDate) { __typename ... on GenerationSession { name description stimulus } ... on GenerationStrengthBlock { order name instructions } ... on GenerationStrengthSet { order setOrder reps weight rpe exercise { __typename name muscleGroups } } ... on GenerationHiitBlock { order hiitWorkout { __typename ...GeneratedHiitWorkout } } ... on GenerationDraftHiitBlock { order name format displayText stimulus } ... on GenerationComplete { workout { __typename ...SessionDetails } } ... on GenerationFailed { message } } }"#,
+      #"subscription WorkoutGeneration($request: String, $scheduledDate: String) { workoutGeneration(request: $request, scheduledDate: $scheduledDate) { __typename ... on GenerationSession { name description stimulus } ... on GenerationStrengthBlock { order name instructions } ... on GenerationStrengthSet { order setOrder reps weight rpe exercise { __typename name muscleGroups videoUrl } } ... on GenerationHiitBlock { order hiitWorkout { __typename ...GeneratedHiitWorkout } } ... on GenerationDraftHiitBlock { order name format displayText stimulus } ... on GenerationComplete { workout { __typename ...SessionDetails } } ... on GenerationFailed { message } } }"#,
       fragments: [GeneratedHiitWorkout.self, SessionDetails.self]
     ))
 
@@ -147,10 +147,12 @@ public class WorkoutGenerationSubscription: GraphQLSubscription {
             .field("__typename", String.self),
             .field("name", String.self),
             .field("muscleGroups", String.self),
+            .field("videoUrl", String?.self),
           ] }
 
           public var name: String { __data["name"] }
           public var muscleGroups: String { __data["muscleGroups"] }
+          public var videoUrl: String? { __data["videoUrl"] }
         }
       }
 

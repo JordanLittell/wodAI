@@ -3,7 +3,7 @@
 //  wodAI
 //
 //  Destination for a session's strength block. A two-half header (how-to
-//  media, and the current exercise's working 1RM and last weight at each prescribed RPE), then
+//  video, and the current exercise's working 1RM and last weight at each prescribed RPE), then
 //  one row per set showing its weight and reps. Tapping a value, or the 1RM,
 //  opens the NumberLog keypad over the bottom half of the screen. For a set,
 //  Log records the number and checks the set off, then moves the keypad on to
@@ -53,6 +53,7 @@ struct StrengthWorkoutView: View {
                             ExerciseSummaryHeader(
                                 exercise: exercise,
                                 muscleGroups: viewModel.muscleGroups(for: exercise),
+                                videoURL: viewModel.videoURL(for: exercise),
                                 oneRepMax: stats.oneRepMax(for: exercise),
                                 tracksOneRepMax: viewModel.tracksOneRepMax(exercise),
                                 unit: unit,

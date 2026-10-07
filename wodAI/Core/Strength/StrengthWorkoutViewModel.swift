@@ -66,6 +66,8 @@ struct ExerciseName: Hashable {
     let name: String
     /// Display-ready target muscles, e.g. ["Quads", "Glutes"]. Empty when unknown.
     var muscleGroups: [String] = []
+    /// How-to demo video (YouTube today, maybe self-hosted later). Nil when none.
+    var videoURL: URL? = nil
 
     /// The catalog stores muscle groups as one comma-separated string
     /// ("quads, glutes"); split and title-case it for display.
@@ -221,6 +223,10 @@ final class StrengthWorkoutViewModel: ObservableObject {
     /// The target muscles of `exercise`, from the first set that has them.
     func muscleGroups(for exercise: String) -> [String] {
         sets.first { $0.exercise.name == exercise && !$0.exercise.muscleGroups.isEmpty }?.exercise.muscleGroups ?? []
+    }
+
+    func videoURL(for exercise: String) -> URL? {
+        sets.first { $0.exercise.name == exercise && $0.exercise.videoURL != nil }?.exercise.videoURL
     }
 
     /// The weight (pounds) last logged for the same effort as set `index`:

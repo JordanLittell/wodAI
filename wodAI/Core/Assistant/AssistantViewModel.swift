@@ -760,7 +760,8 @@ final class AssistantViewModel: ObservableObject {
                     let sets = strength.components
                         .map { StrengthComponent(order: $0.order, reps: $0.reps, weight: $0.weight, rpe: $0.rpe, exercise: ExerciseName(
                             name: $0.exercise.name,
-                            muscleGroups: ExerciseName.muscleGroups(fromCatalog: $0.exercise.muscleGroups)
+                            muscleGroups: ExerciseName.muscleGroups(fromCatalog: $0.exercise.muscleGroups),
+                            videoURL: $0.exercise.videoUrl.flatMap(URL.init(string:))
                         ), id: $0.id, completed: completedSet(
                             at: $0.completedAt,
                             reps: $0.completedReps,
