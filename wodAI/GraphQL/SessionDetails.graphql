@@ -30,6 +30,7 @@ fragment SessionDetails on Workout {
         exercise {
           name
           muscleGroups
+          videoUrl
         }
       }
     }

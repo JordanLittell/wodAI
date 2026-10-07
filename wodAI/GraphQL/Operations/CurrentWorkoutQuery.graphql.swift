@@ -7,7 +7,7 @@ import WodAiAPI
 public class CurrentWorkoutQuery: GraphQLQuery {
   public static let operationName: String = "CurrentWorkout"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "405177395232ee9c08879a6f442d87c714a6c7f536c3d8ed1426e60adcf354d8",
+    operationIdentifier: "96fbd03c2b88d639b82c9ff110018c02bbd17f85c2ad5d9e38e398f4c2721018",
     definition: .init(
       #"query CurrentWorkout { currentWorkout { __typename ...SessionDetails } }"#,
       fragments: [SessionDetails.self]

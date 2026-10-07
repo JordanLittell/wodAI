@@ -177,7 +177,8 @@ struct WorkoutGenerationStream {
                 rpe: set.rpe,
                 exercise: ExerciseName(
                     name: set.exercise.name,
-                    muscleGroups: ExerciseName.muscleGroups(fromCatalog: set.exercise.muscleGroups)
+                    muscleGroups: ExerciseName.muscleGroups(fromCatalog: set.exercise.muscleGroups),
+                    videoURL: set.exercise.videoUrl.flatMap(URL.init(string:))
                 )
             ))
         }
@@ -222,7 +223,8 @@ struct WorkoutGenerationStream {
                 rpe: set.rpe,
                 exercise: ExerciseName(
                     name: set.exercise.name,
-                    muscleGroups: ExerciseName.muscleGroups(fromCatalog: set.exercise.muscleGroups)
+                    muscleGroups: ExerciseName.muscleGroups(fromCatalog: set.exercise.muscleGroups),
+                    videoURL: set.exercise.videoUrl.flatMap(URL.init(string:))
                 )
             ))
         }

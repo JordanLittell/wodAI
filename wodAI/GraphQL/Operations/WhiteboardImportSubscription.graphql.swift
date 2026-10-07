@@ -7,9 +7,9 @@ import WodAiAPI
 public class WhiteboardImportSubscription: GraphQLSubscription {
   public static let operationName: String = "WhiteboardImport"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "968b8f64cd7a012d55a4f7caf43219f4acd1ab96bc54d71e9940d5e1e85bbd6a",
+    operationIdentifier: "8029bf83d8ef1e34f6480ceb9cb06e0d61a11c9899aad1f6be32c0161e20c830",
     definition: .init(
-      #"subscription WhiteboardImport($input: WhiteboardImportInput!) { whiteboardImport(input: $input) { __typename ... on GenerationSession { name description stimulus } ... on GenerationStrengthBlock { order name instructions } ... on GenerationStrengthSet { order setOrder reps weight rpe exercise { __typename name muscleGroups } } ... on GenerationDraftHiitBlock { order name format displayText stimulus } ... on GenerationComplete { workout { __typename ...SessionDetails } } ... on GenerationFailed { message } } }"#,
+      #"subscription WhiteboardImport($input: WhiteboardImportInput!) { whiteboardImport(input: $input) { __typename ... on GenerationSession { name description stimulus } ... on GenerationStrengthBlock { order name instructions } ... on GenerationStrengthSet { order setOrder reps weight rpe exercise { __typename name muscleGroups videoUrl } } ... on GenerationDraftHiitBlock { order name format displayText stimulus } ... on GenerationComplete { workout { __typename ...SessionDetails } } ... on GenerationFailed { message } } }"#,
       fragments: [SessionDetails.self]
     ))
 
@@ -134,10 +134,12 @@ public class WhiteboardImportSubscription: GraphQLSubscription {
             .field("__typename", String.self),
             .field("name", String.self),
             .field("muscleGroups", String.self),
+            .field("videoUrl", String?.self),
           ] }
 
           public var name: String { __data["name"] }
           public var muscleGroups: String { __data["muscleGroups"] }
+          public var videoUrl: String? { __data["videoUrl"] }
         }
       }
 

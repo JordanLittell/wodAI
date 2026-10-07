@@ -13,6 +13,8 @@ struct ExerciseSummaryHeader: View {
     let exercise: String
     /// Display-ready target muscles; the chips are omitted when empty.
     let muscleGroups: [String]
+    /// How-to video; the placeholder shows when nil or unplayable.
+    let videoURL: URL?
     /// Pounds. Nil when not entered yet.
     let oneRepMax: Double?
     /// False for bodyweight work, where a 1RM doesn't apply.
@@ -25,7 +27,7 @@ struct ExerciseSummaryHeader: View {
             Text(exercise)
                 .font(.subheadline)
                 .foregroundColor(Color.primary)
-            mediaPlaceholder
+            media
             
             Divider()
             
@@ -43,9 +45,27 @@ struct ExerciseSummaryHeader: View {
 
     // MARK: - How-to media
 
+    private var videoSource: ExerciseVideoSource? {
+        videoURL.flatMap(ExerciseVideoSource.init(url:))
+    }
+
     /// Full row width at 16:9, the shape of a phone-shot demo, so the
-    /// movement is big enough to actually watch. A stand-in until exercises
-    /// carry a video URL (the schema has none).
+    /// movement is big enough to actually watch.
+    @ViewBuilder
+    private var media: some View {
+        if let videoSource {
+            ExerciseVideoPlayer(source: videoSource)
+                .background(Color.black)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .aspectRatio(16 / 9, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel("\(exercise) how-to video")
+        } else {
+            mediaPlaceholder
+        }
+    }
+
+    /// Shown for an exercise with no video yet.
     private var mediaPlaceholder: some View {
         ZStack(alignment: .bottomLeading) {
             RoundedRectangle(cornerRadius: 16)
@@ -147,12 +167,13 @@ struct ExerciseSummaryHeader: View {
         Section {
             ExerciseSummaryHeader(
                 exercise: "Back Squat", muscleGroups: ["Quads", "Glutes", "Adductors", "Lower Back"],
+                videoURL: nil,
                 oneRepMax: 275, tracksOneRepMax: true, unit: .lb, onEditOneRepMax: {}
             )
         }
         Section {
             ExerciseSummaryHeader(
-                exercise: "Pull-up", muscleGroups: ["Lats", "Biceps"],
+                exercise: "Pull-up", muscleGroups: ["Lats", "Biceps"], videoURL: nil,
                 oneRepMax: nil, tracksOneRepMax: false, unit: .lb, onEditOneRepMax: {}
             )
         }

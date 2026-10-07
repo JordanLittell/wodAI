@@ -7,7 +7,7 @@ import WodAiAPI
 public class GenerateWorkoutMutation: GraphQLMutation {
   public static let operationName: String = "GenerateWorkout"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "44f9b43fd7d59fe2c06260c726bb076d6c91b4b4a2e13abfa6e7e557c75489a2",
+    operationIdentifier: "22c105f6377af6a862a8ad99229a82486c5666d7b6c110bbb804a5d9adb6e8a0",
     definition: .init(
       #"mutation GenerateWorkout { generate { __typename ...SessionDetails } }"#,
       fragments: [SessionDetails.self]

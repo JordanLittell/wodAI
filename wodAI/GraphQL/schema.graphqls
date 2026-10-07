@@ -706,6 +706,7 @@ type HIITExercise {
   skillScore: Int
   excluded: Boolean!
   userOwned: Boolean!
+  videoUrl: String
 }
 
 type HIITComponent {

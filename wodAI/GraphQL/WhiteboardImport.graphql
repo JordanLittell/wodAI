@@ -25,6 +25,7 @@ subscription WhiteboardImport($input: WhiteboardImportInput!) {
       exercise {
         name
         muscleGroups
+        videoUrl
       }
     }
     ... on GenerationDraftHiitBlock {
