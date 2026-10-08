@@ -365,3 +365,6 @@ Then `Cmd+B` in Xcode to rebuild.
 2. **Add a GraphQL operation** — create a `.graphql` file in `wodAI/GraphQL/`, then run `./sync-schema.sh`
 3. **Add a feature** — create or update a ViewModel in `wodAI/ViewModels/`, wire it to a SwiftUI view. Views observe `@Published` properties; mutations go through the view model
 4. **Test** — `Cmd+U` in Xcode
+
+
+END
