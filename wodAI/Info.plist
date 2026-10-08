@@ -15,6 +15,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>wodAI uses the camera to read a workout off your gym's whiteboard and add it to your day.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
