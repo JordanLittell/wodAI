@@ -10,6 +10,11 @@ struct ActivityView: View {
     @StateObject private var stats: ActivityStatsStore
     @StateObject private var feed: ActivityFeedStore
     @StateObject private var recovery = RecoveryStatusStore()
+    /// The card tapped to edit; drives the pushed completion screen.
+    @State private var editing: EditTarget?
+    /// An edit was saved, so the week's charts (volume, training load) are
+    /// out of date; they reload when the editor closes.
+    @State private var statsStale = false
 
     /// Passing `previewItems` or `previewStats` shows them without fetching.
     init(
@@ -59,6 +64,39 @@ struct ActivityView: View {
         .task(id: selectedWeek) { await stats.load(week: selectedWeek) }
         .task(id: selectedWeek) { await feed.load(week: selectedWeek) }
         .task { await recovery.load() }
+        .navigationDestination(item: $editing) { target in
+            editor(for: target.item)
+        }
+        .onChange(of: editing) { _, editing in
+            guard editing == nil, statsStale else { return }
+            statsStale = false
+            Task {
+                await stats.load(week: selectedWeek, force: true)
+                await recovery.load()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func editor(for item: ActivityItem) -> some View {
+        switch item {
+        case let .hiit(entry):
+            EditHiitCompletionView(entry: entry) { updated in
+                feed.replace(.hiit(updated))
+                statsStale = true
+            }
+        case let .strength(entry):
+            if let workout = entry.workout {
+                StrengthWorkoutView(workout: workout, onChange: { updated in
+                    if let edited = entry.updated(with: updated) {
+                        feed.replace(.strength(edited))
+                    } else {
+                        feed.remove(id: item.id)
+                    }
+                    statsStale = true
+                })
+            }
+        }
     }
 
     private var chartsSection: some View {
@@ -106,10 +144,16 @@ struct ActivityView: View {
                     ForEach(days) { day in
                         ActivityDayDivider(day: day.day, count: day.items.count)
                         ForEach(day.items) { item in
-                            switch item {
-                            case let .hiit(entry): CompletedHiitCard(entry: entry)
-                            case let .strength(entry): CompletedStrengthCard(entry: entry)
+                            Button {
+                                editing = EditTarget(item: item)
+                            } label: {
+                                switch item {
+                                case let .hiit(entry): CompletedHiitCard(entry: entry)
+                                case let .strength(entry): CompletedStrengthCard(entry: entry)
+                                }
                             }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Edit this result")
                         }
                     }
                 }
@@ -158,6 +202,15 @@ struct ActivityView: View {
             selectedWeek = selectedWeek.shifted(by: weeks)
         }
     }
+}
+
+/// A tapped card, snapshotted so its editor keeps its workout even if the
+/// card leaves the feed (a strength piece with every set un-checked).
+private struct EditTarget: Hashable {
+    let item: ActivityItem
+
+    static func == (lhs: EditTarget, rhs: EditTarget) -> Bool { lhs.item.id == rhs.item.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(item.id) }
 }
 
 private struct WeekSelectorBar: View {

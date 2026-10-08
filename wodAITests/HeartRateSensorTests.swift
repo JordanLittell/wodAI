@@ -3,7 +3,7 @@
 //  wodAITests
 //
 //  The Bluetooth heart-rate payload parser, brand detection from advertised
-//  names, and the live zone lookup.
+//  names, the live zone lookup, and the heart-rate chart's scale and scrubbing.
 //
 
 import Testing
@@ -83,5 +83,34 @@ struct LiveHeartRateZoneTests {
 
     @Test func noZoneWithoutThresholds() {
         #expect(LiveHeartRate.zone(for: 150, thresholds: []) == nil)
+    }
+}
+
+struct HeartRateChartScaleTests {
+    private static let thresholds = [94, 112, 131, 150, 168]
+
+    private static func points(_ bpms: [Int]) -> [HeartRatePoint] {
+        bpms.enumerated().map { HeartRatePoint(seconds: Double($0.offset * 10), bpm: $0.element) }
+    }
+
+    @Test func framesTheCurveWithTheZoneStartsAroundIt() {
+        let scale = HeartRateChartScale(points: Self.points([120, 145, 160]), zoneThresholds: Self.thresholds)
+        #expect(scale.zoneLines.map(\.zone) == [2, 3, 4, 5])
+        #expect(scale.domain == 109...171)
+    }
+
+    @Test func noZoneLinesWithoutThresholds() {
+        let scale = HeartRateChartScale(points: Self.points([120, 160]), zoneThresholds: [])
+        #expect(scale.zoneLines.isEmpty)
+        #expect(scale.domain == 117...163)
+    }
+
+    @Test func snapsToTheNearestPointInTime() {
+        let points = Self.points([100, 110, 120, 130])
+        #expect(HeartRateChartScale.nearest(to: -5, in: points)?.bpm == 100)
+        #expect(HeartRateChartScale.nearest(to: 14, in: points)?.bpm == 110)
+        #expect(HeartRateChartScale.nearest(to: 16, in: points)?.bpm == 120)
+        #expect(HeartRateChartScale.nearest(to: 999, in: points)?.bpm == 130)
+        #expect(HeartRateChartScale.nearest(to: 0, in: []) == nil)
     }
 }

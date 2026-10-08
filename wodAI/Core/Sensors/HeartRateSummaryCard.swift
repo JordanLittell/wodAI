@@ -30,13 +30,13 @@ struct HeartRateSummaryCard: View {
                     .font(.subheadline)
                     .foregroundColor(Color("SecondaryText"))
             }
-        case let .ready(summary, points):
-            card { ready(summary, points: points) }
+        case let .ready(summary, points, zoneThresholds):
+            card { ready(summary, points: points, zoneThresholds: zoneThresholds) }
         }
     }
 
     @ViewBuilder
-    private func ready(_ summary: HeartRateSummary, points: [HeartRatePoint]) -> some View {
+    private func ready(_ summary: HeartRateSummary, points: [HeartRatePoint], zoneThresholds: [Int]) -> some View {
         HStack(spacing: 0) {
             stat("Avg", value: "\(Int(summary.avg.rounded()))", unit: "bpm")
             stat("Max", value: "\(Int(summary.max.rounded()))", unit: "bpm")
@@ -47,7 +47,7 @@ struct HeartRateSummaryCard: View {
         }
 
         if points.count > 1 {
-            HeartRateSparkline(points: points)
+            HeartRateSparkline(points: points, zoneThresholds: zoneThresholds)
                 .frame(height: 120)
         }
 
@@ -146,7 +146,8 @@ struct HeartRateSummaryCard: View {
     return HeartRateSummaryCard(state: .ready(
         HeartRateSummary(avg: 148, max: 171, min: 88, coverage: 0.97, zoneSeconds: [40, 60, 120, 300, 80],
                          trainingLoad: 41.3, estimatedCalories: 142),
-        points
+        points,
+        zoneThresholds: [94, 112, 131, 150, 168]
     ))
     .padding()
 }

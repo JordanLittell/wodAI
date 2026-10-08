@@ -24,6 +24,67 @@ struct CompletedHiitEntry: Identifiable, Equatable {
     var trainingLoad: Double? = nil
     /// The session's heart rate over time; empty when none was recorded.
     var heartRate: [HeartRatePoint] = []
+    /// bpm where zones 1–5 start; empty when no heart rate was recorded.
+    var zoneThresholds: [Int] = []
+    /// The recorded result, editable from the completion screen.
+    var durationSeconds: Int? = nil
+    var roundsCompleted: Int? = nil
+    var repsCompleted: Int? = nil
+    /// The rest of the workout, so it can reopen in the completion screen.
+    var name: String? = nil
+    var constraintType: String = ""
+    var constraintMagnitude: Int = 0
+    var timeCap: Int? = nil
+    var heartRateSummary: HeartRateSummary? = nil
+
+    var workout: HIITWorkoutItem {
+        HIITWorkoutItem(
+            id: workoutId,
+            format: format,
+            displayText: displayText,
+            stimulus: stimulus,
+            constraintType: constraintType,
+            constraintMagnitude: constraintMagnitude,
+            timeCap: timeCap,
+            timingScheme: nil,
+            tags: [],
+            name: name
+        )
+    }
+
+    /// The completion screen's starting point: the result as logged.
+    var completionDraft: WorkoutCompletionDraft {
+        var draft = WorkoutCompletionDraft(
+            id: workoutId,
+            workout: workout,
+            capturedElapsed: TimeInterval(durationSeconds ?? 0)
+        )
+        draft.durationSeconds = durationSeconds
+        draft.roundsCompleted = roundsCompleted
+        draft.repsCompleted = repsCompleted
+        draft.perceivedEffort = perceivedEffort
+        return draft
+    }
+
+    /// What Save sends for an edited `draft`. Effort always goes (the slider
+    /// always shows a value); a result only when it changed, so opening a
+    /// result logged without a time and saving doesn't record 0:00.
+    func edit(from draft: WorkoutCompletionDraft) -> HiitCompletionEdit {
+        HiitCompletionEdit(
+            durationSeconds: draft.durationSeconds == durationSeconds ? nil : draft.durationSeconds,
+            roundsCompleted: draft.roundsCompleted == roundsCompleted ? nil : draft.roundsCompleted,
+            repsCompleted: draft.repsCompleted == repsCompleted ? nil : draft.repsCompleted,
+            perceivedEffort: draft.perceivedEffort
+        )
+    }
+}
+
+/// The fields an edit changes; nil leaves a field as it is on the server.
+struct HiitCompletionEdit: Equatable {
+    var durationSeconds: Int?
+    var roundsCompleted: Int?
+    var repsCompleted: Int?
+    var perceivedEffort: Int?
 }
 
 /// One strength piece with at least one logged set.
@@ -33,6 +94,8 @@ struct CompletedStrengthEntry: Identifiable, Equatable {
     let title: String
     /// One line per exercise, in the order they first appear (several for a superset).
     let lifts: [Lift]
+    /// The whole piece, so it can reopen in StrengthWorkoutView for editing.
+    var workout: StrengthWorkout? = nil
 
     struct Lift: Equatable {
         let exercise: String
@@ -76,6 +139,33 @@ struct CompletedStrengthEntry: Identifiable, Equatable {
         let title = name.flatMap { $0.isEmpty ? nil : $0 }
             ?? exercises.joined(separator: " + ")
         self.init(id: id, completedAt: completedAt, title: title.isEmpty ? "Strength" : title, lifts: lifts)
+    }
+
+    /// Builds the card from the whole piece, keeping it for editing.
+    init(completedAt: Date, name: String?, workout: StrengthWorkout) {
+        self.init(
+            id: workout.serverId ?? workout.id,
+            completedAt: completedAt,
+            name: name,
+            sets: workout.components.map {
+                Set(
+                    order: $0.order,
+                    exercise: $0.exercise.name,
+                    reps: $0.reps,
+                    completedAt: $0.completed == nil ? nil : completedAt,
+                    completedWeight: $0.completed?.weightUsed
+                )
+            }
+        )
+        self.workout = workout
+    }
+
+    /// This card after its piece was edited: same day and title, lifts from
+    /// what's logged now. Nil once every set is un-checked, since the piece
+    /// is no longer a completed workout.
+    func updated(with workout: StrengthWorkout) -> CompletedStrengthEntry? {
+        guard workout.components.contains(where: { $0.completed != nil }) else { return nil }
+        return CompletedStrengthEntry(completedAt: completedAt, name: title, workout: workout)
     }
 }
 

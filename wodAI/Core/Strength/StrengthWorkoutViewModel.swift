@@ -98,6 +98,15 @@ struct CompletedSet: Hashable {
     var rpe: Int? = nil
 }
 
+extension CompletedSet {
+    /// A logged set from the server's completed* fields. completedAt is what
+    /// marks a set done; the rest can be null (an unloaded set has no weight).
+    init?(completedAt: String?, reps: Int?, weight: Double?, rpe: Int?) {
+        guard completedAt != nil, let reps else { return nil }
+        self.init(weightUsed: weight, reps: reps, rpe: rpe)
+    }
+}
+
 /// Tracks set-by-set progress through one strength block. Sets are addressed
 /// by their index in `sets`: `order` isn't guaranteed unique, and two sets
 /// with identical prescriptions are still different sets.

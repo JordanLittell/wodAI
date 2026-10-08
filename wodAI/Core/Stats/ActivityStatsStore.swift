@@ -35,7 +35,9 @@ final class ActivityStatsStore: ObservableObject {
         self.stats = stats
     }
 
-    func load(week: ActivityWeek, now: Date = Date()) async {
+    /// `force` refetches even a past week, e.g. after a workout in it was
+    /// edited.
+    func load(week: ActivityWeek, now: Date = Date(), force: Bool = false) async {
         guard let client else { return }
         selectedWeekStart = week.start
         errorMessage = nil
@@ -44,7 +46,7 @@ final class ActivityStatsStore: ObservableObject {
         stats = cached
         // A past week can't change; the current one can, so it refetches
         // behind its cached charts.
-        if cached != nil, !week.isCurrentOrFuture(relativeTo: now) { return }
+        if cached != nil, !force, !week.isCurrentOrFuture(relativeTo: now) { return }
         guard week.start <= now else { return }
 
         isLoading = true

@@ -762,8 +762,8 @@ final class AssistantViewModel: ObservableObject {
                             name: $0.exercise.name,
                             muscleGroups: ExerciseName.muscleGroups(fromCatalog: $0.exercise.muscleGroups),
                             videoURL: $0.exercise.videoUrl.flatMap(URL.init(string:))
-                        ), id: $0.id, completed: completedSet(
-                            at: $0.completedAt,
+                        ), id: $0.id, completed: CompletedSet(
+                            completedAt: $0.completedAt,
                             reps: $0.completedReps,
                             weight: $0.completedWeight,
                             rpe: $0.completedRpe
@@ -824,13 +824,6 @@ final class AssistantViewModel: ObservableObject {
             source: SessionSource(workout.source),
             isOptional: workout.optional
         )
-    }
-
-    /// A logged set from the server's completed* fields. completedAt is what
-    /// marks a set done; the rest can be null (an unloaded set has no weight).
-    nonisolated private static func completedSet(at completedAt: String?, reps: Int?, weight: Double?, rpe: Int?) -> CompletedSet? {
-        guard completedAt != nil, let reps else { return nil }
-        return CompletedSet(weightUsed: weight, reps: reps, rpe: rpe)
     }
 
     // MARK: - Preview factory

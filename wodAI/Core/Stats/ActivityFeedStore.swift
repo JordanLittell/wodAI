@@ -79,40 +79,86 @@ final class ActivityFeedStore: ObservableObject {
         }
     }
 
+    // MARK: - Edits
+
+    /// Swaps in an edited item wherever it's shown or cached, so its card
+    /// updates without a refetch (a past week never refetches).
+    func replace(_ item: ActivityItem) {
+        update { $0.map { $0.id == item.id ? item : $0 } }
+    }
+
+    func remove(id: String) {
+        update { $0.filter { $0.id != id } }
+    }
+
+    private func update(_ change: ([ActivityItem]) -> [ActivityItem]) {
+        items = change(items)
+        for week in cache.keys {
+            cache[week] = cache[week].map(change)
+        }
+    }
+
     // MARK: - Mapping
 
     private static func entry(_ item: CompletedHiitWorkoutsQuery.Data.CompletedHiitWorkout) -> CompletedHiitEntry {
-        CompletedHiitEntry(
+        let workout = item.workout
+        return CompletedHiitEntry(
             id: item.id,
             completedAt: DateParser().parseDate(item.completedAt) ?? Date(),
-            workoutId: item.workout.id,
-            format: item.workout.format,
-            displayText: item.workout.displayText,
-            stimulus: item.workout.stimulus,
+            workoutId: workout.id,
+            format: workout.format,
+            displayText: workout.displayText,
+            stimulus: workout.stimulus,
             perceivedEffort: item.perceivedEffort,
             avgHeartRate: item.heartRate.map { Int($0.avg.rounded()) },
             maxHeartRate: item.heartRate.map { Int($0.max.rounded()) },
             trainingLoad: item.trainingLoad,
-            heartRate: item.heartRateSeries.map { HeartRatePoint(seconds: $0.seconds, bpm: Int($0.bpm.rounded())) }
+            heartRate: item.heartRateSeries.map { HeartRatePoint(seconds: $0.seconds, bpm: Int($0.bpm.rounded())) },
+            zoneThresholds: item.zoneThresholds,
+            durationSeconds: item.durationSeconds,
+            roundsCompleted: item.roundsCompleted,
+            repsCompleted: item.repsCompleted,
+            name: workout.name,
+            constraintType: workout.constraintType,
+            constraintMagnitude: workout.constraintMagnitude,
+            timeCap: workout.timeCap,
+            heartRateSummary: item.heartRate.map { HeartRateSummary(fields: $0.fragments.heartRateSummaryFields) }
         )
     }
 
     private static func entry(_ item: CompletedStrengthWorkoutsQuery.Data.CompletedStrengthWorkout) -> CompletedStrengthEntry {
-        let parser = DateParser()
         let piece = item.strengthWorkout
-        return CompletedStrengthEntry(
-            id: piece.id,
-            completedAt: parser.parseDate(item.completedAt) ?? Date(),
-            name: piece.name,
-            sets: piece.components.map { set in
-                CompletedStrengthEntry.Set(
-                    order: set.order,
-                    exercise: set.exercise.name,
-                    reps: set.reps,
-                    completedAt: set.completedAt.flatMap { parser.parseDate($0) },
-                    completedWeight: set.completedWeight
+        let sets = piece.components.map {
+            StrengthComponent(
+                order: $0.order,
+                reps: $0.reps,
+                weight: $0.weight,
+                rpe: $0.rpe,
+                exercise: ExerciseName(
+                    name: $0.exercise.name,
+                    muscleGroups: ExerciseName.muscleGroups(fromCatalog: $0.exercise.muscleGroups),
+                    videoURL: $0.exercise.videoUrl.flatMap(URL.init(string:))
+                ),
+                id: $0.id,
+                completed: CompletedSet(
+                    completedAt: $0.completedAt,
+                    reps: $0.completedReps,
+                    weight: $0.completedWeight,
+                    rpe: $0.completedRpe
                 )
-            }
+            )
+        }
+        let workout = StrengthWorkout(
+            id: piece.id,
+            name: piece.name ?? "Strength",
+            instructions: piece.instructions,
+            components: sets,
+            serverId: piece.id
+        )
+        return CompletedStrengthEntry(
+            completedAt: DateParser().parseDate(item.completedAt) ?? Date(),
+            name: piece.name,
+            workout: workout
         )
     }
 

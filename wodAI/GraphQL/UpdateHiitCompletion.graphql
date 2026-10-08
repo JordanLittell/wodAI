@@ -1,0 +1,24 @@
+# Edits a logged HIIT result from the Stats feed. `id` is the
+# CompletedHIITWorkout id; omitted arguments are left unchanged.
+mutation UpdateHiitCompletion(
+  $id: Int!
+  $durationSeconds: Int
+  $roundsCompleted: Int
+  $repsCompleted: Int
+  $perceivedEffort: Int
+) {
+  updateHiitCompletion(
+    id: $id
+    durationSeconds: $durationSeconds
+    roundsCompleted: $roundsCompleted
+    repsCompleted: $repsCompleted
+    perceivedEffort: $perceivedEffort
+  ) {
+    id
+    durationSeconds
+    roundsCompleted
+    repsCompleted
+    perceivedEffort
+    trainingLoad
+  }
+}

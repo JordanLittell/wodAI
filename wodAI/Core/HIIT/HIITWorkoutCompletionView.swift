@@ -6,7 +6,8 @@
 //  finished: confetti, a high-level overview of what was just done, an adaptive
 //  result editor (chosen by a format classifier), and an RPE 1–10 selector.
 //  Purely presentational — driven by a plain `WorkoutCompletionDraft`; the view
-//  model wiring (persist + advance) is layered on in Phase B.
+//  model wiring (persist + advance) is layered on in Phase B. With
+//  `isEditing`, the same screen edits a result already logged (from Stats).
 //
 
 import SwiftUI
@@ -82,17 +83,24 @@ struct HIITWorkoutCompletionView: View {
     private let isSubmitting: Bool
     /// Abandons the result. Only offered once a submit has failed.
     private let onDiscard: (() -> Void)?
+    /// Editing a logged result: no celebration, Save instead of Done, and no
+    /// Skip (backing out is the way to cancel).
+    private let isEditing: Bool
 
     init(draft: WorkoutCompletionDraft,
          heartRate: CompletionHeartRate = .none,
          errorMessage: String? = nil,
          isSubmitting: Bool = false,
+         isEditing: Bool = false,
          onDone: @escaping (WorkoutCompletionDraft) -> Void,
-         onSkip: @escaping (WorkoutCompletionDraft) -> Void,
+         onSkip: @escaping (WorkoutCompletionDraft) -> Void = { _ in },
          onDiscard: (() -> Void)? = nil) {
         // Seed editable fields so the editors render with sensible defaults.
+        // Not when editing: the draft is what was logged, and a field left
+        // empty then should stay empty unless the athlete changes it (the
+        // editors already read an empty field as 0).
         var seeded = draft
-        switch seeded.kind {
+        switch isEditing ? .completionOnly : seeded.kind {
         case .forTime:
             if seeded.durationSeconds == nil {
                 seeded.durationSeconds = max(0, Int(seeded.capturedElapsed.rounded()))
@@ -114,6 +122,8 @@ struct HIITWorkoutCompletionView: View {
         self.onDone = onDone
         self.onSkip = onSkip
         self.onDiscard = onDiscard
+        self.isEditing = isEditing
+        self._showConfetti = State(initialValue: !isEditing)
     }
 
     var body: some View {
@@ -154,14 +164,14 @@ struct HIITWorkoutCompletionView: View {
 
     private var header: some View {
         VStack(spacing: 10) {
-            Image(systemName: "checkmark.circle.fill")
+            Image(systemName: isEditing ? "square.and.pencil.circle.fill" : "checkmark.circle.fill")
                 .font(.system(size: 56))
-                .foregroundColor(Color("Success"))
-            Text("Workout Complete!")
+                .foregroundColor(Color(isEditing ? "BrandPrimary" : "Success"))
+            Text(isEditing ? "Edit Result" : "Workout Complete!")
                 .font(.title)
                 .fontWeight(.bold)
                 .foregroundColor(Color("PrimaryText"))
-            Text("Nice work — log how it went.")
+            Text(isEditing ? "Update how it went." : "Nice work — log how it went.")
                 .font(.subheadline)
                 .foregroundColor(Color("SecondaryText"))
         }
@@ -414,7 +424,7 @@ struct HIITWorkoutCompletionView: View {
                     if isSubmitting {
                         ProgressView().tint(.white)
                     } else {
-                        Text(errorMessage == nil ? "Done" : "Try Again")
+                        Text(errorMessage != nil ? "Try Again" : isEditing ? "Save" : "Done")
                             .fontWeight(.semibold)
                     }
                 }
@@ -435,7 +445,9 @@ struct HIITWorkoutCompletionView: View {
 
             // After a failure, the secondary action has to be a way out — a
             // second save attempt under a different name would just fail again.
-            if errorMessage != nil, let onDiscard {
+            if isEditing {
+                EmptyView()
+            } else if errorMessage != nil, let onDiscard {
                 Button(action: onDiscard) {
                     Text("Discard and continue")
                         .fontWeight(.medium)
@@ -674,6 +686,21 @@ private func sampleWorkout(
         onDone: { _ in },
         onSkip: { _ in }
     )
+}
+
+#Preview("Editing") {
+    let workout = sampleWorkout(
+        format: "AMRAP 20",
+        displayText: "AMRAP 20:\n5 Pull-ups\n10 Push-ups\n15 Air Squats",
+        stimulus: "Aerobic Capacity",
+        constraintType: "rounds",
+        constraintMagnitude: 20
+    )
+    var draft = WorkoutCompletionDraft(id: workout.id, workout: workout, capturedElapsed: 1200)
+    draft.roundsCompleted = 7
+    draft.repsCompleted = 12
+    draft.perceivedEffort = 7
+    return HIITWorkoutCompletionView(draft: draft, isEditing: true, onDone: { _ in })
 }
 
 #Preview("EMOM (completion only)") {

@@ -7,9 +7,9 @@ import WodAiAPI
 public class CompletedStrengthWorkoutsQuery: GraphQLQuery {
   public static let operationName: String = "CompletedStrengthWorkouts"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "82c5f7b386e4852a404ef980fe9c78c2ecb592ef6a642cc4636d8067313199bd",
+    operationIdentifier: "a8f66e2a89c323cd4ba93ba224e2bc11ef64adc38cfc1ca69be983750fe2c212",
     definition: .init(
-      #"query CompletedStrengthWorkouts($startDate: DateTime!, $endDate: DateTime!) { completedStrengthWorkouts(startDate: $startDate, endDate: $endDate) { __typename completedAt strengthWorkout { __typename id name stimulus instructions components { __typename id order reps weight completedAt completedReps completedWeight exercise { __typename name } } } } }"#
+      #"query CompletedStrengthWorkouts($startDate: DateTime!, $endDate: DateTime!) { completedStrengthWorkouts(startDate: $startDate, endDate: $endDate) { __typename completedAt strengthWorkout { __typename id name stimulus instructions components { __typename id order reps weight rpe completedAt completedReps completedWeight completedRpe exercise { __typename name muscleGroups videoUrl } } } } }"#
     ))
 
   public var startDate: WodAiAPI.DateTime
@@ -96,9 +96,11 @@ public class CompletedStrengthWorkoutsQuery: GraphQLQuery {
             .field("order", Int.self),
             .field("reps", Int.self),
             .field("weight", Double?.self),
+            .field("rpe", Int?.self),
             .field("completedAt", WodAiAPI.DateTime?.self),
             .field("completedReps", Int?.self),
             .field("completedWeight", Double?.self),
+            .field("completedRpe", Int?.self),
             .field("exercise", Exercise.self),
           ] }
 
@@ -106,9 +108,11 @@ public class CompletedStrengthWorkoutsQuery: GraphQLQuery {
           public var order: Int { __data["order"] }
           public var reps: Int { __data["reps"] }
           public var weight: Double? { __data["weight"] }
+          public var rpe: Int? { __data["rpe"] }
           public var completedAt: WodAiAPI.DateTime? { __data["completedAt"] }
           public var completedReps: Int? { __data["completedReps"] }
           public var completedWeight: Double? { __data["completedWeight"] }
+          public var completedRpe: Int? { __data["completedRpe"] }
           public var exercise: Exercise { __data["exercise"] }
 
           /// CompletedStrengthWorkout.StrengthWorkout.Component.Exercise
@@ -122,9 +126,13 @@ public class CompletedStrengthWorkoutsQuery: GraphQLQuery {
             public static var __selections: [ApolloAPI.Selection] { [
               .field("__typename", String.self),
               .field("name", String.self),
+              .field("muscleGroups", String.self),
+              .field("videoUrl", String?.self),
             ] }
 
             public var name: String { __data["name"] }
+            public var muscleGroups: String { __data["muscleGroups"] }
+            public var videoUrl: String? { __data["videoUrl"] }
           }
         }
       }

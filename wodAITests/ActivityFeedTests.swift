@@ -2,7 +2,8 @@
 //  ActivityFeedTests.swift
 //  wodAITests
 //
-//  The Stats feed's pure rules: grouping by day, strength text, RPE bands.
+//  The Stats feed's pure rules: grouping by day, strength text, RPE bands,
+//  and editing a logged result.
 //
 
 import Testing
@@ -127,5 +128,99 @@ struct ActivityFeedTests {
         #expect(RPEBand(rpe: 8) == .hard)
         #expect(RPEBand(rpe: 9) == .max)
         #expect(RPEBand(rpe: 10) == .max)
+    }
+
+    // MARK: - Editing HIIT
+
+    private static func amrapEntry(rounds: Int?, reps: Int?, effort: Int?) -> CompletedHiitEntry {
+        CompletedHiitEntry(
+            id: 9, completedAt: date("2026-10-05T16:00:00Z"), workoutId: 42,
+            format: "AMRAP 20", stimulus: "", perceivedEffort: effort,
+            roundsCompleted: rounds, repsCompleted: reps,
+            constraintType: "rounds", constraintMagnitude: 20
+        )
+    }
+
+    @Test func draftStartsAtTheLoggedResult() {
+        let draft = Self.amrapEntry(rounds: 7, reps: 12, effort: 6).completionDraft
+        #expect(draft.id == 42)  // the workout, not the completion
+        #expect(draft.kind == .amrap)
+        #expect(draft.roundsCompleted == 7)
+        #expect(draft.repsCompleted == 12)
+        #expect(draft.perceivedEffort == 6)
+    }
+
+    @Test func editSendsOnlyChangedResultsButAlwaysEffort() {
+        let entry = Self.amrapEntry(rounds: 7, reps: 12, effort: 6)
+        var draft = entry.completionDraft
+        draft.perceivedEffort = 8
+        #expect(entry.edit(from: draft) == HiitCompletionEdit(perceivedEffort: 8))
+
+        draft.roundsCompleted = 8
+        #expect(entry.edit(from: draft) == HiitCompletionEdit(roundsCompleted: 8, perceivedEffort: 8))
+    }
+
+    @Test func untouchedEmptyResultStaysEmpty() {
+        // Logged with Skip: no score. Re-rating it mustn't record 0 rounds.
+        let entry = Self.amrapEntry(rounds: nil, reps: nil, effort: nil)
+        var draft = entry.completionDraft
+        draft.perceivedEffort = 5
+        #expect(entry.edit(from: draft) == HiitCompletionEdit(perceivedEffort: 5))
+    }
+
+    // MARK: - Editing strength
+
+    private static func squats(logged: [Double?]) -> StrengthWorkout {
+        let squat = ExerciseName(name: "Back Squat")
+        return StrengthWorkout(
+            id: 3, name: "Back Squat", instructions: "",
+            components: logged.enumerated().map { index, weight in
+                StrengthComponent(
+                    order: index, reps: 5, weight: nil, rpe: nil, exercise: squat, id: 100 + index,
+                    completed: weight.map { CompletedSet(weightUsed: $0, reps: 5) }
+                )
+            },
+            serverId: 3
+        )
+    }
+
+    @Test func strengthEntryFromWorkoutListsOnlyLoggedSets() {
+        let entry = CompletedStrengthEntry(
+            completedAt: Self.date("2026-10-05T16:00:00Z"), name: nil,
+            workout: Self.squats(logged: [135, 155, nil])
+        )
+        #expect(entry.id == 3)
+        #expect(entry.title == "Back Squat")
+        #expect(entry.lifts == [.init(exercise: "Back Squat", prescribedReps: [5, 5, 5], loggedWeights: [135, 155])])
+        #expect(entry.workout != nil)
+    }
+
+    @Test func editedStrengthKeepsDayAndTitle() {
+        let completedAt = Self.date("2026-10-05T16:00:00Z")
+        let entry = CompletedStrengthEntry(completedAt: completedAt, name: "Heavy Day", workout: Self.squats(logged: [135, 155]))
+        let edited = entry.updated(with: Self.squats(logged: [135, 165]))
+        #expect(edited?.completedAt == completedAt)
+        #expect(edited?.title == "Heavy Day")
+        #expect(edited?.lifts.first?.loggedWeights == [135, 165])
+    }
+
+    @Test func strengthWithEverySetUncheckedLeavesTheFeed() {
+        let entry = CompletedStrengthEntry(
+            completedAt: Self.date("2026-10-05T16:00:00Z"), name: nil,
+            workout: Self.squats(logged: [135])
+        )
+        #expect(entry.updated(with: Self.squats(logged: [nil])) == nil)
+    }
+
+    @MainActor
+    @Test func storeReplacesAndRemovesItems() {
+        let store = ActivityFeedStore(preview: [Self.hiit(1, "2026-10-05T16:00:00Z"), Self.strength(2, "2026-10-05T15:00:00Z")])
+        var rated = CompletedHiitEntry(id: 1, completedAt: Self.date("2026-10-05T16:00:00Z"), workoutId: 1, stimulus: "")
+        rated.perceivedEffort = 9
+        store.replace(.hiit(rated))
+        #expect(store.items.first == .hiit(rated))
+
+        store.remove(id: "strength-2")
+        #expect(store.items.map(\.id) == ["hiit-1"])
     }
 }

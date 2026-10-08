@@ -7,9 +7,10 @@ import WodAiAPI
 public class CompletedHiitWorkoutsQuery: GraphQLQuery {
   public static let operationName: String = "CompletedHiitWorkoutsQuery"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "2e5c72f84671a398cead15a95d8f392f7874ad291dbc154302fc1872b089a208",
+    operationIdentifier: "9b8cc90c22949beebfa609a40b228bb989e69cd3b80fbf3534303625badcfd5b",
     definition: .init(
-      #"query CompletedHiitWorkoutsQuery($startDate: DateTime, $endDate: DateTime) { completedHiitWorkouts(startDate: $startDate, endDate: $endDate) { __typename id completedAt durationSeconds roundsCompleted repsCompleted perceivedEffort trainingLoad heartRate { __typename avg max } heartRateSeries { __typename seconds bpm } workout { __typename id format displayText stimulus constraintType constraintMagnitude } } }"#
+      #"query CompletedHiitWorkoutsQuery($startDate: DateTime, $endDate: DateTime) { completedHiitWorkouts(startDate: $startDate, endDate: $endDate) { __typename id completedAt durationSeconds roundsCompleted repsCompleted perceivedEffort trainingLoad heartRate { __typename ...HeartRateSummaryFields } heartRateSeries { __typename seconds bpm } zoneThresholds workout { __typename id name format displayText stimulus constraintType constraintMagnitude timeCap } } }"#,
+      fragments: [HeartRateSummaryFields.self]
     ))
 
   public var startDate: GraphQLNullable<WodAiAPI.DateTime>
@@ -61,6 +62,7 @@ public class CompletedHiitWorkoutsQuery: GraphQLQuery {
         .field("trainingLoad", Double?.self),
         .field("heartRate", HeartRate?.self),
         .field("heartRateSeries", [HeartRateSeries].self),
+        .field("zoneThresholds", [Int].self),
         .field("workout", Workout.self),
       ] }
 
@@ -73,6 +75,7 @@ public class CompletedHiitWorkoutsQuery: GraphQLQuery {
       public var trainingLoad: Double? { __data["trainingLoad"] }
       public var heartRate: HeartRate? { __data["heartRate"] }
       public var heartRateSeries: [HeartRateSeries] { __data["heartRateSeries"] }
+      public var zoneThresholds: [Int] { __data["zoneThresholds"] }
       public var workout: Workout { __data["workout"] }
 
       /// CompletedHiitWorkout.HeartRate
@@ -85,12 +88,23 @@ public class CompletedHiitWorkoutsQuery: GraphQLQuery {
         public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.HeartRateSummary }
         public static var __selections: [ApolloAPI.Selection] { [
           .field("__typename", String.self),
-          .field("avg", Double.self),
-          .field("max", Double.self),
+          .fragment(HeartRateSummaryFields.self),
         ] }
 
         public var avg: Double { __data["avg"] }
         public var max: Double { __data["max"] }
+        public var min: Double { __data["min"] }
+        public var coverage: Double { __data["coverage"] }
+        public var zoneSeconds: [Int] { __data["zoneSeconds"] }
+        public var trainingLoad: Double { __data["trainingLoad"] }
+        public var estimatedCalories: Double? { __data["estimatedCalories"] }
+
+        public struct Fragments: FragmentContainer {
+          public let __data: DataDict
+          public init(_dataDict: DataDict) { __data = _dataDict }
+
+          public var heartRateSummaryFields: HeartRateSummaryFields { _toFragment() }
+        }
       }
 
       /// CompletedHiitWorkout.HeartRateSeries
@@ -122,19 +136,23 @@ public class CompletedHiitWorkoutsQuery: GraphQLQuery {
         public static var __selections: [ApolloAPI.Selection] { [
           .field("__typename", String.self),
           .field("id", Int.self),
+          .field("name", String?.self),
           .field("format", String?.self),
           .field("displayText", String.self),
           .field("stimulus", String.self),
           .field("constraintType", String.self),
           .field("constraintMagnitude", Int.self),
+          .field("timeCap", Int?.self),
         ] }
 
         public var id: Int { __data["id"] }
+        public var name: String? { __data["name"] }
         public var format: String? { __data["format"] }
         public var displayText: String { __data["displayText"] }
         public var stimulus: String { __data["stimulus"] }
         public var constraintType: String { __data["constraintType"] }
         public var constraintMagnitude: Int { __data["constraintMagnitude"] }
+        public var timeCap: Int? { __data["timeCap"] }
       }
     }
   }

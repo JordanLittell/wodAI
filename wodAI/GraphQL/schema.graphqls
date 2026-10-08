@@ -812,6 +812,7 @@ type CompletedHIITWorkout {
   trainingLoad: Float
   trainingLoadSource: TrainingLoadSource
   heartRateSeries: [HeartRateSample!]!
+  zoneThresholds: [Int!]!
 }
 
 type HeartRateSample {

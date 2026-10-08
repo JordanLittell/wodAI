@@ -1,5 +1,6 @@
 # The Stats feed's strength pieces for one week: each piece with at least one
 # set logged in the range, and the day it counts on (its latest logged set).
+# Carries the whole piece so it can reopen in StrengthWorkoutView for editing.
 query CompletedStrengthWorkouts($startDate: DateTime!, $endDate: DateTime!) {
   completedStrengthWorkouts(startDate: $startDate, endDate: $endDate) {
     completedAt
@@ -13,11 +14,15 @@ query CompletedStrengthWorkouts($startDate: DateTime!, $endDate: DateTime!) {
         order
         reps
         weight
+        rpe
         completedAt
         completedReps
         completedWeight
+        completedRpe
         exercise {
           name
+          muscleGroups
+          videoUrl
         }
       }
     }

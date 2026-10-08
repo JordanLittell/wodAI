@@ -47,7 +47,7 @@ struct HIITWorkoutItem: Identifiable, Hashable {
 enum CompletionHeartRate: Equatable {
     case none
     case analyzing
-    case ready(HeartRateSummary, [HeartRatePoint])
+    case ready(HeartRateSummary, [HeartRatePoint], zoneThresholds: [Int])
     case unavailable
 }
 
@@ -731,7 +731,7 @@ class HIITWorkoutViewModel: ObservableObject {
             if recorder.sessionId == nil {
                 self.completionHeartRate = .none
             } else if let summary {
-                self.completionHeartRate = .ready(summary, recorder.points)
+                self.completionHeartRate = .ready(summary, recorder.points, zoneThresholds: recorder.zoneThresholds)
             } else {
                 self.completionHeartRate = .unavailable
             }

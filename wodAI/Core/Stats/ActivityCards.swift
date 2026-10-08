@@ -4,7 +4,8 @@
 //
 //  The Stats feed's rows: a dated divider for each day, a HIIT card tinted by
 //  the athlete's RPE (heart-rate curve on top when one was recorded), and a
-//  strength card with the rep scheme and how the load climbed.
+//  strength card with the rep scheme and how the load climbed. Tapping either
+//  opens it for editing (ActivityView).
 //
 
 import SwiftUI
@@ -46,12 +47,13 @@ struct CompletedHiitCard: View {
         VStack(alignment: .leading, spacing: 12) {
             if hasHeartRate {
                 HStack(alignment: .center, spacing: 12) {
-                    HeartRateSparkline(points: entry.heartRate, showsAxes: false)
-                        .frame(height: 48)
-                        .frame(maxWidth: .infinity)
                     heartRateStats
+                    Spacer()
                     rpeBadge
                 }
+                HeartRateSparkline(points: entry.heartRate, zoneThresholds: entry.zoneThresholds, showsAxes: false)
+                    .frame(height: 96)
+                    .frame(maxWidth: .infinity)
                 titleRow
             } else {
                 HStack(alignment: .top) {
@@ -111,18 +113,30 @@ struct CompletedHiitCard: View {
     @ViewBuilder
     private var heartRateStats: some View {
         if let avg = entry.avgHeartRate {
-            VStack(alignment: .trailing, spacing: 2) {
-                Label("\(avg)", systemImage: "heart.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundColor(Color("PrimaryText"))
-                    .labelStyle(TintedIconLabelStyle(tint: .red))
-                Text(entry.maxHeartRate.map { "avg · max \($0)" } ?? "avg bpm")
-                    .font(.caption2)
-                    .foregroundColor(Color("SecondaryText"))
+            VStack(alignment: .leading, spacing: 4) {
+                heartRateLine(avg, unit: "avg bpm", systemImage: "heart.fill", emphasized: true)
+                if let max = entry.maxHeartRate {
+                    heartRateLine(max, unit: "max bpm", systemImage: "arrow.up", emphasized: false)
+                }
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(entry.maxHeartRate.map { "Average heart rate \(avg), max \($0)" } ?? "Average heart rate \(avg)")
+        }
+    }
+
+    private func heartRateLine(_ bpm: Int, unit: String, systemImage: String, emphasized: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Image(systemName: systemImage)
+                .font(.caption)
+                .foregroundColor(.red)
+                .frame(width: 14)
+            Text("\(bpm)")
+                .font(emphasized ? .title3.weight(.bold) : .subheadline.weight(.semibold))
+                .monospacedDigit()
+                .foregroundColor(Color(emphasized ? "PrimaryText" : "SecondaryText"))
+            Text(unit)
+                .font(.caption2)
+                .foregroundColor(Color("SecondaryText"))
         }
     }
 
@@ -160,20 +174,21 @@ struct CompletedHiitCard: View {
             if !hasHeartRate, let bpm = entry.avgHeartRate {
                 Label("\(bpm) avg bpm", systemImage: "heart.fill")
             }
+            Spacer()
+            EditChevron()
         }
         .font(.caption)
         .foregroundColor(Color("SecondaryText"))
     }
 }
 
-private struct TintedIconLabelStyle: LabelStyle {
-    let tint: Color
-
-    func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 4) {
-            configuration.icon.foregroundColor(tint).font(.caption)
-            configuration.title
-        }
+/// Marks a card as tappable: it opens the result for editing.
+private struct EditChevron: View {
+    var body: some View {
+        Image(systemName: "chevron.right")
+            .font(.caption.weight(.semibold))
+            .foregroundColor(Color("TertiaryText"))
+            .accessibilityHidden(true)
     }
 }
 
@@ -197,6 +212,7 @@ struct CompletedStrengthCard: View {
                 Text(entry.completedAt.formatted(date: .omitted, time: .shortened))
                     .font(.caption)
                     .foregroundColor(Color("SecondaryText"))
+                EditChevron()
             }
 
             ForEach(entry.lifts, id: \.exercise) { lift in
@@ -237,4 +253,18 @@ struct CompletedStrengthCard: View {
         }
         .accessibilityElement(children: .combine)
     }
+}
+
+#Preview("HIIT with heart rate") {
+    let points = stride(from: 0.0, through: 720, by: 12).map { t in
+        HeartRatePoint(seconds: t, bpm: 95 + Int(70 * (1 - exp(-t / 120))) + Int(8 * sin(t / 40)))
+    }
+    return CompletedHiitCard(entry: CompletedHiitEntry(
+        id: 1, completedAt: .now, workoutId: 1, format: "AMRAP",
+        displayText: "12 min AMRAP\n10 Wall Balls\n10 Box Jumps\n200m Run",
+        stimulus: "Sustained moderate-high effort",
+        perceivedEffort: 8, avgHeartRate: 148, maxHeartRate: 171, trainingLoad: 41,
+        heartRate: points, zoneThresholds: [94, 112, 131, 150, 168]
+    ))
+    .padding()
 }
