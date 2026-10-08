@@ -7,6 +7,8 @@ import SwiftUI
 
 struct ActivityView: View {
     @State private var selectedWeek: ActivityWeek
+    /// The chart the toggle shows; kept when the week changes.
+    @State private var selectedStat: StatKind = .volume
     @StateObject private var stats: ActivityStatsStore
     @StateObject private var feed: ActivityFeedStore
     @StateObject private var recovery = RecoveryStatusStore()
@@ -100,20 +102,10 @@ struct ActivityView: View {
     }
 
     private var chartsSection: some View {
-        VStack(spacing: 12) {
-            statCard("Volume", chart: stats.stats?.volume, empty: "No strength sets logged this week")
-            statCard("Intensity minutes", chart: stats.stats?.intensity, empty: "No WODs completed this week")
-            statCard("Training load", chart: stats.stats?.trainingLoad, empty: "Rate your effort or wear a heart rate monitor to see training load")
-            statCard("Muscle load", chart: stats.stats?.muscleLoad, empty: "No training this week")
-        }
-    }
-
-    private func statCard(_ title: String, chart: StatChart?, empty: String) -> some View {
-        StatChartCard(
-            title: title,
-            chart: chart,
+        StatsChartsSection(
+            kind: $selectedStat,
+            stats: stats.stats,
             week: selectedWeek,
-            emptyMessage: empty,
             isLoading: stats.isLoading,
             errorMessage: stats.errorMessage,
             onRetry: { Task { await stats.load(week: selectedWeek) } }

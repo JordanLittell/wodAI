@@ -13,11 +13,12 @@ struct ZZRenderStatCards {
             CategoryValue(label: "Back", value: 24), CategoryValue(label: "Legs", value: 38),
             CategoryValue(label: "Shoulders", value: 17), CategoryValue(label: "Core", value: 12), CategoryValue(label: "Arms", value: 9)]))
         let empty = StatChart(unit: "min", total: 0, points: .series(days.map { DayValue(day: $0, value: 0) }))
+        let stats = ActivityStats(muscleLoad: load, volume: volume, intensity: empty)
         let view = VStack(spacing: 12) {
-            StatChartCard(title: "Volume", chart: volume, week: week, emptyMessage: "No strength sets logged this week", isLoading: false, errorMessage: nil, onRetry: {})
-            StatChartCard(title: "Intensity minutes", chart: empty, week: week, emptyMessage: "No WODs completed this week", isLoading: false, errorMessage: nil, onRetry: {})
-            StatChartCard(title: "Muscle load", chart: load, week: week, emptyMessage: "No training this week", isLoading: false, errorMessage: nil, onRetry: {})
-            StatChartCard(title: "Loading", chart: nil, week: week, emptyMessage: "", isLoading: true, errorMessage: nil, onRetry: {})
+            ForEach(StatKind.allCases) { kind in
+                StatsChartsSection(kind: .constant(kind), stats: stats, week: week, isLoading: false, errorMessage: nil, onRetry: {})
+            }
+            StatsChartsSection(kind: .constant(.volume), stats: nil, week: week, isLoading: true, errorMessage: nil, onRetry: {})
         }
         .padding()
         .frame(width: 393)

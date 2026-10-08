@@ -1,17 +1,16 @@
 //
-//  StatChartCard.swift
+//  StatChartView.swift
 //  wodAI
 //
-//  One card per stat on the Activity screen: a title, a headline, and a Swift
-//  Chart drawn from the stat's shape — daily bars across the whole week for a
-//  series, horizontal bars largest-first for categories.
+//  One stat's Swift Chart, drawn from its shape — daily bars across the whole
+//  week for a series, horizontal bars largest-first for categories — with its
+//  empty, loading and error states. No card chrome: `StatsChartsSection` hosts it.
 //
 
 import SwiftUI
 import Charts
 
-struct StatChartCard: View {
-    let title: String
+struct StatChartView: View {
     let chart: StatChart?
     let week: ActivityWeek
     /// Shown instead of a chart of zeros, e.g. "No strength sets logged".
@@ -23,31 +22,7 @@ struct StatChartCard: View {
     private static let chartHeight: CGFloat = 140
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(Color("PrimaryText"))
-                Spacer()
-                if let headline = chart?.headline(), chart?.isEmpty == false {
-                    Text(headline)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(Color("BrandPrimary"))
-                        .contentTransition(.numericText())
-                }
-            }
-
-            content
-        }
-        .padding()
-        .background(Color("Surface"))
-        .cornerRadius(14)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color("Border"), lineWidth: 1)
-        )
+        content
     }
 
     @ViewBuilder
