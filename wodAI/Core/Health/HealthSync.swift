@@ -6,12 +6,15 @@
 //  summary), disconnecting, and saving finished workouts.
 //
 //  What gets written:
-//  - A session from the Workout page, once it completes on the server (its
-//    last set or HIIT result logged): one workout from the first logged work
-//    to the last, with the heart rate any of its metcons recorded.
+//  - A session from the Workout page, as its work is logged: one workout from
+//    the first logged work to the last, with the heart rate any of its metcons
+//    recorded. Each later write replaces it, so a session done in part still
+//    reaches Health, and finishing it brings the workout up to date.
 //  - A metcon done on its own (a saved workout), when its result is saved.
 //  Nothing is written while the athlete isn't connected or has writing off,
-//  and a write never blocks or fails a workout.
+//  and a write never blocks or fails a workout. A write that's skipped is
+//  reported to Sentry as `health.write_skipped` with its reason, once per
+//  session and reason.
 //
 
 import Foundation
@@ -54,17 +57,26 @@ final class HealthSync: ObservableObject, HealthConnecting {
     /// until the session's workout is written. Memory only: a session
     /// finished after the app restarts is written without it.
     private var pieceHeartRate: [Int: (samples: [(date: Date, bpm: Double)], kcal: Double?)] = [:]
+    /// How long a session's write waits for more work, so a run of sets
+    /// writes once.
+    private let sessionWriteDelay: Duration
+    /// The write waiting on each session, by session id.
+    private var pendingSessionWrites: [String: Task<Void, Never>] = [:]
+    /// Skips already reported, as "<session id>|<reason>".
+    private var reportedSkips: Set<String> = []
 
     init(
         source: HealthDataSource = HealthKitDataSource.shared,
         api: HealthAPI = ApolloHealthAPI(),
         defaults: UserDefaults = .standard,
-        clock: @escaping () -> Date = Date.init
+        clock: @escaping () -> Date = Date.init,
+        sessionWriteDelay: Duration = .seconds(20)
     ) {
         self.source = source
         self.api = api
         self.defaults = defaults
         self.clock = clock
+        self.sessionWriteDelay = sessionWriteDelay
         isConnected = defaults.bool(forKey: Keys.connected)
         writesWorkouts = defaults.object(forKey: Keys.writesWorkouts) as? Bool ?? true
     }
@@ -144,28 +156,52 @@ final class HealthSync: ObservableObject, HealthConnecting {
         await save(workout)
     }
 
-    /// A session on the Workout page looks done. Writes its workout once the
-    /// server agrees (it completes sessions itself when the last work is
-    /// logged), keyed by the session so a repeat replaces rather than adds.
-    func sessionMayHaveCompleted(id: String) async {
+    /// Work in a session on the Workout page was saved on the server. Writes
+    /// the session's workout from what's logged so far, after a short wait
+    /// for more (at once when `completed`), keyed by the session so each
+    /// write replaces the last rather than adding one.
+    @discardableResult
+    func sessionProgressed(id: String, completed: Bool) -> Task<Void, Never>? {
+        // Once per run rather than per session: many athletes never connect.
+        guard isConnected else { reportSkip(.notConnected, session: "*"); return nil }
+        guard writesWorkouts else { return nil }
+        pendingSessionWrites[id]?.cancel()
+        let delay = completed ? .zero : sessionWriteDelay
+        let task = Task { [weak self] in
+            if delay > .zero {
+                try? await Task.sleep(for: delay)
+            }
+            guard !Task.isCancelled, let self else { return }
+            self.pendingSessionWrites[id] = nil
+            await self.writeSession(id: id)
+        }
+        pendingSessionWrites[id] = task
+        return task
+    }
+
+    private func writeSession(id: String) async {
         guard canWrite else { return }
         let session: HealthSessionInfo?
         do {
             session = try await api.session(id: id)
         } catch {
+            reportSkip(.fetchFailed, session: id)
             return
         }
-        guard let session, let completedAt = session.completedAt,
-              let write = Self.write(for: session, completedAt: completedAt, heartRate: pieceHeartRate)
-        else { return }
-        for result in session.hiitResults { pieceHeartRate[result.pieceId] = nil }
-        await save(write)
+        guard let session, let write = Self.write(for: session, heartRate: pieceHeartRate) else {
+            TelemetryService.addBreadcrumb(category: "health", message: "nothing logged", data: ["session": id])
+            return
+        }
+        if session.completedAt != nil {
+            for result in session.hiitResults { pieceHeartRate[result.pieceId] = nil }
+        }
+        await save(write, session: id)
     }
 
-    /// The Health workout for a completed session. Pure, for tests.
+    /// The Health workout for a session's logged work; nil when nothing in
+    /// it is logged. Pure, for tests.
     static func write(
         for session: HealthSessionInfo,
-        completedAt: Date,
         heartRate: [Int: (samples: [(date: Date, bpm: Double)], kcal: Double?)]
     ) -> HealthWorkoutWrite? {
         guard let plan = SessionWorkoutPlan(
@@ -176,8 +212,8 @@ final class HealthSync: ObservableObject, HealthConnecting {
         let kcal = recorded.compactMap(\.kcal)
         var write = HealthWorkoutWrite(
             syncIdentifier: "wodai-session-\(session.id)",
-            // A session reopened and finished again replaces its workout.
-            syncVersion: Int(completedAt.timeIntervalSince1970),
+            // Later work ends later, so its write replaces the earlier one.
+            syncVersion: Int(plan.end.timeIntervalSince1970),
             activity: plan.activity,
             start: plan.start,
             end: plan.end,
@@ -188,12 +224,34 @@ final class HealthSync: ObservableObject, HealthConnecting {
         return write
     }
 
-    private func save(_ workout: HealthWorkoutWrite) async {
+    private func save(_ workout: HealthWorkoutWrite, session: String? = nil) async {
         do {
             let outcome = try await source.save(workout)
             TelemetryService.addBreadcrumb(category: "health", message: "write", data: ["outcome": "\(outcome)"])
+            switch outcome {
+            case .saved: break
+            case .skippedOverlap: reportSkip(.overlap, session: session ?? workout.syncIdentifier)
+            case .notAllowed: reportSkip(.notAllowed, session: session ?? workout.syncIdentifier)
+            }
         } catch {
             TelemetryService.captureError(error, tags: ["operation": "HealthWrite"])
         }
+    }
+
+    enum SkipReason: String {
+        /// Writing is on but Apple Health isn't connected in the app.
+        case notConnected
+        /// The session couldn't be fetched to time its workout.
+        case fetchFailed
+        /// Another app has a workout at that time.
+        case overlap
+        /// iOS doesn't allow the app to write workouts.
+        case notAllowed
+    }
+
+    /// Reports why a workout didn't reach Health, once per session and reason.
+    private func reportSkip(_ reason: SkipReason, session: String) {
+        guard reportedSkips.insert("\(session)|\(reason.rawValue)").inserted else { return }
+        TelemetryService.captureMessage("health.write_skipped", level: .warning, tags: ["reason": reason.rawValue])
     }
 }

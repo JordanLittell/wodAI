@@ -598,6 +598,11 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = wodAI/Info.plist;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "wodAI connects to your heart rate monitor or watch to show your live heart rate during workouts and how hard each one was.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "wodAI uses the camera to read a workout off your gym's whiteboard and add it to your day.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "wodAI reads your workouts, heart rate, cardio fitness and body measurements to suggest a starting level and fill in your profile. A summary of your last 90 days of training is saved to your wodAI account to plan your workouts.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "wodAI saves the workouts you finish, with their heart rate and estimated calories, so they count toward your Activity rings.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -629,6 +634,11 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = wodAI/Info.plist;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "wodAI connects to your heart rate monitor or watch to show your live heart rate during workouts and how hard each one was.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "wodAI uses the camera to read a workout off your gym's whiteboard and add it to your day.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "wodAI reads your workouts, heart rate, cardio fitness and body measurements to suggest a starting level and fill in your profile. A summary of your last 90 days of training is saved to your wodAI account to plan your workouts.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "wodAI saves the workouts you finish, with their heart rate and estimated calories, so they count toward your Activity rings.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

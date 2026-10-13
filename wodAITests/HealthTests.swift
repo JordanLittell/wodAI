@@ -151,7 +151,7 @@ struct HealthSyncTests {
     private func sync(connected: Bool = true) -> HealthSync {
         let defaults = UserDefaults(suiteName: "HealthSyncTests-\(UUID().uuidString)")!
         defaults.set(connected, forKey: "health.isConnected")
-        return HealthSync(source: source, api: api, defaults: defaults, clock: { now })
+        return HealthSync(source: source, api: api, defaults: defaults, clock: { now }, sessionWriteDelay: .milliseconds(10))
     }
 
     private func session(completed: Bool) -> HealthSessionInfo {
@@ -173,12 +173,12 @@ struct HealthSyncTests {
         api.sessions["w1"] = session(completed: true)
         health.metconFinished(pieceId: 9, heartRate: [(daysAgo(0.012), 150), (daysAgo(0.011), 162)], kcal: 80)
 
-        await health.sessionMayHaveCompleted(id: "w1")
+        await health.sessionProgressed(id: "w1", completed: true)?.value
 
         let write = try #require(source.saved.first)
         #expect(source.saved.count == 1)
         #expect(write.syncIdentifier == "wodai-session-w1")
-        #expect(write.syncVersion == Int(now.timeIntervalSince1970))
+        #expect(write.syncVersion == Int(daysAgo(0.01).timeIntervalSince1970))
         #expect(write.activity == .mixed)
         #expect(write.title == "Squat day")
         #expect(write.start == daysAgo(0.03))
@@ -187,20 +187,55 @@ struct HealthSyncTests {
         #expect(write.activeEnergyKcal == 80)
     }
 
-    @Test func nothingIsWrittenUntilTheServerCompletesTheSession() async {
+    @Test func aPartlyDoneSessionIsWrittenWithWhatWasLogged() async throws {
+        let health = sync()
+        api.sessions["w1"] = HealthSessionInfo(
+            id: "w1", name: "Squat day", completedAt: nil, setTimes: [daysAgo(0.03), daysAgo(0.02)], hiitResults: []
+        )
+        await health.sessionProgressed(id: "w1", completed: false)?.value
+
+        let write = try #require(source.saved.first)
+        #expect(write.activity == .strength)
+        #expect(write.start == daysAgo(0.03))
+        #expect(write.end == daysAgo(0.02))
+    }
+
+    @Test func moreWorkReplacesTheEarlierWrite() async throws {
+        let health = sync()
+        api.sessions["w1"] = HealthSessionInfo(id: "w1", name: "Day", completedAt: nil, setTimes: [daysAgo(0.03)], hiitResults: [])
+        await health.sessionProgressed(id: "w1", completed: false)?.value
+        api.sessions["w1"] = session(completed: true)
+        await health.sessionProgressed(id: "w1", completed: true)?.value
+
+        #expect(source.saved.count == 2)
+        #expect(Set(source.saved.map(\.syncIdentifier)) == ["wodai-session-w1"])
+        #expect(source.saved[1].syncVersion > source.saved[0].syncVersion)
+    }
+
+    @Test func aRunOfSetsWritesOnce() async {
         let health = sync()
         api.sessions["w1"] = session(completed: false)
-        await health.sessionMayHaveCompleted(id: "w1")
+        let first = health.sessionProgressed(id: "w1", completed: false)
+        let second = health.sessionProgressed(id: "w1", completed: false)
+        await first?.value
+        await second?.value
+        #expect(source.saved.count == 1)
+    }
+
+    @Test func nothingLoggedIsNotWritten() async {
+        let health = sync()
+        api.sessions["w1"] = HealthSessionInfo(id: "w1", name: "Day", completedAt: nil, setTimes: [], hiitResults: [])
+        await health.sessionProgressed(id: "w1", completed: false)?.value
         #expect(source.saved.isEmpty)
     }
 
     @Test func nothingIsWrittenWhenNotConnectedOrSwitchedOff() async {
         api.sessions["w1"] = session(completed: true)
 
-        await sync(connected: false).sessionMayHaveCompleted(id: "w1")
+        await sync(connected: false).sessionProgressed(id: "w1", completed: true)?.value
         let off = sync()
         off.writesWorkouts = false
-        await off.sessionMayHaveCompleted(id: "w1")
+        await off.sessionProgressed(id: "w1", completed: true)?.value
 
         #expect(source.saved.isEmpty)
     }
@@ -224,7 +259,7 @@ struct HealthSyncTests {
         #expect(api.disconnects == 1)
 
         api.sessions["w1"] = session(completed: true)
-        await health.sessionMayHaveCompleted(id: "w1")
+        await health.sessionProgressed(id: "w1", completed: true)?.value
         #expect(source.saved.isEmpty)
     }
 
@@ -258,21 +293,22 @@ struct SessionCompletionHookTests {
         ))
     }
 
-    @Test func reportsTheSessionOnceItsLastBlockIsDone() throws {
+    @Test func reportsEverySavedPieceOfWorkAndWhenItFinishesTheSession() throws {
         let vm = viewModel()
-        var reported: [String] = []
-        vm.sessionCompleted = { reported.append($0) }
+        var reported: [(id: String, completed: Bool)] = []
+        vm.sessionProgressed = { reported.append(($0, $1)) }
 
         vm.markHiitCompleted(sessionId: "w1", blockId: 1)
-        #expect(reported.isEmpty)
+        #expect(reported.map(\.id) == ["w1"])
+        #expect(reported.map(\.completed) == [false])
 
         var logged = try #require(vm.strengthWorkout(sessionId: "w1", id: 0))
         logged.components[0].completed = CompletedSet(weightUsed: 225, reps: 5)
         vm.updateStrength(logged, sessionId: "w1")
-        #expect(reported == ["w1"])
+        #expect(reported.map(\.completed) == [false, true])
 
-        // Re-logging a set on a finished session doesn't report it again.
+        // Re-logging a set on a finished session updates its workout.
         vm.updateStrength(logged, sessionId: "w1")
-        #expect(reported == ["w1"])
+        #expect(reported.map(\.completed) == [false, true, true])
     }
 }

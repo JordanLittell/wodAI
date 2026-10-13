@@ -320,7 +320,7 @@ struct LoginView: View {
             return false
         }
         
-        let signInConfig = GIDConfiguration(clientID: "323431688528-e8s8oo9o1qtf6vrcu69uf0hnb9etvdg3.apps.googleusercontent.com")
+        let signInConfig = GIDConfiguration(clientID: "323431688528-jaj33ofh3jde4t085mht8ef8fbtgd9gu.apps.googleusercontent.com")
         
         await MainActor.run {
             isGoogleLoading = true
