@@ -23,9 +23,7 @@ struct StatGuideTests {
     }
 
     @Test(arguments: StatKind.allCases)
-    func everyKindExplainsEveryTopicOnce(kind: StatKind) {
-        #expect(kind.pointers.map(\.topic) == StatPointer.Topic.allCases)
-        #expect(kind.pointers.allSatisfy { !$0.text.isEmpty })
+    func everyKindIsDescribed(kind: StatKind) {
         #expect(!kind.definition.isEmpty)
         #expect(!kind.emptyMessage.isEmpty)
     }

@@ -18,6 +18,8 @@ private actor FakeOnboardingAPI: OnboardingAPI {
     var restDaysSent: [[String]] = []
     /// Whether any profile save sent a days-per-week.
     var sentDaysPerWeek = false
+    /// The fitness level each profile save sent (raw values), when it sent one.
+    var levelsSent: [String] = []
     var gymIdsSeen: [Int?] = []
     var profileDelay: Duration = .zero
     var gymDelays: [Duration] = []
@@ -49,6 +51,7 @@ private actor FakeOnboardingAPI: OnboardingAPI {
         calls.append("profile")
         if case let .some(days) = input.restDays { restDaysSent.append(days.map(\.rawValue)) }
         if case .some = input.activeDaysPerWeek { sentDaysPerWeek = true }
+        if case let .some(level) = input.fitnessLevel { levelsSent.append(level.rawValue) }
     }
 
     func saveGym(id: Int?, name: String, equipmentIds: [Int]) async throws -> Int {
@@ -86,12 +89,52 @@ private actor FakeOnboardingAPI: OnboardingAPI {
     func isProvisioned() async throws -> Bool { provisioned }
 }
 
+/// Apple Health as onboarding sees it: a snapshot to read, and a suggestion
+/// that can be slowed down.
+@MainActor
+private final class FakeHealth: HealthConnecting {
+    var isAvailable = true
+    var snapshot = HealthSnapshot()
+    var connectFails = false
+    var suggestion: HealthSuggestion? = HealthSuggestion(level: .intermediate, reasons: ["About 3 cardio sessions a week."])
+    var uploadDelay: Duration = .zero
+    private(set) var connects = 0
+    private(set) var uploads = 0
+
+    func connect() async throws -> HealthSnapshot {
+        connects += 1
+        if connectFails { throw HealthAPIError.server("denied") }
+        return snapshot
+    }
+
+    func upload(_ snapshot: HealthSnapshot) async throws -> HealthSuggestion? {
+        uploads += 1
+        try await Task.sleep(for: uploadDelay)
+        return suggestion
+    }
+}
+
 @MainActor
 struct OnboardingViewModelTests {
     private static let today = "2026-10-05"
 
-    private func ready(_ api: FakeOnboardingAPI, onFinished: @escaping () -> Void = {}) async -> OnboardingViewModel {
-        let vm = OnboardingViewModel(api: api, onFinished: onFinished, today: Self.today, timezone: "America/Denver", pollInterval: .milliseconds(5))
+    /// Without `health`, onboarding has no Apple Health step.
+    private func ready(
+        _ api: FakeOnboardingAPI,
+        health: FakeHealth? = nil,
+        healthBudget: Duration = .seconds(3),
+        onFinished: @escaping () -> Void = {}
+    ) async -> OnboardingViewModel {
+        let vm = OnboardingViewModel(
+            api: api,
+            health: health,
+            offersAppleHealth: health != nil,
+            healthBudget: healthBudget,
+            onFinished: onFinished,
+            today: Self.today,
+            timezone: "America/Denver",
+            pollInterval: .milliseconds(5)
+        )
         await vm.load()
         return vm
     }
@@ -309,6 +352,132 @@ struct OnboardingViewModelTests {
         #expect(PlanWait.from(nil, today: Self.today, waited: 10) == .waiting(slow: false))
         // Today being planned wins even if the run later failed.
         #expect(PlanWait.from(PlanStatus(state: .failed, plannedDates: [Self.today]), today: Self.today, waited: 0) == .ready)
+    }
+
+    // MARK: - Apple Health
+
+    /// A snapshot with body stats and enough training to upload.
+    private func healthWithData() -> FakeHealth {
+        let health = FakeHealth()
+        var snapshot = HealthSnapshot()
+        snapshot.dateOfBirth = DateComponents(year: 1990, month: 1, day: 1)
+        snapshot.biologicalSex = .female
+        snapshot.heightInches = 66.2
+        snapshot.weightPounds = 139.6
+        snapshot.workouts.workoutCount = 40
+        snapshot.workouts.workoutsPerWeek = 3
+        health.snapshot = snapshot
+        return health
+    }
+
+    @Test func appleHealthComesRightAfterTheGoal() async {
+        let vm = await ready(FakeOnboardingAPI(), health: FakeHealth())
+        vm.choose(.buildEngine)
+        #expect(vm.flow.current == .appleHealth)
+    }
+
+    @Test func connectingFillsInAboutYouAndOffersTheSuggestedLevel() async throws {
+        let health = healthWithData()
+        let vm = await ready(FakeOnboardingAPI(), health: health)
+        vm.choose(.buildEngine)
+
+        vm.connectHealth()
+        try await waitUntil { vm.health != .reading }
+
+        #expect(vm.health == .found(HealthSuggestion(level: .intermediate, reasons: ["About 3 cardio sessions a week."])))
+        #expect(vm.healthLevel == .intermediate)
+        #expect(vm.flow.current == .appleHealth)
+        #expect(vm.age == String(health.snapshot.age(on: Date()) ?? 0))
+        #expect(vm.sex == .female)
+        #expect(vm.heightFeet == "5")
+        #expect(vm.heightInches == "6")
+        #expect(vm.bodyWeight == "140")
+    }
+
+    @Test func aConfirmedLevelIsSavedAndExperienceKeepsIt() async throws {
+        let api = FakeOnboardingAPI()
+        let vm = await ready(api, health: healthWithData())
+        vm.choose(.buildEngine)
+        vm.connectHealth()
+        try await waitUntil { vm.health != .reading }
+
+        vm.healthLevel = .advanced // picked over the suggestion
+        vm.confirmHealthLevel()
+        #expect(vm.flow.current == .experience)
+        vm.choose(.new)
+        try await waitUntil { await api.calls.count == 3 }
+
+        // Goal, the confirmed level, then experience with years only.
+        #expect(await api.levelsSent == ["ADVANCED"])
+    }
+
+    @Test func withoutHealthExperienceStillSetsTheLevel() async throws {
+        let api = FakeOnboardingAPI()
+        let vm = await ready(api, health: FakeHealth())
+        vm.choose(.buildEngine)
+        vm.skipHealth()
+        vm.choose(.twoToFive)
+        try await waitUntil { await api.calls.count == 2 }
+        #expect(await api.levelsSent == ["INTERMEDIATE"])
+    }
+
+    @Test func aSlowSuggestionDoesNotHoldUpOnboarding() async throws {
+        let health = healthWithData()
+        health.uploadDelay = .seconds(2)
+        let vm = await ready(FakeOnboardingAPI(), health: health, healthBudget: .milliseconds(50))
+        vm.choose(.buildEngine)
+
+        vm.connectHealth()
+        try await waitUntil { vm.flow.current == .experience }
+
+        #expect(vm.flow.current == .experience)
+        #expect(vm.bodyWeight == "140") // the prefill didn't wait
+        #expect(health.uploads == 1) // and the upload still went
+    }
+
+    @Test func nothingInHealthMovesStraightOn() async throws {
+        let health = FakeHealth()
+        let vm = await ready(FakeOnboardingAPI(), health: health)
+        vm.choose(.buildEngine)
+
+        vm.connectHealth()
+        try await waitUntil { vm.flow.current == .experience }
+        #expect(vm.flow.current == .experience)
+        #expect(health.uploads == 0)
+    }
+
+    @Test func aFailedConnectStaysOnTheStepWithAMessage() async throws {
+        let health = FakeHealth()
+        health.connectFails = true
+        let vm = await ready(FakeOnboardingAPI(), health: health)
+        vm.choose(.buildEngine)
+
+        vm.connectHealth()
+        try await waitUntil { vm.errorMessage != nil }
+        #expect(vm.flow.current == .appleHealth)
+        #expect(vm.health == .pitch)
+    }
+
+    @Test func notNowSkipsWithoutAskingHealth() async {
+        let health = FakeHealth()
+        let vm = await ready(FakeOnboardingAPI(), health: health)
+        vm.choose(.buildEngine)
+        vm.skipHealth()
+        #expect(vm.flow.current == .experience)
+        #expect(health.connects == 0)
+    }
+
+    @Test func theHealthPrefillLeavesWhatWasTypedAlone() async throws {
+        let vm = await ready(FakeOnboardingAPI(), health: healthWithData())
+        vm.choose(.buildEngine)
+        vm.age = "41"
+        vm.bodyWeight = "180"
+
+        vm.connectHealth()
+        try await waitUntil { vm.health != .reading }
+        #expect(vm.age == "41")
+        #expect(vm.bodyWeight == "180")
+        #expect(vm.heightFeet == "5") // still filled where it was empty
     }
 }
 

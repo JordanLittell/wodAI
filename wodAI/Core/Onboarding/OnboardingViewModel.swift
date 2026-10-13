@@ -16,6 +16,11 @@
 //  is on screen, so a tap that lands on a screen as it slides away can't
 //  answer it twice or skip the next one.
 //
+//  Apple Health is read on the phone and fills in About you at once. The
+//  suggested level needs the server: if it doesn't come back within
+//  `healthBudget`, the athlete moves on without it (the upload still
+//  finishes, and Connect → Apple Health shows the suggestion later).
+//
 
 import Foundation
 import SwiftUI
@@ -108,9 +113,22 @@ enum OnboardingSex: CaseIterable {
     }
 }
 
+/// Where the Apple Health step is.
+enum OnboardingHealthState: Equatable {
+    /// Explaining what connecting does.
+    case pitch
+    /// Reading Health, then waiting (briefly) for the suggested level.
+    case reading
+    /// A level to confirm.
+    case found(HealthSuggestion)
+}
+
 @MainActor
 final class OnboardingViewModel: ObservableObject {
     enum Phase { case loading, failed, ready, planning }
+
+    /// How long the Health step waits for the suggested level before moving on.
+    static let defaultHealthBudget: Duration = .seconds(3)
 
     static let sessionLengthOptions = [30, 45, 60, 90]
 
@@ -141,8 +159,18 @@ final class OnboardingViewModel: ObservableObject {
     @Published var heightFeet = ""
     @Published var heightInches = ""
     @Published var bodyWeight = ""
+    @Published private(set) var health: OnboardingHealthState = .pitch
+    /// The level picked on the Health step's card, starting at the suggestion.
+    @Published var healthLevel: OnboardingLevel = .beginner
+    /// Set once the athlete confirms a level from Health; Experience then
+    /// saves only their years of training.
+    @Published private(set) var confirmedLevel: OnboardingLevel?
 
     private let api: OnboardingAPI
+    private let healthSource: HealthConnecting?
+    private let healthBudget: Duration
+    /// Bumped on each connect, so a late answer from an earlier one is ignored.
+    private var healthAttempt = 0
     private let onFinished: () -> Void
     /// The athlete's local date, "YYYY-MM-DD": the day planning must reach.
     private let today: String
@@ -166,6 +194,10 @@ final class OnboardingViewModel: ObservableObject {
 
     init(
         api: OnboardingAPI = ApolloOnboardingAPI(),
+        /// Nil reads Apple Health through HealthSync where it's available.
+        health: HealthConnecting? = nil,
+        offersAppleHealth: Bool = true,
+        healthBudget: Duration = OnboardingViewModel.defaultHealthBudget,
         onFinished: @escaping () -> Void = { AuthState.shared.completeProvisioning() },
         today: String? = nil,
         timezone: String = TimeZone.current.identifier,
@@ -173,6 +205,8 @@ final class OnboardingViewModel: ObservableObject {
         pollInterval: Duration = .seconds(3)
     ) {
         self.api = api
+        self.healthSource = offersAppleHealth ? (health ?? (HealthSync.shared.isAvailable ? HealthSync.shared : nil)) : nil
+        self.healthBudget = healthBudget
         self.onFinished = onFinished
         let week = AssistantWeek()
         self.today = today ?? week.calendarDate(for: week.today)
@@ -200,7 +234,7 @@ final class OnboardingViewModel: ObservableObject {
                 return
             }
             content = try await api.loadContent()
-            flow = OnboardingFlow(ladderRungCounts: content.ladders.map(\.rungs.count))
+            flow = OnboardingFlow(ladderRungCounts: content.ladders.map(\.rungs.count), includesAppleHealth: healthSource != nil)
             phase = .ready
         } catch {
             phase = .failed
@@ -261,11 +295,103 @@ final class OnboardingViewModel: ObservableObject {
         advance()
     }
 
+    // MARK: Apple Health
+
+    /// Asks for Health access, reads it, and fills in About you. Shows the
+    /// suggested level if the server answers within the budget; otherwise
+    /// moves on.
+    func connectHealth() {
+        guard flow.current == .appleHealth, health == .pitch, let healthSource else { return }
+        health = .reading
+        errorMessage = nil
+        healthAttempt += 1
+        let attempt = healthAttempt
+        Task {
+            let snapshot: HealthSnapshot
+            do {
+                snapshot = try await healthSource.connect()
+            } catch {
+                guard attempt == healthAttempt, flow.current == .appleHealth else { return }
+                health = .pitch
+                errorMessage = "Couldn't open Apple Health. You can connect it later from Connect."
+                return
+            }
+            guard attempt == healthAttempt, flow.current == .appleHealth else { return }
+            prefill(from: snapshot)
+            if snapshot.isEmpty {
+                finishHealth()
+                return
+            }
+            Task {
+                let suggestion = try? await healthSource.upload(snapshot)
+                self.healthAnswered(suggestion, attempt: attempt)
+            }
+            Task {
+                try? await Task.sleep(for: healthBudget)
+                if attempt == self.healthAttempt, self.health == .reading {
+                    TelemetryService.addBreadcrumb(category: "health", message: "suggestion timed out")
+                    self.finishHealth()
+                }
+            }
+        }
+    }
+
+    private func healthAnswered(_ suggestion: HealthSuggestion?, attempt: Int) {
+        guard attempt == healthAttempt, flow.current == .appleHealth, health == .reading else { return }
+        guard let suggestion else {
+            finishHealth()
+            return
+        }
+        healthLevel = suggestion.level
+        health = .found(suggestion)
+    }
+
+    /// Leaves the Health step without a level to confirm.
+    private func finishHealth() {
+        health = .pitch
+        advance()
+    }
+
+    /// Saves the level picked on the card.
+    func confirmHealthLevel() {
+        guard flow.current == .appleHealth, case .found = health else { return }
+        let level = healthLevel
+        confirmedLevel = level
+        let input = UpdateUserInput(fitnessLevel: .some(GraphQLEnum(rawValue: level.rawValue)))
+        save("healthLevel") { [api] in try await api.updateProfile(input) }
+        advance()
+    }
+
+    func skipHealth() {
+        guard flow.current == .appleHealth else { return }
+        healthAttempt += 1
+        errorMessage = nil
+        health = .pitch
+        advance()
+    }
+
+    /// Fills in About you from Health, leaving anything already typed alone.
+    private func prefill(from snapshot: HealthSnapshot) {
+        if age.isEmpty, let years = snapshot.age(on: clock()), (13...100).contains(years) { age = String(years) }
+        if sex == nil { sex = snapshot.biologicalSex }
+        if heightFeet.isEmpty, heightInches.isEmpty, let inches = snapshot.heightInches.map({ Int($0.rounded()) }),
+           (36...107).contains(inches) {
+            heightFeet = String(inches / 12)
+            heightInches = String(inches % 12)
+        }
+        if bodyWeight.isEmpty, let pounds = snapshot.weightPounds.map({ Int($0.rounded()) }), (50...600).contains(pounds) {
+            bodyWeight = String(pounds)
+        }
+    }
+
+    // MARK: Experience
+
     func choose(_ experience: OnboardingExperience) {
         guard flow.current == .experience else { return }
         self.experience = experience
+        // A level confirmed from Health wins over the one years imply.
         let input = UpdateUserInput(
-            fitnessLevel: .some(.case(experience.fitnessLevel)),
+            fitnessLevel: confirmedLevel == nil ? .some(.case(experience.fitnessLevel)) : .none,
             trainingYears: .some(experience.trainingYears)
         )
         save("experience") { [api] in try await api.updateProfile(input) }

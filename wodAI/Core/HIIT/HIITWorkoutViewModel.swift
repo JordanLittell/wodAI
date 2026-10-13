@@ -126,6 +126,10 @@ class HIITWorkoutViewModel: ObservableObject {
     private var sensorRecorder: WorkoutSensorRecorder?
     /// The finished run's sensor session, linked to the completion on submit.
     private var completionSessionId: String?
+    /// When the clock first started and when the run finished, wall clock
+    /// (pauses included), for the workout saved to Apple Health.
+    private var runStartedAt: Date?
+    private var runEndedAt: Date?
     /// The scheduled session piece this metcon was opened from, if any, and
     /// the WOD it holds. A result for that WOD is logged against the piece so
     /// the session shows it done after a reload.
@@ -525,7 +529,10 @@ class HIITWorkoutViewModel: ObservableObject {
     /// Countdown fired: begin the actual workout clock.
     private func beginRunning() {
         timerCancellable?.cancel()
-        executionState = .running(startTime: Date(), priorElapsed: 0)
+        let now = Date()
+        runStartedAt = now
+        runEndedAt = nil
+        executionState = .running(startTime: now, priorElapsed: 0)
         startTimer()
         startSensorRecording()
     }
@@ -586,6 +593,7 @@ class HIITWorkoutViewModel: ObservableObject {
             return
         }
         executionState = .idle
+        runEndedAt = Date()
         finishSensorRecording()
 
         var draft = WorkoutCompletionDraft(
@@ -668,6 +676,7 @@ class HIITWorkoutViewModel: ObservableObject {
                 return
             }
             TelemetryService.captureMessage("workout.hiit_completed")
+            saveToHealth(completionId: result.data?.completeHiitWorkout.id, pieceId: pieceId, title: draft.workout.title)
         } catch {
             print("⚠️ Failed to complete workout: \(error)")
             TelemetryService.captureError(error, tags: ["operation": "CompleteHiitWorkout"])
@@ -743,6 +752,30 @@ class HIITWorkoutViewModel: ObservableObject {
         guard let recorder = sensorRecorder else { return }
         sensorRecorder = nil
         Task { @MainActor in await recorder.abandon() }
+    }
+
+    /// Hands the saved result to Apple Health: a metcon in a session adds its
+    /// heart rate to the session's workout (written when the session
+    /// completes); one done on its own is written now. Reads the heart rate
+    /// before it's cleared.
+    @MainActor
+    private func saveToHealth(completionId: Int?, pieceId: Int?, title: String) {
+        guard let start = runStartedAt else { return }
+        var heartRate: [(date: Date, bpm: Double)] = []
+        var kcal: Double?
+        if case let .ready(summary, points, _) = completionHeartRate {
+            heartRate = points.map { (start.addingTimeInterval($0.seconds), Double($0.bpm)) }
+            kcal = summary.estimatedCalories
+        }
+        let health = HealthSync.shared
+        if let pieceId {
+            health.metconFinished(pieceId: pieceId, heartRate: heartRate, kcal: kcal)
+        } else if let completionId {
+            let end = runEndedAt ?? Date()
+            Task {
+                await health.metconFinished(completionId: completionId, title: title, start: start, end: end, heartRate: heartRate, kcal: kcal)
+            }
+        }
     }
 
     private func clearCompletionHeartRate() {

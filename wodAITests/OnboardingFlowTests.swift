@@ -10,15 +10,23 @@ struct OnboardingFlowTests {
     /// Two ladders: three rungs, then two.
     private func flowAtFirstSkill() -> OnboardingFlow {
         var flow = OnboardingFlow(ladderRungCounts: [3, 2])
-        for _ in 0..<5 { flow.advance() } // goal → … → equipment → first question
+        for _ in 0..<6 { flow.advance() } // goal → Apple Health → … → equipment → first question
         return flow
     }
 
     @Test func walksTheFixedStepsInOrder() {
         var flow = OnboardingFlow(ladderRungCounts: [3])
         var seen = [flow.current]
-        for _ in 0..<5 { flow.advance(); seen.append(flow.current) }
-        #expect(seen == [.goal, .experience, .schedule, .gym, .equipment, .skill(ladder: 0, rung: 0)])
+        for _ in 0..<6 { flow.advance(); seen.append(flow.current) }
+        #expect(seen == [.goal, .appleHealth, .experience, .schedule, .gym, .equipment, .skill(ladder: 0, rung: 0)])
+    }
+
+    @Test func leavesOutAppleHealthWhereItIsUnavailable() {
+        var flow = OnboardingFlow(ladderRungCounts: [3], includesAppleHealth: false)
+        flow.advance()
+        #expect(flow.current == .experience)
+        // 5 fixed steps + 1 ladder + 2 closing steps = 8 pages.
+        #expect(OnboardingFlow(ladderRungCounts: [3], includesAppleHealth: false).progress == 1.0 / 8)
     }
 
     @Test func aYesSettlesTheLadderAtThatRung() {
@@ -49,7 +57,7 @@ struct OnboardingFlowTests {
 
     @Test func withoutLaddersEquipmentLeadsToLifts() {
         var flow = OnboardingFlow(ladderRungCounts: [])
-        for _ in 0..<5 { flow.advance() }
+        for _ in 0..<6 { flow.advance() }
         #expect(flow.current == .lifts)
     }
 
@@ -81,7 +89,7 @@ struct OnboardingFlowTests {
         flow.advance(); values.append(flow.progress)
         #expect(zip(values, values.dropFirst()).allSatisfy { $0 < $1 })
         #expect(values.last == 1)
-        // 5 fixed steps + 2 ladders + 2 closing steps = 9 pages.
-        #expect(OnboardingFlow(ladderRungCounts: [3, 2]).progress == 1.0 / 9)
+        // 6 fixed steps + 2 ladders + 2 closing steps = 10 pages.
+        #expect(OnboardingFlow(ladderRungCounts: [3, 2]).progress == 1.0 / 10)
     }
 }

@@ -80,7 +80,7 @@ struct SwipeToConfirmButton: View {
         }
         .frame(height: trackHeight)
         .accessibilityElement()
-        .accessibilityLabel("Swipe to \(title.lowercased())")
+        .accessibilityLabel(title)
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { action() }
     }

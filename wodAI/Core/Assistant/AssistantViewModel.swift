@@ -293,6 +293,11 @@ final class AssistantViewModel: ObservableObject {
     var planStatus: () async throws -> PlanStatus? = { try await ApolloOnboardingAPI().planStatus() }
     /// How often to check on a run that's still planning.
     var planPollInterval: Duration = .seconds(5)
+    /// A session just turned complete here (its last block saved). Saves its
+    /// workout to Apple Health once the server agrees.
+    var sessionCompleted: (_ id: String) -> Void = { id in
+        Task { await HealthSync.shared.sessionMayHaveCompleted(id: id) }
+    }
     /// Refetches the week as planning lands days; `then` runs once it's back.
     lazy var refetchWeek: (_ then: @escaping () -> Void) -> Void = { [weak self] then in
         guard let self else { return then() }
@@ -506,12 +511,15 @@ final class AssistantViewModel: ObservableObject {
         }
     }
 
-    /// Edits the selected day's session with this id in place.
+    /// Edits the selected day's session with this id in place, and reports
+    /// it when the edit finished it.
     private func updateSession(_ id: String, _ change: (inout AssistantSession) -> Void) {
         let day = selectedDay
         guard var list = sessions[day], let index = list.firstIndex(where: { $0.id == id }) else { return }
+        let wasCompleted = list[index].isCompleted
         change(&list[index])
         sessions[day] = list
+        if !wasCompleted && list[index].isCompleted { sessionCompleted(id) }
     }
 
     // MARK: - Adding a session

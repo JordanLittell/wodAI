@@ -1,0 +1,47 @@
+# Apple Health (Core/Health). The app summarizes Health on the device and
+# sends only the summary; the server suggests a starting level for the athlete
+# to confirm, and backfills resting and max heart rate.
+
+mutation ImportHealthSnapshot($input: HealthSnapshotInput!) {
+  importHealthSnapshot(input: $input) {
+    suggestedFitnessLevel
+    reasons
+  }
+}
+
+mutation DisconnectAppleHealth {
+  disconnectAppleHealth
+}
+
+# The last import, with the level the athlete has now, for the Apple Health screen.
+query HealthConnection {
+  healthConnection {
+    syncedAt
+    suggestedFitnessLevel
+  }
+  user {
+    fitnessLevel
+  }
+}
+
+# A session's logged work, to time the workout saved to Health once it's done.
+query HealthSession($id: String!) {
+  workout(id: $id) {
+    id
+    name
+    completed
+    completedAt
+    strengthWorkouts {
+      components {
+        completedAt
+      }
+    }
+    hiitPieces {
+      id
+      completion {
+        completedAt
+        durationSeconds
+      }
+    }
+  }
+}

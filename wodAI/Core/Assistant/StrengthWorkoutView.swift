@@ -64,6 +64,8 @@ struct StrengthWorkoutView: View {
                             // crossfades rather than morphing text in place.
                             .id(exercise)
                             .transition(.opacity)
+                            // Edge to edge, so the video spans the card.
+                            .listRowInsets(EdgeInsets())
                         }
                     }
 

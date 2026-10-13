@@ -85,6 +85,33 @@ struct StatModelsTests {
         #expect(StatChart(fragment: fragment, timeZone: losAngeles) == nil)
     }
 
+    // MARK: - Running totals
+
+    @Test func runsASeriesUpToItsTotal() throws {
+        let start = Date(timeIntervalSince1970: 0)
+        let days = (0..<4).map { start.addingTimeInterval(Double($0) * 86_400) }
+        let chart = StatChart(unit: "lb", total: 27_350, points: .series(
+            zip(days, [12_400, 0, 14_950, 0]).map { DayValue(day: $0, value: $1) }
+        ))
+        let running = try #require(chart.runningTotal)
+        #expect(running.map(\.value) == [12_400, 12_400, 27_350, 27_350])
+        #expect(running.map(\.day) == days)
+    }
+
+    @Test func categoriesHaveNoRunningTotal() {
+        #expect(StatChart(unit: "%", total: nil, points: .categorical([])).runningTotal == nil)
+    }
+
+    @Test func shiftsLastWeekOntoThisWeeksWeekdays() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = losAngeles
+        // US DST ends Sunday Nov 1, 2026, between these two Mondays.
+        let lastWeekMonday = try #require(StatFormatting.day(from: "2026-10-26", timeZone: losAngeles))
+        let shifted = [DayValue(day: lastWeekMonday, value: 5)].shifted(byWeeks: 1, calendar: calendar)
+        // Across the DST change, still local midnight a week on.
+        #expect(shifted == [DayValue(day: try #require(StatFormatting.day(from: "2026-11-02", timeZone: losAngeles)), value: 5)])
+    }
+
     // MARK: - Headlines
 
     private let english = Locale(identifier: "en_US")

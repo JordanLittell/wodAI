@@ -29,6 +29,54 @@ struct GoalStep: View {
     }
 }
 
+// MARK: - Apple Health
+
+struct AppleHealthStep: View {
+    @ObservedObject var viewModel: OnboardingViewModel
+
+    var body: some View {
+        if case let .found(suggestion) = viewModel.health {
+            OnboardingPage(title: "Here's what we found", subtitle: "Pick where you'd like to start. You can change it later.") {
+                HealthLevelPicker(suggestion: suggestion, selection: $viewModel.healthLevel)
+            } footer: {
+                OnboardingButton(title: "Continue", action: viewModel.confirmHealthLevel)
+            }
+        } else {
+            OnboardingPage(title: "Connect Apple Health", subtitle: "Start at the right level, with fewer questions.") {
+                VStack(alignment: .leading, spacing: 16) {
+                    row("heart.text.square", "We read your workouts, heart rate and cardio fitness to suggest where to start.")
+                    row("figure.run.circle", "We save the workouts you finish, so they count toward your Activity rings.")
+                    row("lock", "A summary of your last 90 days is kept with your account to plan training. Turn any of this off in Connect.")
+                }
+            } footer: {
+                OnboardingErrorText(message: viewModel.errorMessage)
+                OnboardingButton(
+                    title: "Connect Apple Health",
+                    isBusy: viewModel.health == .reading,
+                    action: viewModel.connectHealth
+                )
+                Button("Not now", action: viewModel.skipHealth)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color("SecondaryText"))
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+        }
+    }
+
+    private func row(_ icon: String, _ text: String) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: icon)
+                .font(.system(size: 22))
+                .foregroundStyle(Color("BrandPrimary"))
+                .frame(width: 28)
+            Text(text)
+                .font(.body)
+                .foregroundStyle(Color("PrimaryText"))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
 // MARK: - Experience
 
 struct ExperienceStep: View {

@@ -47,7 +47,8 @@ enum ExerciseVideoSource: Equatable {
         self = .youtube(id: id, start: Self.seconds(value("t") ?? value("start")))
     }
 
-    /// The privacy-enhanced embed, inline rather than taking over the screen.
+    /// The privacy-enhanced embed, inline rather than taking over the screen,
+    /// and muted (a gym is loud; the athlete can unmute in the player).
     var embedURL: URL? {
         guard case let .youtube(id, start) = self else { return nil }
         var components = URLComponents(string: "https://www.youtube-nocookie.com/embed/\(id)")!
@@ -55,6 +56,7 @@ enum ExerciseVideoSource: Equatable {
             URLQueryItem(name: "playsinline", value: "1"),
             URLQueryItem(name: "rel", value: "0"),
             URLQueryItem(name: "modestbranding", value: "1"),
+            URLQueryItem(name: "mute", value: "1"),
         ] + (start.map { [URLQueryItem(name: "start", value: String($0))] } ?? [])
         return components.url
     }
@@ -107,15 +109,22 @@ struct ExerciseVideoPlayer: View {
     }
 }
 
-/// A self-hosted video. The player is made on appear and paused on disappear,
-/// so scrolling the header away doesn't keep playing audio.
+/// A self-hosted video, muted until the athlete unmutes it. The player is made
+/// on appear and paused on disappear, so scrolling the header away doesn't
+/// keep playing audio.
 private struct FileVideoView: View {
     let url: URL
     @State private var player: AVPlayer?
 
     var body: some View {
         VideoPlayer(player: player)
-            .onAppear { if player == nil { player = AVPlayer(url: url) } }
+            .onAppear {
+                if player == nil {
+                    let player = AVPlayer(url: url)
+                    player.isMuted = true
+                    self.player = player
+                }
+            }
             .onDisappear { player?.pause() }
     }
 }

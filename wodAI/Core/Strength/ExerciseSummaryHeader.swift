@@ -2,9 +2,9 @@
 //  ExerciseSummaryHeader.swift
 //  wodAI
 //
-//  Top of a strength block: a full-width how-to video (with the exercise's
-//  target muscles along its bottom edge), a subtle divider, then the
-//  athlete's working 1RM.
+//  Top of a strength block: a how-to video spanning the card edge to edge
+//  (the caller zeroes the row's insets), a subtle divider, the exercise's
+//  target muscles, then the athlete's working 1RM.
 //
 
 import SwiftUI
@@ -24,23 +24,23 @@ struct ExerciseSummaryHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(exercise)
-                .font(.subheadline)
-                .foregroundColor(Color.primary)
             media
-            
-            Divider()
-            
-            if !muscleGroups.isEmpty {
-                muscleChips
-                    .padding(12)
-            }
 
-            if tracksOneRepMax {
-                oneRepMaxTile
+            VStack(alignment: .leading, spacing: 14) {
+                Divider()
+
+                if !muscleGroups.isEmpty {
+                    muscleChips
+                        .padding(12)
+                }
+
+                if tracksOneRepMax {
+                    oneRepMaxTile
+                }
             }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
         }
-        .padding(.vertical, 4)
     }
 
     // MARK: - How-to media
@@ -49,15 +49,16 @@ struct ExerciseSummaryHeader: View {
         videoURL.flatMap(ExerciseVideoSource.init(url:))
     }
 
-    /// Full row width at 16:9, the shape of a phone-shot demo, so the
-    /// movement is big enough to actually watch.
+    /// Taller than 16:9 so the movement is big enough to actually watch.
+    private let mediaAspectRatio: CGFloat = 3 / 2
+
+    /// Flush with the card's edges; the card's own rounded corners clip it.
     @ViewBuilder
     private var media: some View {
         if let videoSource {
             ExerciseVideoPlayer(source: videoSource)
                 .background(Color.black)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .aspectRatio(16 / 9, contentMode: .fit)
+                .aspectRatio(mediaAspectRatio, contentMode: .fit)
                 .frame(maxWidth: .infinity)
                 .accessibilityLabel("\(exercise) how-to video")
         } else {
@@ -68,12 +69,7 @@ struct ExerciseSummaryHeader: View {
     /// Shown for an exercise with no video yet.
     private var mediaPlaceholder: some View {
         ZStack(alignment: .bottomLeading) {
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color("Surface"))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color("Border"), style: StrokeStyle(lineWidth: 1, dash: [6, 5]))
-                )
+            Color("Surface2")
 
             VStack(spacing: 10) {
                 Image(systemName: "play.circle.fill")
@@ -85,7 +81,7 @@ struct ExerciseSummaryHeader: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .aspectRatio(16 / 9, contentMode: .fit)
+        .aspectRatio(mediaAspectRatio, contentMode: .fit)
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityDescription)

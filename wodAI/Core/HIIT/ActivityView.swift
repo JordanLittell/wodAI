@@ -22,11 +22,12 @@ struct ActivityView: View {
     init(
         previewItems: [ActivityItem]? = nil,
         previewStats: ActivityStats? = nil,
+        previewPreviousStats: ActivityStats? = nil,
         initialWeek: ActivityWeek = ActivityWeek(containing: Date())
     ) {
         self._selectedWeek = State(initialValue: initialWeek)
         let isPreview = previewItems != nil || previewStats != nil
-        self._stats = StateObject(wrappedValue: isPreview ? ActivityStatsStore(preview: previewStats) : ActivityStatsStore())
+        self._stats = StateObject(wrappedValue: isPreview ? ActivityStatsStore(preview: previewStats, previous: previewPreviousStats) : ActivityStatsStore())
         self._feed = StateObject(wrappedValue: isPreview ? ActivityFeedStore(preview: previewItems ?? []) : ActivityFeedStore())
     }
 
@@ -59,7 +60,7 @@ struct ActivityView: View {
                 .padding(.vertical, 16)
             }
         }
-        .navigationTitle("Stats")
+        .navigationTitle("Activity")
         .navigationBarTitleDisplayMode(.large)
         // Each runs on appear and again whenever the week changes, cancelling
         // the previous week's load.
@@ -105,6 +106,7 @@ struct ActivityView: View {
         StatsChartsSection(
             kind: $selectedStat,
             stats: stats.stats,
+            previousStats: stats.previousStats,
             week: selectedWeek,
             isLoading: stats.isLoading,
             errorMessage: stats.errorMessage,
@@ -288,7 +290,7 @@ private struct WeekSelectorBar: View {
                 id: 4, completedAt: now.addingTimeInterval(-2 * 86_400 - 600), workoutId: 104,
                 displayText: "3 RFT:\n400 m Run\n21 KB Swings", stimulus: "Mixed Modal"
             )),
-        ], previewStats: .preview)
+        ], previewStats: .preview, previewPreviousStats: .previewLastWeek)
     }
 }
 
@@ -317,6 +319,22 @@ private extension ActivityStats {
             )),
             intensity: StatChart(unit: "min", total: 46, points: .series(
                 zip(days, [0, 22, 24, 0, 0, 0, 0]).map { DayValue(day: $0, value: $1) }
+            ))
+        )
+    }
+
+    /// The week before `preview`, trained Monday through Friday.
+    static var previewLastWeek: ActivityStats {
+        let week = ActivityWeek(containing: Date()).shifted(by: -1)
+        let day = { (offset: Int) in week.calendar.date(byAdding: .day, value: offset, to: week.start)! }
+        let days = (0..<7).map(day)
+        return ActivityStats(
+            muscleLoad: nil,
+            volume: StatChart(unit: "lb", total: 31_200, points: .series(
+                zip(days, [10_800, 0, 9_600, 0, 10_800, 0, 0]).map { DayValue(day: $0, value: $1) }
+            )),
+            intensity: StatChart(unit: "min", total: 64, points: .series(
+                zip(days, [0, 20, 0, 24, 0, 20, 0]).map { DayValue(day: $0, value: $1) }
             ))
         )
     }
