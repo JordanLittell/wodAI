@@ -17,10 +17,14 @@
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<key>NSCameraUsageDescription</key>
-	<string>wodAI uses the camera to read a workout off your gym's whiteboard and add it to your day.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>wodAI connects to your heart rate monitor or watch to show your live heart rate during workouts and how hard each one was.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>wodAI uses the camera to read a workout off your gym's whiteboard and add it to your day.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>wodAI reads your workouts, heart rate, cardio fitness and body measurements to suggest a starting level and fill in your profile. A summary of your last 90 days of training is saved to your wodAI account to plan your workouts.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>wodAI saves the workouts you finish, with their heart rate and estimated calories, so they count toward your Activity rings.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>bluetooth-central</string>

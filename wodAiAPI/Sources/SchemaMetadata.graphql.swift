@@ -41,6 +41,8 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "HIITPaginatedResponse": return WodAiAPI.Objects.HIITPaginatedResponse
     case "HIITSession": return WodAiAPI.Objects.HIITSession
     case "HIITWorkout": return WodAiAPI.Objects.HIITWorkout
+    case "HealthConnection": return WodAiAPI.Objects.HealthConnection
+    case "HealthImportResult": return WodAiAPI.Objects.HealthImportResult
     case "HeartRateSample": return WodAiAPI.Objects.HeartRateSample
     case "HeartRateSummary": return WodAiAPI.Objects.HeartRateSummary
     case "Mutation": return WodAiAPI.Objects.Mutation

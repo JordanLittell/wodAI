@@ -4,8 +4,8 @@
 //
 //  New athletes land here after signing up (ContentView routes on
 //  AuthState.needsProvisioning). One short question per screen under a
-//  progress bar: goal, experience, schedule, gym, equipment, skill questions,
-//  lifts, and a little about them. Each step saves as they go.
+//  progress bar: goal, Apple Health, experience, schedule, gym, equipment,
+//  skill questions, lifts, and a little about them. Each step saves as they go.
 //
 
 import SwiftUI
@@ -69,6 +69,7 @@ struct OnboardingView: View {
     private var step: some View {
         switch viewModel.flow.current {
         case .goal: GoalStep(viewModel: viewModel)
+        case .appleHealth: AppleHealthStep(viewModel: viewModel)
         case .experience: ExperienceStep(viewModel: viewModel)
         case .schedule: ScheduleStep(viewModel: viewModel)
         case .gym: GymStep(viewModel: viewModel)

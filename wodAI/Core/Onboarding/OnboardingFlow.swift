@@ -15,6 +15,8 @@ import Foundation
 
 enum OnboardingStep: Hashable {
     case goal
+    /// Offers to read Apple Health; left out where Health isn't available.
+    case appleHealth
     case experience
     case schedule
     case gym
@@ -38,8 +40,12 @@ struct OnboardingFlow {
     /// simply replaces the earlier answer.
     private(set) var path: [OnboardingStep] = [.goal]
 
-    init(ladderRungCounts: [Int]) {
+    /// The fixed steps before the skill questions, in order.
+    private let leadingSteps: [OnboardingStep]
+
+    init(ladderRungCounts: [Int], includesAppleHealth: Bool = true) {
         self.ladderRungCounts = ladderRungCounts.filter { $0 > 0 }
+        leadingSteps = includesAppleHealth ? Self.allLeadingSteps : Self.allLeadingSteps.filter { $0 != .appleHealth }
     }
 
     var current: OnboardingStep { path[path.count - 1] }
@@ -79,16 +85,16 @@ struct OnboardingFlow {
     /// 0...1 for the progress bar. Each step, and each ladder, is one page; a
     /// ladder fills its page as the athlete works down its rungs.
     var progress: Double {
-        let pages = Double(Self.leadingSteps.count + ladderRungCounts.count + Self.trailingSteps.count)
+        let pages = Double(leadingSteps.count + ladderRungCounts.count + Self.trailingSteps.count)
         let position: Double
         switch current {
         case let .skill(ladder, rung):
-            position = Double(Self.leadingSteps.count + ladder) + Double(rung) / Double(ladderRungCounts[ladder])
+            position = Double(leadingSteps.count + ladder) + Double(rung) / Double(ladderRungCounts[ladder])
         default:
-            if let i = Self.leadingSteps.firstIndex(of: current) {
+            if let i = leadingSteps.firstIndex(of: current) {
                 position = Double(i)
             } else {
-                position = Double(Self.leadingSteps.count + ladderRungCounts.count
+                position = Double(leadingSteps.count + ladderRungCounts.count
                     + (Self.trailingSteps.firstIndex(of: current) ?? 0))
             }
         }
@@ -97,7 +103,7 @@ struct OnboardingFlow {
 
     // MARK: - Order
 
-    private static let leadingSteps: [OnboardingStep] = [.goal, .experience, .schedule, .gym, .equipment]
+    private static let allLeadingSteps: [OnboardingStep] = [.goal, .appleHealth, .experience, .schedule, .gym, .equipment]
     private static let trailingSteps: [OnboardingStep] = [.lifts, .aboutYou]
 
     private func step(after step: OnboardingStep) -> OnboardingStep? {
@@ -107,7 +113,7 @@ struct OnboardingFlow {
         case .skill:
             return nil // answered with answerSkill / skipLadder
         default:
-            let order = Self.leadingSteps + Self.trailingSteps
+            let order = leadingSteps + Self.trailingSteps
             guard let i = order.firstIndex(of: step), i + 1 < order.count else { return nil }
             return order[i + 1]
         }

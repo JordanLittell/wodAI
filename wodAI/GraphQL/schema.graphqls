@@ -146,6 +146,7 @@ type StrengthWorkout implements WorkoutBlock {
   components: [StrengthComponent!]!
   createdAt: DateTime!
   updatedAt: DateTime!
+  workoutCompletedAt: DateTime
 }
 
 type StrengthComponent {
@@ -390,6 +391,7 @@ type Query {
   activeGymProfile: GymProfile
   gymPresets: [GymPreset!]!
   strengthBenchmarks: [StrengthBenchmark!]!
+  healthConnection: HealthConnection
   equipment: [Equipment!]!
   equipmentById(id: Int!): Equipment
   isUserProvisioned: Boolean!
@@ -441,6 +443,8 @@ type Mutation {
   startWeeklyPlan(timezone: String!): WeeklyPlanJob!
   setStrengthBenchmark(exerciseId: Int!, weight: Float!, reps: Int!): StrengthBenchmark!
   deleteStrengthBenchmark(id: Int!): Boolean!
+  importHealthSnapshot(input: HealthSnapshotInput!): HealthImportResult!
+  disconnectAppleHealth: Boolean!
   sendAgentMessage(wodId: String!, message: String!): SendAgentMessageResponse!
   approveWorkoutModification(wodId: String!, conversationId: String!): Workout!
   generateHiitWorkout(tagIds: [Int!], skipWorkoutId: Int, timezone: String): HIITWorkout
@@ -605,6 +609,35 @@ type StrengthBenchmark {
   weight: Float!
   reps: Int!
   updatedAt: DateTime!
+}
+
+input HealthSnapshotInput {
+  vo2Max: Float
+  restingHeartRate: Int
+  hrvMs: Float
+  dailySteps: Int
+  maxHeartRate: Int
+  workoutsPerWeek: Float
+  cardioPerWeek: Float
+  strengthPerWeek: Float
+  activeWeeks: Int
+  topActivityTypes: [String!]
+}
+
+type HealthImportResult {
+  suggestedFitnessLevel: FitnessLevel
+  reasons: [String!]!
+}
+
+type HealthConnection {
+  syncedAt: DateTime!
+  vo2Max: Float
+  restingHeartRate: Int
+  maxHeartRate: Int
+  workoutsPerWeek: Float
+  activeWeeks: Int
+  topActivityTypes: [String!]!
+  suggestedFitnessLevel: FitnessLevel
 }
 
 type GymProfile {
@@ -813,6 +846,7 @@ type CompletedHIITWorkout {
   trainingLoadSource: TrainingLoadSource
   heartRateSeries: [HeartRateSample!]!
   zoneThresholds: [Int!]!
+  workoutCompletedAt: DateTime
 }
 
 type HeartRateSample {
