@@ -2,7 +2,7 @@
 //  ActivityFeedStore.swift
 //  wodAI
 //
-//  Loads the Stats screen's workout log for a week: completed HIIT results and
+//  Loads the Activity screen's workout log for a week: completed HIIT results and
 //  strength pieces, fetched in parallel and merged into ActivityItems. Caches
 //  each week like ActivityStatsStore, so flipping back to one is instant.
 //

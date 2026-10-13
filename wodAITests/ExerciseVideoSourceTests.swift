@@ -40,7 +40,7 @@ struct ExerciseVideoSourceTests {
 
     @Test func embedsInlineWithoutRelatedVideos() {
         let embed = ExerciseVideoSource.youtube(id: "dQw4w9WgXcQ", start: 30).embedURL?.absoluteString
-        #expect(embed == "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?playsinline=1&rel=0&modestbranding=1&start=30")
+        #expect(embed == "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?playsinline=1&rel=0&modestbranding=1&mute=1&start=30")
     }
 
     // MARK: - Files

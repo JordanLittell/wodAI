@@ -2,9 +2,9 @@
 //  StatsChartsSection.swift
 //  wodAI
 //
-//  The Stats screen's charts in one card: a toggle picks the stat, which shows
-//  its chart, what it measures, and how to read it for progress, recovery and
-//  injury risk. Every stat arrives in one request, so switching is instant.
+//  The Activity screen's charts in one card: a toggle picks the stat, which shows
+//  its chart, against last week's where it has a running total, and what it
+//  measures. Every stat arrives in one request, so switching is instant.
 //
 
 import SwiftUI
@@ -12,6 +12,8 @@ import SwiftUI
 struct StatsChartsSection: View {
     @Binding var kind: StatKind
     let stats: ActivityStats?
+    /// The week before `week`, for the series charts' overlay.
+    var previousStats: ActivityStats? = nil
     let week: ActivityWeek
     let isLoading: Bool
     let errorMessage: String?
@@ -44,6 +46,7 @@ struct StatsChartsSection: View {
 
             StatChartView(
                 chart: chart,
+                previous: kind.chart(in: previousStats),
                 week: week,
                 emptyMessage: kind.emptyMessage,
                 isLoading: isLoading,
@@ -55,19 +58,6 @@ struct StatsChartsSection: View {
                 .font(.subheadline)
                 .foregroundColor(Color("SecondaryText"))
                 .fixedSize(horizontal: false, vertical: true)
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 12) {
-                Text("How to read it")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .textCase(.uppercase)
-                    .foregroundColor(Color("SecondaryText"))
-                ForEach(kind.pointers) { pointer in
-                    PointerRow(pointer: pointer)
-                }
-            }
         }
         .animation(.easeInOut(duration: 0.2), value: kind)
         .padding()
@@ -77,30 +67,5 @@ struct StatsChartsSection: View {
             RoundedRectangle(cornerRadius: 14)
                 .stroke(Color("Border"), lineWidth: 1)
         )
-    }
-}
-
-private struct PointerRow: View {
-    let pointer: StatPointer
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Image(systemName: pointer.topic.systemImage)
-                .font(.subheadline)
-                .foregroundColor(Color("BrandPrimary"))
-                .frame(width: 22)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(pointer.topic.title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(Color("PrimaryText"))
-                Text(pointer.text)
-                    .font(.subheadline)
-                    .foregroundColor(Color("SecondaryText"))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .accessibilityElement(children: .combine)
     }
 }

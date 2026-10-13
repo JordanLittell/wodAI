@@ -74,6 +74,18 @@ struct StatChart: Equatable {
         }
     }
 
+    /// A series as a running total, so each day's point is everything up to
+    /// and including that day and the last is the range's total. Nil for
+    /// categories.
+    var runningTotal: [DayValue]? {
+        guard case let .series(days) = points else { return nil }
+        var sum = 0.0
+        return days.map { day in
+            sum += day.value
+            return DayValue(day: day.day, value: sum)
+        }
+    }
+
     /// The card's headline: the formatted total ("42,300 lb"), or for a stat
     /// with no total, its largest category ("Mostly Legs").
     func headline(locale: Locale = .current) -> String? {
@@ -93,6 +105,17 @@ struct ActivityStats: Equatable {
     let volume: StatChart?
     let intensity: StatChart?
     var trainingLoad: StatChart? = nil
+}
+
+extension Array where Element == DayValue {
+    /// Moves each day by whole weeks on `calendar`, so last week's Monday
+    /// lands on this week's Monday (across a DST change too).
+    func shifted(byWeeks weeks: Int, calendar: Calendar) -> [DayValue] {
+        compactMap { point in
+            calendar.date(byAdding: .weekOfYear, value: weeks, to: point.day)
+                .map { DayValue(day: $0, value: point.value) }
+        }
+    }
 }
 
 enum StatFormatting {

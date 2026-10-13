@@ -4,7 +4,7 @@
 //
 //  Full-screen WOD timer shown during workout execution. Renders the current
 //  round and a large H:MM:SS / MM:SS clock driven by the engine, with
-//  hold-to-confirm controls for resume and finish.
+//  swipe-to-confirm controls for exit and finish.
 //
 
 import SwiftUI
@@ -114,15 +114,16 @@ struct WodTimerView: View {
                     viewModel.pauseExecution()
                 }
             } else {
-                HStack(spacing: 12) {
-                    tapButton(title: "Exit", systemImage: "xmark", tint: Color("Error")) {
-                        viewModel.exitExecution()
-                    }
-                    tapButton(title: "Resume", systemImage: "play.fill",
-                              tint: Color("BrandPrimary")) {
-                        viewModel.resumeExecution()
-                    }
+                tapButton(title: "Resume", systemImage: "play.fill",
+                          tint: Color("BrandPrimary")) {
+                    viewModel.resumeExecution()
                 }
+                SwipeToConfirmButton(
+                    title: "Swipe to exit",
+                    systemImage: "xmark",
+                    tint: Color("Error"),
+                    action: { viewModel.exitExecution() }
+                )
             }
 
             SwipeToConfirmButton(

@@ -2,7 +2,7 @@
 //  ActivityFeed.swift
 //  wodAI
 //
-//  The Stats screen's workout log, Apollo-free so it's unit-tested: completed
+//  The Activity screen's workout log, Apollo-free so it's unit-tested: completed
 //  HIIT and strength items grouped under the day they were done, plus the text
 //  rules their cards use (rep scheme, weight progression, RPE band).
 //

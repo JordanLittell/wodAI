@@ -116,7 +116,7 @@ struct SideMenuView: View {
 
                 MenuRow(
                     icon: "chart.bar.fill",
-                    label: "Stats",
+                    label: "Activity",
                     isSelected: destination == .activity
                 ) {
                     navigate(to: .activity)

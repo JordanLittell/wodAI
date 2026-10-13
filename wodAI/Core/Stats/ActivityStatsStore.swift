@@ -2,9 +2,10 @@
 //  ActivityStatsStore.swift
 //  wodAI
 //
-//  Loads the Activity screen's charts for a week with one `ActivityStats`
-//  request (every stat, aliased), and caches each week so flipping back
-//  to one already seen is instant.
+//  Loads the Activity screen's charts for a week, and the week before for
+//  comparison, with one `ActivityStats` request per week (every stat,
+//  aliased). Caches each week, so flipping back to one already seen is
+//  instant and stepping back a week reuses the overlay's data.
 //
 
 import Foundation
@@ -15,6 +16,9 @@ import WodAiAPI
 final class ActivityStatsStore: ObservableObject {
     /// The selected week's charts; nil until its first load finishes.
     @Published private(set) var stats: ActivityStats?
+    /// The week before the selected one, drawn behind it for comparison; nil
+    /// until loaded, or when it failed to load.
+    @Published private(set) var previousStats: ActivityStats?
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
 
@@ -30,26 +34,60 @@ final class ActivityStatsStore: ObservableObject {
     }
 
     /// For previews: shows `stats` and never touches the network.
-    init(preview stats: ActivityStats?) {
+    init(preview stats: ActivityStats?, previous: ActivityStats? = nil) {
         self.client = nil
         self.stats = stats
+        self.previousStats = previous
     }
 
     /// `force` refetches even a past week, e.g. after a workout in it was
-    /// edited.
+    /// edited. The week before is loaded alongside, for the charts' overlay.
     func load(week: ActivityWeek, now: Date = Date(), force: Bool = false) async {
         guard let client else { return }
         selectedWeekStart = week.start
         errorMessage = nil
 
-        let cached = cache[week.start]
-        stats = cached
+        let previousWeek = week.shifted(by: -1)
+        stats = cache[week.start]
+        previousStats = cache[previousWeek.start]
+
+        // Each lands as soon as it arrives; nil means it stayed cached.
+        async let current = fetchIfNeeded(week, now: now, force: force, client: client)
+        async let previous = fetchIfNeeded(previousWeek, now: now, force: force, client: client)
+        isLoading = true
+        let (currentResult, previousResult) = await (current, previous)
+        guard selectedWeekStart == week.start else { return }
+        isLoading = false
+
+        if case let .success(loaded) = previousResult {
+            previousStats = loaded
+        }
+        switch currentResult {
+        case let .success(loaded):
+            stats = loaded
+        case let .failure(error):
+            // Keep showing cached charts if there are any; only an empty card
+            // needs the error.
+            if stats == nil {
+                errorMessage = error.localizedDescription
+            }
+        case nil:
+            break
+        }
+    }
+
+    /// Nil when the cached week can be used as is, or the week hasn't started.
+    private func fetchIfNeeded(
+        _ week: ActivityWeek,
+        now: Date,
+        force: Bool,
+        client: ApolloClient
+    ) async -> Result<ActivityStats, Error>? {
         // A past week can't change; the current one can, so it refetches
         // behind its cached charts.
-        if cached != nil, !force, !week.isCurrentOrFuture(relativeTo: now) { return }
-        guard week.start <= now else { return }
+        if cache[week.start] != nil, !force, !week.isCurrentOrFuture(relativeTo: now) { return nil }
+        guard week.start <= now else { return nil }
 
-        isLoading = true
         let end = min(week.end.addingTimeInterval(-1), now)
         let timeZone = week.calendar.timeZone
         let formatter = ISO8601DateFormatter()
@@ -59,11 +97,7 @@ final class ActivityStatsStore: ObservableObject {
             timezone: .some(timeZone.identifier)
         )
 
-        let result = await Self.fetch(query, client: client)
-        guard selectedWeekStart == week.start else { return }
-        isLoading = false
-
-        switch result {
+        switch await Self.fetch(query, client: client) {
         case let .success(data):
             let loaded = ActivityStats(
                 muscleLoad: StatChart(fragment: data.muscleLoad.fragments.statFields, timeZone: timeZone),
@@ -72,13 +106,9 @@ final class ActivityStatsStore: ObservableObject {
                 trainingLoad: StatChart(fragment: data.trainingLoad.fragments.statFields, timeZone: timeZone)
             )
             cache[week.start] = loaded
-            stats = loaded
+            return .success(loaded)
         case let .failure(error):
-            // Keep showing cached charts if there are any; only an empty card
-            // needs the error.
-            if stats == nil {
-                errorMessage = error.localizedDescription
-            }
+            return .failure(error)
         }
     }
 
