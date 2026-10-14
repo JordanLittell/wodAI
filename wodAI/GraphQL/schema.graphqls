@@ -412,6 +412,7 @@ type Query {
   tags: [Tag!]!
   availableTags(selectedTagIds: [Int!]): [TagFacet!]!
   stat(type: StatType!, startDate: DateTime!, endDate: DateTime!, timezone: String): StatResult!
+  muscleReadiness: [RegionReadiness!]!
 }
 
 type Mutation {
@@ -443,7 +444,7 @@ type Mutation {
   startWeeklyPlan(timezone: String!): WeeklyPlanJob!
   setStrengthBenchmark(exerciseId: Int!, weight: Float!, reps: Int!): StrengthBenchmark!
   deleteStrengthBenchmark(id: Int!): Boolean!
-  importHealthSnapshot(input: HealthSnapshotInput!): HealthImportResult!
+  importHealthSnapshot(input: HealthSnapshotInput!, applyLevel: Boolean): HealthImportResult!
   disconnectAppleHealth: Boolean!
   sendAgentMessage(wodId: String!, message: String!): SendAgentMessageResponse!
   approveWorkoutModification(wodId: String!, conversationId: String!): Workout!
@@ -1025,4 +1026,11 @@ type CategoryPoint {
 type SeriesPoint {
   x: String!
   y: Float!
+}
+
+type RegionReadiness {
+  slug: String!
+  name: String!
+  fatigue: Int!
+  readyAt: DateTime
 }

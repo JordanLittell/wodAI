@@ -1,0 +1,8 @@
+query MuscleReadiness {
+  muscleReadiness {
+    slug
+    name
+    fatigue
+    readyAt
+  }
+}

@@ -30,7 +30,7 @@ enum StatKind: String, CaseIterable, Identifiable {
         case .volume: return "Volume"
         case .intensity: return "Intensity minutes"
         case .trainingLoad: return "Training load"
-        case .muscleLoad: return "Muscle load"
+        case .muscleLoad: return "Where your work went"
         }
     }
 
@@ -60,9 +60,9 @@ enum StatKind: String, CaseIterable, Identifiable {
         case .intensity:
             return "Minutes of WOD work this week, adding up day by day: the time you logged, or the workout's estimate when you didn't log one. The dotted line is last week."
         case .trainingLoad:
-            return "How hard this week's WODs were on your body, adding up day by day. Each combines how long it lasted with how hard it was, from your heart rate when you wore a monitor, otherwise from your effort rating. The dotted line is last week."
+            return "How hard this week's training was on your body, adding up day by day. Each workout combines how long it lasted with how hard it was: a WOD from your heart rate when you wore a monitor, otherwise from your effort rating; a strength session from the RPE of its sets. The dotted line is last week."
         case .muscleLoad:
-            return "Each body region's share of this week's work, so you can see where your training went."
+            return "Each body region's share of this week's work, so you can see where your training went. This is the work you did, not how recovered you are; see Readiness above."
         }
     }
 }

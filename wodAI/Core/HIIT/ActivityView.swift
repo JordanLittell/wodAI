@@ -12,10 +12,11 @@ struct ActivityView: View {
     @StateObject private var stats: ActivityStatsStore
     @StateObject private var feed: ActivityFeedStore
     @StateObject private var recovery = RecoveryStatusStore()
+    @StateObject private var readiness = MuscleReadinessStore()
     /// The card tapped to edit; drives the pushed completion screen.
     @State private var editing: EditTarget?
-    /// An edit was saved, so the week's charts (volume, training load) are
-    /// out of date; they reload when the editor closes.
+    /// An edit was saved, so the week's charts (volume, training load),
+    /// recovery and readiness are out of date; they reload when the editor closes.
     @State private var statsStale = false
 
     /// Passing `previewItems` or `previewStats` shows them without fetching.
@@ -45,6 +46,8 @@ struct ActivityView: View {
                 VStack(spacing: 20) {
                     RecoveryStatusCard(status: recovery.status)
 
+                    MuscleReadinessCard(readiness: readiness.readiness)
+
                     WeekSelectorBar(
                         week: selectedWeek,
                         canGoForward: !selectedWeek.isCurrentOrFuture(relativeTo: Date()),
@@ -67,6 +70,7 @@ struct ActivityView: View {
         .task(id: selectedWeek) { await stats.load(week: selectedWeek) }
         .task(id: selectedWeek) { await feed.load(week: selectedWeek) }
         .task { await recovery.load() }
+        .task { await readiness.load() }
         .navigationDestination(item: $editing) { target in
             editor(for: target.item)
         }
@@ -76,6 +80,7 @@ struct ActivityView: View {
             Task {
                 await stats.load(week: selectedWeek, force: true)
                 await recovery.load()
+                await readiness.load()
             }
         }
     }

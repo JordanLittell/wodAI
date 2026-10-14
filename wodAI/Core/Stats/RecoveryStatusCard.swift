@@ -3,8 +3,9 @@
 //  wodAI
 //
 //  How recovered the athlete is right now: the last 7 days' training load
-//  against the last 28 (backend `recoveryStatus`). Load comes from heart rate
-//  when a device recorded the workout, else from perceived effort.
+//  against the last 28 (backend `recoveryStatus`), WODs and strength sessions
+//  alike. A WOD's load comes from heart rate when a device recorded it, else
+//  from perceived effort; a strength session's from the RPE of its sets.
 //
 
 import SwiftUI
@@ -34,7 +35,7 @@ struct RecoveryStatus: Equatable {
     var message: String {
         switch level {
         case .insufficientData:
-            return "Rate your effort after each workout (or wear a heart rate monitor) for about two weeks to see how recovered you are."
+            return "Rate your effort after each workout and log the RPE of your sets (or wear a heart rate monitor) for about two weeks to see how recovered you are."
         case .fresh:
             return "This week has been lighter than you're used to. A good day to push."
         case .optimal:

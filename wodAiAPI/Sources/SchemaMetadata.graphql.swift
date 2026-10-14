@@ -48,6 +48,7 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "Mutation": return WodAiAPI.Objects.Mutation
     case "Query": return WodAiAPI.Objects.Query
     case "RecoveryStatus": return WodAiAPI.Objects.RecoveryStatus
+    case "RegionReadiness": return WodAiAPI.Objects.RegionReadiness
     case "SavedHIITWorkout": return WodAiAPI.Objects.SavedHIITWorkout
     case "SeriesPoint": return WodAiAPI.Objects.SeriesPoint
     case "SeriesStat": return WodAiAPI.Objects.SeriesStat
