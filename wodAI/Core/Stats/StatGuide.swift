@@ -11,7 +11,7 @@ import Foundation
 
 /// In toggle order; the first is the default.
 enum StatKind: String, CaseIterable, Identifiable {
-    case volume, intensity, trainingLoad, muscleLoad
+    case volume, intensity, trainingLoad, recovery
 
     var id: String { rawValue }
 
@@ -21,7 +21,7 @@ enum StatKind: String, CaseIterable, Identifiable {
         case .volume: return "Volume"
         case .intensity: return "Minutes"
         case .trainingLoad: return "Load"
-        case .muscleLoad: return "Muscles"
+        case .recovery: return "Muscles"
         }
     }
 
@@ -30,7 +30,7 @@ enum StatKind: String, CaseIterable, Identifiable {
         case .volume: return "Volume"
         case .intensity: return "Intensity minutes"
         case .trainingLoad: return "Training load"
-        case .muscleLoad: return "Where your work went"
+        case .recovery: return "Recovery right now"
         }
     }
 
@@ -40,7 +40,7 @@ enum StatKind: String, CaseIterable, Identifiable {
         case .volume: return "No strength sets logged this week"
         case .intensity: return "No WODs completed this week"
         case .trainingLoad: return "Rate your effort or wear a heart rate monitor to see training load"
-        case .muscleLoad: return "No training this week"
+        case .recovery: return "Every region is fully recovered"
         }
     }
 
@@ -49,7 +49,8 @@ enum StatKind: String, CaseIterable, Identifiable {
         case .volume: return stats?.volume
         case .intensity: return stats?.intensity
         case .trainingLoad: return stats?.trainingLoad
-        case .muscleLoad: return stats?.muscleLoad
+        // Recovery is "right now", not a weekly chart; it comes from muscleReadiness.
+        case .recovery: return nil
         }
     }
 
@@ -61,8 +62,8 @@ enum StatKind: String, CaseIterable, Identifiable {
             return "Minutes of WOD work this week, adding up day by day: the time you logged, or the workout's estimate when you didn't log one. The dotted line is last week."
         case .trainingLoad:
             return "How hard this week's training was on your body, adding up day by day. Each workout combines how long it lasted with how hard it was: a WOD from your heart rate when you wore a monitor, otherwise from your effort rating; a strength session from the RPE of its sets. The dotted line is last week."
-        case .muscleLoad:
-            return "Each body region's share of this week's work, so you can see where your training went. This is the work you did, not how recovered you are; see Readiness above."
+        case .recovery:
+            return "How much of your recent training each body region is still carrying, when it's ready to train again, and when it's fully recovered."
         }
     }
 }

@@ -6,7 +6,7 @@ import WodAiAPI
 
 public struct StatFields: WodAiAPI.SelectionSet, Fragment {
   public static var fragmentDefinition: StaticString {
-    #"fragment StatFields on StatResult { __typename type shape unit total ... on CategoricalStat { categories { __typename label value } } ... on SeriesStat { series { __typename x y } } }"#
+    #"fragment StatFields on StatResult { __typename type shape unit total provenance ... on CategoricalStat { categories { __typename label value } } ... on SeriesStat { series { __typename x y } } }"#
   }
 
   public let __data: DataDict
@@ -19,6 +19,7 @@ public struct StatFields: WodAiAPI.SelectionSet, Fragment {
     .field("shape", GraphQLEnum<WodAiAPI.StatShape>.self),
     .field("unit", String.self),
     .field("total", Double?.self),
+    .field("provenance", String?.self),
     .inlineFragment(AsCategoricalStat.self),
     .inlineFragment(AsSeriesStat.self),
   ] }
@@ -27,6 +28,7 @@ public struct StatFields: WodAiAPI.SelectionSet, Fragment {
   public var shape: GraphQLEnum<WodAiAPI.StatShape> { __data["shape"] }
   public var unit: String { __data["unit"] }
   public var total: Double? { __data["total"] }
+  public var provenance: String? { __data["provenance"] }
 
   public var asCategoricalStat: AsCategoricalStat? { _asInlineFragment() }
   public var asSeriesStat: AsSeriesStat? { _asInlineFragment() }
@@ -49,6 +51,7 @@ public struct StatFields: WodAiAPI.SelectionSet, Fragment {
     public var shape: GraphQLEnum<WodAiAPI.StatShape> { __data["shape"] }
     public var unit: String { __data["unit"] }
     public var total: Double? { __data["total"] }
+    public var provenance: String? { __data["provenance"] }
 
     /// AsCategoricalStat.Category
     ///
@@ -87,6 +90,7 @@ public struct StatFields: WodAiAPI.SelectionSet, Fragment {
     public var shape: GraphQLEnum<WodAiAPI.StatShape> { __data["shape"] }
     public var unit: String { __data["unit"] }
     public var total: Double? { __data["total"] }
+    public var provenance: String? { __data["provenance"] }
 
     /// AsSeriesStat.Series
     ///

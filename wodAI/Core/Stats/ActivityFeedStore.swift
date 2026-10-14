@@ -158,7 +158,8 @@ final class ActivityFeedStore: ObservableObject {
         return CompletedStrengthEntry(
             completedAt: DateParser().parseDate(item.completedAt) ?? Date(),
             name: piece.name,
-            workout: workout
+            workout: workout,
+            personalRecordSetIds: Set(piece.components.filter(\.personalRecord).map(\.id))
         )
     }
 

@@ -242,6 +242,9 @@ struct CompletedStrengthCard: View {
                         .font(.subheadline)
                         .foregroundColor(Color("SecondaryText"))
                 }
+                if lift.personalRecord {
+                    PersonalRecordBadge()
+                }
             }
             if let progression = StrengthText.progression(lift.loggedWeights, unit: unit) {
                 Text(progression)
@@ -252,6 +255,20 @@ struct CompletedStrengthCard: View {
             }
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// Marks a lift whose logged set beat the athlete's previous best.
+struct PersonalRecordBadge: View {
+    var body: some View {
+        Label("PR", systemImage: "trophy.fill")
+            .font(.caption2.weight(.bold))
+            .foregroundColor(Color("BrandPrimary"))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color("BrandPrimary").opacity(0.12))
+            .clipShape(Capsule())
+            .accessibilityLabel("Personal record")
     }
 }
 

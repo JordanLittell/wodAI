@@ -46,8 +46,6 @@ struct ActivityView: View {
                 VStack(spacing: 20) {
                     RecoveryStatusCard(status: recovery.status)
 
-                    MuscleReadinessCard(readiness: readiness.readiness)
-
                     WeekSelectorBar(
                         week: selectedWeek,
                         canGoForward: !selectedWeek.isCurrentOrFuture(relativeTo: Date()),
@@ -112,6 +110,7 @@ struct ActivityView: View {
             kind: $selectedStat,
             stats: stats.stats,
             previousStats: stats.previousStats,
+            readiness: readiness.readiness,
             week: selectedWeek,
             isLoading: stats.isLoading,
             errorMessage: stats.errorMessage,
@@ -312,13 +311,6 @@ private extension ActivityStats {
         let day = { (offset: Int) in week.calendar.date(byAdding: .day, value: offset, to: week.start)! }
         let days = (0..<7).map(day)
         return ActivityStats(
-            muscleLoad: StatChart(unit: "%", total: nil, points: .categorical([
-                CategoryValue(label: "Legs", value: 38),
-                CategoryValue(label: "Back", value: 24),
-                CategoryValue(label: "Shoulders", value: 17),
-                CategoryValue(label: "Core", value: 12),
-                CategoryValue(label: "Arms", value: 9),
-            ])),
             volume: StatChart(unit: "lb", total: 27_350, points: .series(
                 zip(days, [12_400, 0, 14_950, 0, 0, 0, 0]).map { DayValue(day: $0, value: $1) }
             )),
@@ -334,7 +326,6 @@ private extension ActivityStats {
         let day = { (offset: Int) in week.calendar.date(byAdding: .day, value: offset, to: week.start)! }
         let days = (0..<7).map(day)
         return ActivityStats(
-            muscleLoad: nil,
             volume: StatChart(unit: "lb", total: 31_200, points: .series(
                 zip(days, [10_800, 0, 9_600, 0, 10_800, 0, 0]).map { DayValue(day: $0, value: $1) }
             )),

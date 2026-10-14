@@ -88,6 +88,17 @@ struct ActivityFeedTests {
         #expect(entry.lifts[1].loggedWeights == [135])
     }
 
+    @Test func marksALiftWithALoggedRecordSet() {
+        let done = Self.date("2026-10-05T15:00:00Z")
+        let entry = CompletedStrengthEntry(id: 1, completedAt: done, name: nil, sets: [
+            .init(order: 0, exercise: "Back Squat", reps: 1, completedAt: done, completedWeight: 315, personalRecord: true),
+            .init(order: 1, exercise: "Bench Press", reps: 1, completedAt: done, completedWeight: 225),
+            // A flag on a set that's no longer logged doesn't count.
+            .init(order: 2, exercise: "Bench Press", reps: 1, completedAt: nil, completedWeight: nil, personalRecord: true),
+        ])
+        #expect(entry.lifts.map(\.personalRecord) == [true, false])
+    }
+
     @Test func prefersThePiecesOwnName() {
         let entry = CompletedStrengthEntry(id: 1, completedAt: Date(), name: "Heavy day", sets: [
             .init(order: 0, exercise: "Deadlift", reps: 3, completedAt: Date(), completedWeight: 315),

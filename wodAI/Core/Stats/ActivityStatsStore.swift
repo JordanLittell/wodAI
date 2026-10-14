@@ -100,7 +100,6 @@ final class ActivityStatsStore: ObservableObject {
         switch await Self.fetch(query, client: client) {
         case let .success(data):
             let loaded = ActivityStats(
-                muscleLoad: StatChart(fragment: data.muscleLoad.fragments.statFields, timeZone: timeZone),
                 volume: StatChart(fragment: data.volume.fragments.statFields, timeZone: timeZone),
                 intensity: StatChart(fragment: data.intensity.fragments.statFields, timeZone: timeZone),
                 trainingLoad: StatChart(fragment: data.trainingLoad.fragments.statFields, timeZone: timeZone)

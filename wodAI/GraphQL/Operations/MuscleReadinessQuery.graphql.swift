@@ -7,9 +7,9 @@ import WodAiAPI
 public class MuscleReadinessQuery: GraphQLQuery {
   public static let operationName: String = "MuscleReadiness"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "10e089a6bfd87b6d244bdee13ba32c5d4a5640c4803721e92565dd64dd2133bf",
+    operationIdentifier: "332e8f7cd668b749fdea41bd0ef465bc1e1bbdac4b048722d6da7f890705d0f7",
     definition: .init(
-      #"query MuscleReadiness { muscleReadiness { __typename slug name fatigue readyAt } }"#
+      #"query MuscleReadiness { muscleReadiness { __typename slug name fatigue readyAt recoveredAt } }"#
     ))
 
   public init() {}
@@ -39,12 +39,14 @@ public class MuscleReadinessQuery: GraphQLQuery {
         .field("name", String.self),
         .field("fatigue", Int.self),
         .field("readyAt", WodAiAPI.DateTime?.self),
+        .field("recoveredAt", WodAiAPI.DateTime.self),
       ] }
 
       public var slug: String { __data["slug"] }
       public var name: String { __data["name"] }
       public var fatigue: Int { __data["fatigue"] }
       public var readyAt: WodAiAPI.DateTime? { __data["readyAt"] }
+      public var recoveredAt: WodAiAPI.DateTime { __data["recoveredAt"] }
     }
   }
 }

@@ -7,9 +7,9 @@ import WodAiAPI
 public class CompletedStrengthWorkoutsQuery: GraphQLQuery {
   public static let operationName: String = "CompletedStrengthWorkouts"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "a8f66e2a89c323cd4ba93ba224e2bc11ef64adc38cfc1ca69be983750fe2c212",
+    operationIdentifier: "f11f1f80ce281a632f9954c4902e90d908eb5c7ec315a562d8b8fc1cdbd7e278",
     definition: .init(
-      #"query CompletedStrengthWorkouts($startDate: DateTime!, $endDate: DateTime!) { completedStrengthWorkouts(startDate: $startDate, endDate: $endDate) { __typename completedAt strengthWorkout { __typename id name stimulus instructions components { __typename id order reps weight rpe completedAt completedReps completedWeight completedRpe exercise { __typename name muscleGroups videoUrl } } } } }"#
+      #"query CompletedStrengthWorkouts($startDate: DateTime!, $endDate: DateTime!) { completedStrengthWorkouts(startDate: $startDate, endDate: $endDate) { __typename completedAt strengthWorkout { __typename id name stimulus instructions components { __typename id order reps weight rpe completedAt completedReps completedWeight completedRpe personalRecord exercise { __typename name muscleGroups videoUrl } } } } }"#
     ))
 
   public var startDate: WodAiAPI.DateTime
@@ -101,6 +101,7 @@ public class CompletedStrengthWorkoutsQuery: GraphQLQuery {
             .field("completedReps", Int?.self),
             .field("completedWeight", Double?.self),
             .field("completedRpe", Int?.self),
+            .field("personalRecord", Bool.self),
             .field("exercise", Exercise.self),
           ] }
 
@@ -113,6 +114,7 @@ public class CompletedStrengthWorkoutsQuery: GraphQLQuery {
           public var completedReps: Int? { __data["completedReps"] }
           public var completedWeight: Double? { __data["completedWeight"] }
           public var completedRpe: Int? { __data["completedRpe"] }
+          public var personalRecord: Bool { __data["personalRecord"] }
           public var exercise: Exercise { __data["exercise"] }
 
           /// CompletedStrengthWorkout.StrengthWorkout.Component.Exercise

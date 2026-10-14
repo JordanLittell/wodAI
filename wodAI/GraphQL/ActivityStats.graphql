@@ -2,9 +2,6 @@
 # is the same `stat` query for a different StatType; the result says whether to
 # draw it as categories or as a daily series.
 query ActivityStats($start: DateTime!, $end: DateTime!, $timezone: String) {
-  muscleLoad: stat(type: MUSCLE_LOAD, startDate: $start, endDate: $end, timezone: $timezone) {
-    ...StatFields
-  }
   volume: stat(type: STRENGTH_VOLUME, startDate: $start, endDate: $end, timezone: $timezone) {
     ...StatFields
   }
@@ -22,6 +19,7 @@ fragment StatFields on StatResult {
   shape
   unit
   total
+  provenance
   ... on CategoricalStat {
     categories {
       label

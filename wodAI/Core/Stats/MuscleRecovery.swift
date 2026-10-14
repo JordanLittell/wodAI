@@ -1,11 +1,11 @@
 //
-//  MuscleReadinessCard.swift
+//  MuscleRecovery.swift
 //  wodAI
 //
-//  Which body regions are still recovering, and when each will be ready to
-//  train again (backend `muscleReadiness`). These are the same per-region
-//  fatigue scores the planner programs from, so the athlete can see why a
-//  session kept them off a region.
+//  How recovered each body region is right now, when it's ready to train again
+//  and when it's fully recovered (backend `muscleReadiness`). These are the same
+//  per-region fatigue scores the planner programs from, so the athlete can see
+//  why a session kept them off a region. Shown at the top of the Muscles tab.
 //
 
 import SwiftUI
@@ -20,6 +20,8 @@ struct MuscleReadiness: Equatable {
         let fatigue: Int
         /// When fatigue drops under `MuscleReadiness.readyBelow`; nil when it already has.
         let readyAt: Date?
+        /// When fatigue reaches zero.
+        let recoveredAt: Date
 
         var id: String { slug }
 
@@ -28,31 +30,47 @@ struct MuscleReadiness: Equatable {
         static let restAbove = 60
 
         var isResting: Bool { fatigue > Self.restAbove }
+        var isReady: Bool { fatigue < MuscleReadiness.readyBelow }
 
-        var color: Color { isResting ? .red : .orange }
+        var color: Color {
+            if isReady { return .green }
+            return isResting ? .red : .orange
+        }
 
-        /// "Ready", "Ready by 6:00 PM", "Ready tomorrow", "Ready Thursday".
+        /// "Ready to train", "Ready to train by 6:00 PM", "… tomorrow", "… Thursday".
         func readyText(now: Date = Date(), calendar: Calendar = .current) -> String {
-            guard let readyAt, readyAt > now else { return "Ready" }
-            if calendar.isDate(readyAt, inSameDayAs: now) {
-                return "Ready by \(readyAt.formatted(date: .omitted, time: .shortened))"
+            guard !isReady, let readyAt, readyAt > now else { return "Ready to train" }
+            return "Ready to train \(Self.when(readyAt, now: now, calendar: calendar))"
+        }
+
+        /// "Fully recovered by 6:00 PM", "… tomorrow", "… Saturday".
+        func recoveredText(now: Date = Date(), calendar: Calendar = .current) -> String {
+            guard recoveredAt > now else { return "Fully recovered" }
+            return "Fully recovered \(Self.when(recoveredAt, now: now, calendar: calendar))"
+        }
+
+        private static func when(_ date: Date, now: Date, calendar: Calendar) -> String {
+            if calendar.isDate(date, inSameDayAs: now) {
+                return "by \(date.formatted(date: .omitted, time: .shortened))"
             }
             if let tomorrow = calendar.date(byAdding: .day, value: 1, to: now),
-               calendar.isDate(readyAt, inSameDayAs: tomorrow) {
-                return "Ready tomorrow"
+               calendar.isDate(date, inSameDayAs: tomorrow) {
+                return "tomorrow"
             }
-            return "Ready \(readyAt.formatted(.dateTime.weekday(.wide)))"
+            return date.formatted(.dateTime.weekday(.wide))
         }
     }
 
     /// Under this a region trains normally (the backend's READY_FATIGUE).
     static let readyBelow = 30
 
-    /// Every region the backend reported, most fatigued first.
+    /// Every region still fatigued, most fatigued first; any region not here is
+    /// fully recovered.
     let regions: [Region]
 
-    /// The regions not yet ready to train normally; the rest are left off the card.
-    var recovering: [Region] { regions.filter { $0.fatigue >= Self.readyBelow } }
+    init(regions: [Region]) {
+        self.regions = regions.sorted { $0.fatigue > $1.fatigue || ($0.fatigue == $1.fatigue && $0.name < $1.name) }
+    }
 }
 
 @MainActor
@@ -95,32 +113,42 @@ final class MuscleReadinessStore: ObservableObject {
         guard let regions = data?.muscleReadiness else { return }
         let parser = DateParser()
         readiness = MuscleReadiness(regions: regions.map {
-            MuscleReadiness.Region(slug: $0.slug, name: $0.name, fatigue: $0.fatigue, readyAt: parser.parseDate($0.readyAt))
+            MuscleReadiness.Region(
+                slug: $0.slug,
+                name: $0.name,
+                fatigue: $0.fatigue,
+                readyAt: parser.parseDate($0.readyAt),
+                recoveredAt: parser.parseDate($0.recoveredAt) ?? Date()
+            )
         })
     }
 }
 
-struct MuscleReadinessCard: View {
+/// The top of the Muscles tab: one row per region still recovering. Always
+/// "right now", whichever week the screen shows.
+struct MuscleRecoverySection: View {
     let readiness: MuscleReadiness?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Readiness")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(Color("PrimaryText"))
+            HStack(alignment: .firstTextBaseline) {
+                Text("Recovery right now")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(Color("PrimaryText"))
+                ExplainerButton(explainer: .readiness)
+            }
 
             if let readiness {
-                let recovering = readiness.recovering
-                if recovering.isEmpty {
-                    Text("Everything's ready to train.")
+                if readiness.regions.isEmpty {
+                    Text("Every region is fully recovered.")
                         .font(.subheadline)
                         .foregroundColor(Color("SecondaryText"))
                 } else {
-                    ForEach(recovering) { region in
+                    ForEach(readiness.regions) { region in
                         row(region)
                     }
-                    Text("Your plan works around these until they're ready. Everything else is ready to train.")
+                    Text("Any region not listed is fully recovered. Your plan leaves red regions alone and works orange ones lightly.")
                         .font(.caption)
                         .foregroundColor(Color("SecondaryText"))
                         .fixedSize(horizontal: false, vertical: true)
@@ -132,10 +160,6 @@ struct MuscleReadinessCard: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color("Surface"))
-        .cornerRadius(14)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color("Border"), lineWidth: 1))
     }
 
     private func row(_ region: MuscleReadiness.Region) -> some View {
@@ -145,9 +169,8 @@ struct MuscleReadinessCard: View {
                     .font(.subheadline)
                     .foregroundColor(Color("PrimaryText"))
                 Spacer()
-                Text(region.readyText())
-                    .font(.caption)
-                    .fontWeight(.semibold)
+                Text("\(region.fatigue)")
+                    .font(.subheadline.monospacedDigit().weight(.semibold))
                     .foregroundColor(region.color)
             }
             GeometryReader { geo in
@@ -158,20 +181,25 @@ struct MuscleReadinessCard: View {
                 }
             }
             .frame(height: 6)
+            HStack {
+                Text(region.readyText())
+                    .foregroundColor(region.isReady ? Color("SecondaryText") : region.color)
+                Spacer()
+                Text(region.recoveredText())
+                    .foregroundColor(Color("SecondaryText"))
+            }
+            .font(.caption)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(region.name), \(region.fatigue) percent fatigued, \(region.readyText())")
+        .accessibilityLabel("\(region.name), \(region.fatigue) percent fatigued. \(region.readyText()). \(region.recoveredText()).")
     }
 }
 
 #Preview {
-    VStack {
-        MuscleReadinessCard(readiness: MuscleReadiness(regions: [
-            .init(slug: "quadriceps", name: "Quadriceps", fatigue: 72, readyAt: Date().addingTimeInterval(2 * 86_400)),
-            .init(slug: "glutes", name: "Glutes", fatigue: 41, readyAt: Date().addingTimeInterval(20 * 3_600)),
-            .init(slug: "core", name: "Core", fatigue: 12, readyAt: nil),
-        ]))
-        MuscleReadinessCard(readiness: MuscleReadiness(regions: []))
-    }
+    MuscleRecoverySection(readiness: MuscleReadiness(regions: [
+        .init(slug: "quadriceps", name: "Quadriceps", fatigue: 72, readyAt: Date().addingTimeInterval(2 * 86_400), recoveredAt: Date().addingTimeInterval(3 * 86_400)),
+        .init(slug: "glutes", name: "Glutes", fatigue: 41, readyAt: Date().addingTimeInterval(20 * 3_600), recoveredAt: Date().addingTimeInterval(2 * 86_400)),
+        .init(slug: "core", name: "Core", fatigue: 12, readyAt: nil, recoveredAt: Date().addingTimeInterval(10 * 3_600)),
+    ]))
     .padding()
 }

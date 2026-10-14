@@ -4,5 +4,6 @@ query MuscleReadiness {
     name
     fatigue
     readyAt
+    recoveredAt
   }
 }

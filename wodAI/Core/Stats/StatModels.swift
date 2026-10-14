@@ -37,10 +37,14 @@ struct StatChart: Equatable {
     /// Sum over the range; nil when a total isn't meaningful (muscle-load shares).
     let total: Double?
     let points: Points
+    /// Where the numbers came from, in the server's words ("From heart rate for
+    /// 2 workouts…"); nil when there's no data to describe.
+    let provenance: String?
 
-    init(unit: String, total: Double?, points: Points) {
+    init(unit: String, total: Double?, points: Points, provenance: String? = nil) {
         self.unit = unit
         self.total = total
+        self.provenance = provenance
         if case let .categorical(values) = points {
             self.points = .categorical(values.sorted { $0.value > $1.value })
         } else {
@@ -54,13 +58,13 @@ struct StatChart: Equatable {
         if let categorical = fragment.asCategoricalStat {
             self.init(unit: fragment.unit, total: fragment.total, points: .categorical(
                 categorical.categories.map { CategoryValue(label: $0.label, value: $0.value) }
-            ))
+            ), provenance: fragment.provenance)
         } else if let series = fragment.asSeriesStat {
             self.init(unit: fragment.unit, total: fragment.total, points: .series(
                 series.series.compactMap { point in
                     StatFormatting.day(from: point.x, timeZone: timeZone).map { DayValue(day: $0, value: point.y) }
                 }
-            ))
+            ), provenance: fragment.provenance)
         } else {
             return nil
         }
@@ -101,7 +105,6 @@ struct StatChart: Equatable {
 
 /// The charts on the Activity screen for one week.
 struct ActivityStats: Equatable {
-    let muscleLoad: StatChart?
     let volume: StatChart?
     let intensity: StatChart?
     var trainingLoad: StatChart? = nil

@@ -9,14 +9,10 @@ struct ZZRenderStatCards {
         let day = { (o: Int) in week.calendar.date(byAdding: .day, value: o, to: week.start)! }
         let days = (0..<7).map(day)
         let volume = StatChart(unit: "lb", total: 27_350, points: .series(zip(days, [12_400, 0, 14_950, 0, 0, 0, 0]).map { DayValue(day: $0, value: $1) }))
-        let load = StatChart(unit: "%", total: nil, points: .categorical([
-            CategoryValue(label: "Back", value: 24), CategoryValue(label: "Legs", value: 38),
-            CategoryValue(label: "Shoulders", value: 17), CategoryValue(label: "Core", value: 12), CategoryValue(label: "Arms", value: 9)]))
         let empty = StatChart(unit: "min", total: 0, points: .series(days.map { DayValue(day: $0, value: 0) }))
-        let stats = ActivityStats(muscleLoad: load, volume: volume, intensity: empty)
+        let stats = ActivityStats(volume: volume, intensity: empty)
         let lastDays = days.map { week.calendar.date(byAdding: .weekOfYear, value: -1, to: $0)! }
         let lastWeek = ActivityStats(
-            muscleLoad: nil,
             volume: StatChart(unit: "lb", total: 31_200, points: .series(zip(lastDays, [10_800, 0, 9_600, 0, 10_800, 0, 0]).map { DayValue(day: $0, value: $1) })),
             intensity: StatChart(unit: "min", total: 64, points: .series(zip(lastDays, [0, 20, 0, 24, 0, 20, 0]).map { DayValue(day: $0, value: $1) }))
         )

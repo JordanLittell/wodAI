@@ -19,6 +19,7 @@ query CompletedStrengthWorkouts($startDate: DateTime!, $endDate: DateTime!) {
         completedReps
         completedWeight
         completedRpe
+        personalRecord
         exercise {
           name
           muscleGroups

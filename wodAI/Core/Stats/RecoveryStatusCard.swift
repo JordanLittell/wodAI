@@ -25,10 +25,10 @@ struct RecoveryStatus: Equatable {
     var title: String {
         switch level {
         case .insufficientData: return "Building your baseline"
-        case .fresh: return "Fresh"
-        case .optimal: return "On track"
-        case .elevated: return "Elevated"
-        case .highStrain: return "High strain"
+        case .fresh: return "Below usual"
+        case .optimal: return "In line with usual"
+        case .elevated: return "Above usual"
+        case .highStrain: return "Well above usual"
         }
     }
 
@@ -37,13 +37,13 @@ struct RecoveryStatus: Equatable {
         case .insufficientData:
             return "Rate your effort after each workout and log the RPE of your sets (or wear a heart rate monitor) for about two weeks to see how recovered you are."
         case .fresh:
-            return "This week has been lighter than you're used to. A good day to push."
+            return "Your last 7 days were lighter than your usual. If you feel good, there's room to push."
         case .optimal:
-            return "Your recent training is in line with what you're used to."
+            return "Your last 7 days are in line with what you usually do."
         case .elevated:
-            return "You've trained harder than usual this week. Keep an eye on sleep and soreness."
+            return "Your last 7 days were harder than your usual. Pay attention to how you're sleeping and how sore you feel."
         case .highStrain:
-            return "This week is much harder than you're used to. Consider an easier session or a rest day."
+            return "Your last 7 days were much harder than your usual. An easier day or a rest day will help you absorb the work."
         }
     }
 
@@ -120,10 +120,11 @@ struct RecoveryStatusCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Recovery")
+                Text("This week vs your usual")
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(Color("PrimaryText"))
+                ExplainerButton(explainer: .recovery)
                 Spacer()
                 if let status {
                     Text(status.title)

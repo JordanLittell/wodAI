@@ -96,6 +96,8 @@ struct CompletedStrengthEntry: Identifiable, Equatable {
     let lifts: [Lift]
     /// The whole piece, so it can reopen in StrengthWorkoutView for editing.
     var workout: StrengthWorkout? = nil
+    /// Server ids of the logged sets that were personal records when loaded.
+    var personalRecordSetIds: Swift.Set<Int> = []
 
     struct Lift: Equatable {
         let exercise: String
@@ -103,6 +105,8 @@ struct CompletedStrengthEntry: Identifiable, Equatable {
         let prescribedReps: [Int]
         /// Logged sets' weights in pounds, in order; nil for a bodyweight set.
         let loggedWeights: [Double?]
+        /// A logged set of this lift beat the athlete's previous best.
+        var personalRecord: Bool = false
     }
 
     /// A set as the server sends it, before grouping.
@@ -112,6 +116,7 @@ struct CompletedStrengthEntry: Identifiable, Equatable {
         let reps: Int
         let completedAt: Date?
         let completedWeight: Double?
+        var personalRecord: Bool = false
     }
 
     init(id: Int, completedAt: Date, title: String, lifts: [Lift]) {
@@ -133,7 +138,8 @@ struct CompletedStrengthEntry: Identifiable, Equatable {
             return Lift(
                 exercise: exercise,
                 prescribedReps: mine.map(\.reps),
-                loggedWeights: mine.filter { $0.completedAt != nil }.map(\.completedWeight)
+                loggedWeights: mine.filter { $0.completedAt != nil }.map(\.completedWeight),
+                personalRecord: mine.contains { $0.completedAt != nil && $0.personalRecord }
             )
         }
         let title = name.flatMap { $0.isEmpty ? nil : $0 }
@@ -142,7 +148,8 @@ struct CompletedStrengthEntry: Identifiable, Equatable {
     }
 
     /// Builds the card from the whole piece, keeping it for editing.
-    init(completedAt: Date, name: String?, workout: StrengthWorkout) {
+    /// `personalRecordSetIds` are the server ids of its record-setting sets.
+    init(completedAt: Date, name: String?, workout: StrengthWorkout, personalRecordSetIds: Swift.Set<Int> = []) {
         self.init(
             id: workout.serverId ?? workout.id,
             completedAt: completedAt,
@@ -153,19 +160,22 @@ struct CompletedStrengthEntry: Identifiable, Equatable {
                     exercise: $0.exercise.name,
                     reps: $0.reps,
                     completedAt: $0.completed == nil ? nil : completedAt,
-                    completedWeight: $0.completed?.weightUsed
+                    completedWeight: $0.completed?.weightUsed,
+                    personalRecord: $0.id.map(personalRecordSetIds.contains) ?? false
                 )
             }
         )
         self.workout = workout
+        self.personalRecordSetIds = personalRecordSetIds
     }
 
     /// This card after its piece was edited: same day and title, lifts from
     /// what's logged now. Nil once every set is un-checked, since the piece
-    /// is no longer a completed workout.
+    /// is no longer a completed workout. A record badge stays only on sets
+    /// still logged; the next load recomputes records on the server.
     func updated(with workout: StrengthWorkout) -> CompletedStrengthEntry? {
         guard workout.components.contains(where: { $0.completed != nil }) else { return nil }
-        return CompletedStrengthEntry(completedAt: completedAt, name: title, workout: workout)
+        return CompletedStrengthEntry(completedAt: completedAt, name: title, workout: workout, personalRecordSetIds: personalRecordSetIds)
     }
 }
 

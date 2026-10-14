@@ -161,6 +161,7 @@ type StrengthComponent {
   completedReps: Int
   completedWeight: Float
   completedRpe: Int
+  personalRecord: Boolean!
 }
 
 input StrengthComponentResultInput {
@@ -1000,6 +1001,7 @@ interface StatResult {
   shape: StatShape!
   unit: String!
   total: Float
+  provenance: String
 }
 
 type CategoricalStat implements StatResult {
@@ -1007,6 +1009,7 @@ type CategoricalStat implements StatResult {
   shape: StatShape!
   unit: String!
   total: Float
+  provenance: String
   categories: [CategoryPoint!]!
 }
 
@@ -1015,6 +1018,7 @@ type SeriesStat implements StatResult {
   shape: StatShape!
   unit: String!
   total: Float
+  provenance: String
   series: [SeriesPoint!]!
 }
 
@@ -1033,4 +1037,5 @@ type RegionReadiness {
   name: String!
   fatigue: Int!
   readyAt: DateTime
+  recoveredAt: DateTime!
 }
