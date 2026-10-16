@@ -175,7 +175,7 @@ type WorkoutHiitPiece implements WorkoutBlock {
   id: Int!
   order: Int!
   hiitWorkout: HIITWorkout!
-  stimulus: String
+  pieceStimulus: String
   completion: CompletedHIITWorkout
 }
 
@@ -516,6 +516,7 @@ type GenerationStrengthSet {
 type GenerationHiitBlock {
   order: Int!
   hiitWorkout: HIITWorkout!
+  pieceStimulus: String
 }
 
 type GenerationDraftHiitBlock {

@@ -7,7 +7,7 @@ import WodAiAPI
 public class WeekSessionsQuery: GraphQLQuery {
   public static let operationName: String = "WeekSessions"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "25141be7e4cff957df5eef9ec0954271e72db0055c3b03fd6320ef4265be0eb4",
+    operationIdentifier: "4393c586166d76dc7ea0f514595aad66910c6ebfcacf30be4016f8def5aebcfb",
     definition: .init(
       #"query WeekSessions($startDate: DateTime!, $endDate: DateTime!) { getWorkoutsByDateRange(startDate: $startDate, endDate: $endDate) { __typename ...SessionDetails } }"#,
       fragments: [SessionDetails.self]
