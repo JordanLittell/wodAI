@@ -40,7 +40,9 @@ struct MetconView: View {
                                 pieceStimulus(stimulus)
                             }
                             if !workout.stimulus.isEmpty {
-                                about(workout.stimulus)
+                                Text(workout.stimulus)
+                                    .font(.subheadline)
+                                    .foregroundColor(Color("SecondaryText"))
                             }
                         }
                         .padding(.horizontal)
