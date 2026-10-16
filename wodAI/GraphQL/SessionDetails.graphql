@@ -36,6 +36,10 @@ fragment SessionDetails on Workout {
     }
     ... on WorkoutHiitPiece {
       id
+      # The athlete's own stimulus for this piece (target RPE, pacing cues);
+      # null for imported and older sessions. Aliased because it's nullable
+      # here and StrengthWorkout's stimulus isn't, so the two can't merge.
+      pieceStimulus: stimulus
       # Null until a result is logged for this piece (or for this WOD that day).
       completion {
         id

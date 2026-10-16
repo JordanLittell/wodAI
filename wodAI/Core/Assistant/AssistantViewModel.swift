@@ -801,7 +801,8 @@ final class AssistantViewModel: ObservableObject {
                         timeCap: hiit.timeCap,
                         timingScheme: hiit.timingScheme.flatMap { WodTimerConfig(fragment: $0) },
                         tags: [],
-                        name: hiit.name
+                        name: hiit.name,
+                        pieceStimulus: piece.pieceStimulus
                     )
                     return AssistantBlock(
                         id: block.order,

@@ -7,7 +7,7 @@ import WodAiAPI
 public class WorkoutGenerationSubscription: GraphQLSubscription {
   public static let operationName: String = "WorkoutGeneration"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "909517c9d5cc6a7b59462118ff3f12f2752665940dc3de9309f8d5d47fb4db46",
+    operationIdentifier: "5bc85b7e1d36d33abde91aae17cc2e573455f6f0cb525f700fdb745a2ee80db3",
     definition: .init(
       #"subscription WorkoutGeneration($request: String, $scheduledDate: String) { workoutGeneration(request: $request, scheduledDate: $scheduledDate) { __typename ... on GenerationSession { name description stimulus } ... on GenerationStrengthBlock { order name instructions } ... on GenerationStrengthSet { order setOrder reps weight rpe exercise { __typename name muscleGroups videoUrl } } ... on GenerationHiitBlock { order hiitWorkout { __typename ...GeneratedHiitWorkout } } ... on GenerationDraftHiitBlock { order name format displayText stimulus } ... on GenerationComplete { workout { __typename ...SessionDetails } } ... on GenerationFailed { message } } }"#,
       fragments: [GeneratedHiitWorkout.self, SessionDetails.self]

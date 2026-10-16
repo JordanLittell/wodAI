@@ -175,6 +175,7 @@ type WorkoutHiitPiece implements WorkoutBlock {
   id: Int!
   order: Int!
   hiitWorkout: HIITWorkout!
+  stimulus: String
   completion: CompletedHIITWorkout
 }
 
@@ -453,8 +454,8 @@ type Mutation {
   generateHiitWorkouts(tagIds: [Int!], skipWorkoutId: Int, timezone: String): [HIITWorkout!]!
   createHiitWorkout(input: CreateHIITWorkoutInput!): HIITWorkout!
   deleteHiitWorkout(id: Int!): Boolean!
-  completeHiitWorkout(id: Int!, durationSeconds: Int, roundsCompleted: Int, repsCompleted: Int, perceivedEffort: Int, notes: String, sessionId: ID, pieceId: Int): CompletedHIITWorkout!
-  updateHiitCompletion(id: Int!, durationSeconds: Int, roundsCompleted: Int, repsCompleted: Int, perceivedEffort: Int, notes: String): CompletedHIITWorkout!
+  completeHiitWorkout(id: Int!, durationSeconds: Int, roundsCompleted: Int, repsCompleted: Int, perceivedEffort: Int, notes: String, sessionId: ID, pieceId: Int, partResults: [HIITPartResultInput!]): CompletedHIITWorkout!
+  updateHiitCompletion(id: Int!, durationSeconds: Int, roundsCompleted: Int, repsCompleted: Int, perceivedEffort: Int, notes: String, partResults: [HIITPartResultInput!]): CompletedHIITWorkout!
   completeStrengthComponents(strengthWorkoutId: Int!, components: [StrengthComponentResultInput!]!): StrengthWorkout!
   uncompleteStrengthComponents(strengthWorkoutId: Int!, componentIds: [Int!]!): StrengthWorkout!
   saveHiitWorkout(id: Int!): Boolean!
@@ -754,6 +755,17 @@ type HIITComponent {
   exercise: HIITExercise!
 }
 
+type HIITPart {
+  id: Int!
+  order: Int!
+  format: String
+  constraintType: String!
+  constraintMagnitude: Int!
+  timeCap: Int
+  restAfterSeconds: Int
+  components: [HIITComponent!]!
+}
+
 type HIITWorkout {
   id: Int!
   name: String
@@ -766,6 +778,7 @@ type HIITWorkout {
   displayText: String!
   stimulus: String!
   components: [HIITComponent!]!
+  parts: [HIITPart!]!
   equipment: [Equipment]
   tags: [Tag!]
   timingScheme: WodTimerConfig
@@ -834,6 +847,20 @@ type HIITSimilarResult {
   similarity: Float!
 }
 
+input HIITPartResultInput {
+  partId: Int!
+  durationSeconds: Int
+  roundsCompleted: Int
+  repsCompleted: Int
+}
+
+type HIITPartResult {
+  partId: Int!
+  durationSeconds: Int
+  roundsCompleted: Int
+  repsCompleted: Int
+}
+
 type CompletedHIITWorkout {
   id: Int!
   completedAt: DateTime!
@@ -841,6 +868,7 @@ type CompletedHIITWorkout {
   durationSeconds: Int
   roundsCompleted: Int
   repsCompleted: Int
+  partResults: [HIITPartResult!]!
   perceivedEffort: Int
   notes: String
   heartRate: HeartRateSummary
@@ -887,6 +915,16 @@ input CreateHIITComponentInput {
   exerciseId: Int!
 }
 
+input CreateHIITPartInput {
+  order: Int!
+  format: String
+  constraintType: String!
+  constraintMagnitude: Int!
+  timeCap: Int
+  restAfterSeconds: Int
+  components: [CreateHIITComponentInput!]!
+}
+
 input CreateHIITWorkoutInput {
   name: String
   constraintType: String!
@@ -894,6 +932,7 @@ input CreateHIITWorkoutInput {
   format: String
   timeCap: Int
   components: [CreateHIITComponentInput!]!
+  parts: [CreateHIITPartInput!]
   rawText: String!
   displayText: String!
   stimulus: String!
