@@ -35,7 +35,7 @@ struct MetconView: View {
                         VStack(alignment: .leading, spacing: 20) {
                             workoutCard
                             if !workout.stimulus.isEmpty {
-                                ExpandableText(text: workout.stimulus)
+                                Text(workout.stimulus)
                                     .font(.subheadline)
                                     .foregroundColor(Color("SecondaryText"))
                             }
