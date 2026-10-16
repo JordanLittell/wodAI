@@ -7,7 +7,7 @@ import WodAiAPI
 public class WhiteboardImportSubscription: GraphQLSubscription {
   public static let operationName: String = "WhiteboardImport"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "8029bf83d8ef1e34f6480ceb9cb06e0d61a11c9899aad1f6be32c0161e20c830",
+    operationIdentifier: "0dc204ea6decb203eb38616f6046fdeb618ac66b3d9d214872119311461056e5",
     definition: .init(
       #"subscription WhiteboardImport($input: WhiteboardImportInput!) { whiteboardImport(input: $input) { __typename ... on GenerationSession { name description stimulus } ... on GenerationStrengthBlock { order name instructions } ... on GenerationStrengthSet { order setOrder reps weight rpe exercise { __typename name muscleGroups videoUrl } } ... on GenerationDraftHiitBlock { order name format displayText stimulus } ... on GenerationComplete { workout { __typename ...SessionDetails } } ... on GenerationFailed { message } } }"#,
       fragments: [SessionDetails.self]

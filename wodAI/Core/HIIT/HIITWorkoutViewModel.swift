@@ -24,6 +24,10 @@ struct HIITWorkoutItem: Identifiable, Hashable {
     let tags: [HIITWorkoutTag]
     /// The workout's own name, e.g. "Fran". Most generated metcons have none.
     var name: String? = nil
+    /// The athlete's own stimulus for this metcon on their session: target RPE
+    /// and how to pace it. Only set for a piece opened from a generated session;
+    /// `stimulus` is the workout's generic description.
+    var pieceStimulus: String? = nil
 
     /// What to call it on screen: its name when it has one, otherwise
     /// "Metcon". A named workout implies it's a metcon, so the name wins.

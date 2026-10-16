@@ -2,8 +2,9 @@
 //  MetconView.swift
 //  wodAI
 //
-//  One metcon: the WOD card, its stimulus, and Start, which runs the timer
-//  and then the completion screen. Opened from a session block (via the
+//  One metcon: the WOD card, the athlete's stimulus for it (from their
+//  session), the workout's own description folded away, and Start, which runs
+//  the timer and then the completion screen. Opened from a session block (via the
 //  block pager) or a saved workout; there is no feed entry point.
 
 import SwiftUI
@@ -11,6 +12,7 @@ import UIKit
 
 struct MetconView: View {
     @StateObject private var viewModel: HIITWorkoutViewModel
+    @State private var aboutExpanded = false
 
     /// Opens a fixed metcon (a session block or a saved workout).
     /// `pieceId` is the session piece it was opened from, if any, so the
@@ -34,6 +36,9 @@ struct MetconView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
                             workoutCard
+                            if let stimulus = workout.pieceStimulus, !stimulus.isEmpty {
+                                pieceStimulus(stimulus)
+                            }
                             if !workout.stimulus.isEmpty {
                                 Text(workout.stimulus)
                                     .font(.subheadline)
@@ -117,6 +122,52 @@ struct MetconView: View {
         .animation(.easeInOut(duration: 0.4), value: viewModel.isPaused)
     }
 
+    // MARK: - Stimulus
+
+    /// How the athlete should run this piece today: target RPE and pacing.
+    private func pieceStimulus(_ text: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Stimulus")
+                .font(.headline)
+                .foregroundColor(Color("PrimaryText"))
+            Text(text)
+                .font(.subheadline)
+                .foregroundColor(Color("PrimaryText"))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// The workout's own, generic description: long, so folded away.
+    private func about(_ text: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) { aboutExpanded.toggle() }
+            } label: {
+                HStack {
+                    Text("About this workout")
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .rotationEffect(.degrees(aboutExpanded ? 180 : 0))
+                }
+                .foregroundColor(Color("SecondaryText"))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(aboutExpanded ? "Hides the description" : "Shows the description")
+
+            if aboutExpanded {
+                Text(text)
+                    .font(.subheadline)
+                    .foregroundColor(Color("SecondaryText"))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
     // MARK: - Bottom bar
 
     private var bottomBar: some View {
@@ -189,5 +240,14 @@ struct MetconView: View {
 #Preview("Metcon") {
     NavigationStack {
         MetconView(preloaded: HIITWorkoutViewModel.preview().currentWorkout!)
+    }
+}
+
+#Preview("Metcon in a session") {
+    var workout = HIITWorkoutViewModel.preview().currentWorkout!
+    workout.pieceStimulus = "RPE 8. Builds the engine to hold a hard pace while your legs burn. "
+        + "Pick a pace you can repeat every round, and keep the wall balls unbroken."
+    return NavigationStack {
+        MetconView(preloaded: workout, pieceId: 1)
     }
 }
