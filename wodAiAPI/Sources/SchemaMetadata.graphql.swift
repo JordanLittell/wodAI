@@ -20,6 +20,8 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
 
   public static func objectType(forTypename typename: String) -> ApolloAPI.Object? {
     switch typename {
+    case "AssistantGreeting": return WodAiAPI.Objects.AssistantGreeting
+    case "AssistantSuggestion": return WodAiAPI.Objects.AssistantSuggestion
     case "AuthPayload": return WodAiAPI.Objects.AuthPayload
     case "CategoricalStat": return WodAiAPI.Objects.CategoricalStat
     case "CategoryPoint": return WodAiAPI.Objects.CategoryPoint

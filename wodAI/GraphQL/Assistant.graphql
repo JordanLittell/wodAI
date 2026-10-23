@@ -1,0 +1,12 @@
+# The trainer chat's opening message and the options it offers.
+query AssistantGreeting {
+  assistantGreeting {
+    text
+    suggestions {
+      id
+      label
+      action
+      payload
+    }
+  }
+}

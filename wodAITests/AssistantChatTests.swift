@@ -3,6 +3,7 @@
 //  wodAITests
 //
 
+import Foundation
 import Testing
 @testable import wodAI
 
@@ -112,6 +113,52 @@ struct AssistantChatTests {
         let reply = chat.tap("reply-1")
         #expect(reply != nil)
         #expect(chat.flow == "write_today") // a later reply doesn't change the flow
+    }
+
+    // MARK: View model
+
+    private func defaults() -> UserDefaults {
+        let suite = "AssistantChatTests-\(UUID().uuidString)"
+        return UserDefaults(suiteName: suite)!
+    }
+
+    @MainActor @Test func opensWithTheLastServerGreetingThenTheNewOne() async {
+        let store = defaults()
+        store.set("Hey Jordan, how can I help you today?", forKey: AssistantChatViewModel.lastGreetingKey)
+        let viewModel = AssistantChatViewModel(
+            loadGreeting: { ChatGreeting(text: "Hey Jordan!", suggestions: [week]) },
+            defaults: store
+        )
+        #expect(viewModel.transcript.messages[0].text == "Hey Jordan, how can I help you today?")
+
+        await viewModel.load()
+
+        #expect(viewModel.transcript.messages[0].text == "Hey Jordan!")
+        #expect(viewModel.transcript.tappableSuggestions == [week])
+        #expect(store.string(forKey: AssistantChatViewModel.lastGreetingKey) == "Hey Jordan!")
+    }
+
+    @MainActor @Test func keepsTheBundledGreetingWhenTheServerFails() async {
+        struct Offline: Error {}
+        let viewModel = AssistantChatViewModel(loadGreeting: { throw Offline() }, defaults: defaults())
+        await viewModel.load()
+        #expect(viewModel.transcript.messages[0].text == "Hey, how can I help you today?")
+        #expect(viewModel.transcript.tappableSuggestions.map(\.id) == ["whiteboard", "create_with_ai"])
+    }
+
+    @MainActor @Test func handsClientActionsToThePageOnce() async {
+        let viewModel = AssistantChatViewModel(
+            loadGreeting: { ChatGreeting(text: "Hi", suggestions: [whiteboard, week]) },
+            defaults: defaults()
+        )
+        await viewModel.load()
+        var handed: [String] = []
+        viewModel.onClientAction = { handed.append($0.id) }
+
+        viewModel.tap(whiteboard)
+        viewModel.tap(whiteboard)
+
+        #expect(handed == ["whiteboard"])
     }
 
     @Test func aFailedTurnCanBeRetriedWithoutTheErrorOrPartialReply() {
