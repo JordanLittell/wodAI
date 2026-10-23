@@ -156,7 +156,19 @@ struct ChatTranscript: Equatable {
         messages[messages.count - 1].suggestions = suggestions.filter(\.isSupported)
     }
 
-    mutating func finishTrainerReply() {
+    /// Ends the turn. `text` is the whole reply as the server saw it; when
+    /// given it replaces what was streamed, so a delta lost or repeated on a
+    /// reconnect doesn't stay on screen.
+    mutating func finishTrainerReply(text: String? = nil) {
+        guard isAwaitingTrainer else { return }
+        if let text, !text.isEmpty {
+            // While awaiting, a trainer message last is this turn's reply.
+            if let last = messages.indices.last, messages[last].author == .trainer {
+                messages[last].text = text
+            } else {
+                appendTrainerText(text)
+            }
+        }
         isAwaitingTrainer = false
     }
 

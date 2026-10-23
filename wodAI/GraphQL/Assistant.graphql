@@ -10,3 +10,36 @@ query AssistantGreeting {
     }
   }
 }
+
+# One trainer turn: the app sends the whole conversation and the trainer's
+# reply streams back as text deltas, then optional suggestions or an action,
+# then AssistantTurnComplete (or GenerationFailed).
+subscription AssistantTurn($input: AssistantTurnInput!) {
+  assistantTurn(input: $input) {
+    __typename
+    ... on AssistantTextDelta {
+      text
+    }
+    ... on AssistantSuggestions {
+      suggestions {
+        id
+        label
+        action
+        payload
+      }
+    }
+    ... on AssistantAction {
+      kind
+      request
+      scheduledDate
+      dates
+      replaceWorkoutIds
+    }
+    ... on AssistantTurnComplete {
+      text
+    }
+    ... on GenerationFailed {
+      message
+    }
+  }
+}

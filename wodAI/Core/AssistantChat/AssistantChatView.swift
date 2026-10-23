@@ -32,6 +32,8 @@ struct AssistantChatView: View {
         }
         .transition(.move(edge: .bottom).combined(with: .opacity))
         .task { await viewModel.load() }
+        // Closing stops the trainer's reply; reopening can retry it.
+        .onDisappear { viewModel.cancelTurn() }
     }
 
     private var panel: some View {
@@ -100,7 +102,12 @@ struct AssistantChatView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 12) {
                     ForEach(viewModel.transcript.messages) { message in
-                        ChatMessageRow(message: message, tappable: tappable(for: message), onTap: viewModel.tap)
+                        ChatMessageRow(
+                            message: message,
+                            tappable: tappable(for: message),
+                            onTap: viewModel.tap,
+                            onRetry: retry(for: message)
+                        )
                         .id(message.id)
                     }
                     if viewModel.transcript.isAwaitingTrainer, viewModel.transcript.messages.last?.author == .athlete {
@@ -119,6 +126,12 @@ struct AssistantChatView: View {
         }
     }
 
+    /// Only the latest message, when it's an error, offers Try again.
+    private func retry(for message: ChatMessage) -> (() -> Void)? {
+        guard message.isError, message.id == viewModel.transcript.messages.last?.id else { return nil }
+        return { viewModel.retry() }
+    }
+
     /// Only the latest message's suggestions can be tapped.
     private func tappable(for message: ChatMessage) -> [ChatSuggestion] {
         message.id == viewModel.transcript.messages.last?.id ? viewModel.transcript.tappableSuggestions : []
@@ -132,14 +145,13 @@ struct AssistantChatView: View {
                 .padding(.vertical, 10)
                 .background(RoundedRectangle(cornerRadius: 18).fill(Color("Surface")))
                 .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color("Border"), lineWidth: 1))
-            Button {
-                // Turns arrive with B4.
-            } label: {
+            Button(action: viewModel.send) {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 32))
                     .foregroundColor(Color.brandPrimary)
             }
-            .disabled(!viewModel.transcript.canSend || viewModel.draft.trimmingCharacters(in: .whitespaces).isEmpty)
+            .disabled(!viewModel.canSendDraft)
+            .opacity(viewModel.canSendDraft ? 1 : 0.4)
             .accessibilityLabel("Send")
         }
         .padding(.horizontal, 16)
@@ -152,6 +164,8 @@ private struct ChatMessageRow: View {
     /// The suggestions that can still be tapped; empty for older turns.
     let tappable: [ChatSuggestion]
     let onTap: (ChatSuggestion) -> Void
+    /// Offered under the latest message when it's an error.
+    var onRetry: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: message.author == .athlete ? .trailing : .leading, spacing: 8) {
@@ -173,6 +187,14 @@ private struct ChatMessageRow: View {
             }
             if !message.suggestions.isEmpty {
                 SuggestionChips(suggestions: message.suggestions, tappable: tappable, onTap: onTap)
+            }
+            if message.isError, let onRetry {
+                Button(action: onRetry) {
+                    Label("Try again", systemImage: "arrow.clockwise")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(Color.brandPrimary)
+                }
+                .buttonStyle(.plain)
             }
         }
         .frame(maxWidth: .infinity, alignment: message.author == .athlete ? .trailing : .leading)
