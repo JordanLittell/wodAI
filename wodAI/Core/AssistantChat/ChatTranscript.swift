@@ -18,15 +18,27 @@ struct ChatSuggestion: Identifiable, Equatable {
         /// Stopgap: today's Create with AI sheet, until Write Workout for
         /// Today runs in the chat.
         case openCreateSheet
+        /// Program My Week: pick any of these days ("YYYY-MM-DD"); the picked
+        /// ones go back as the athlete's message.
+        case pickDays([String])
         /// One this version of the app doesn't know. Never shown, so the
         /// server can add actions without breaking released apps.
         case unsupported(String)
 
-        init(serverValue: String) {
+        init(serverValue: String, payload: String? = nil) {
             switch serverValue {
             case "REPLY": self = .reply
             case "OPEN_WHITEBOARD_SCANNER": self = .openWhiteboardScanner
             case "OPEN_CREATE_SHEET": self = .openCreateSheet
+            case "PICK_DAYS":
+                // `{"dates": [...]}`; a picker with nothing to pick is hidden.
+                struct Days: Decodable { let dates: [String] }
+                let days = payload.flatMap { try? JSONDecoder().decode(Days.self, from: Data($0.utf8)) }
+                if let dates = days?.dates, !dates.isEmpty {
+                    self = .pickDays(dates)
+                } else {
+                    self = .unsupported(serverValue)
+                }
             default: self = .unsupported(serverValue)
             }
         }
@@ -42,6 +54,12 @@ struct ChatSuggestion: Identifiable, Equatable {
     var isSupported: Bool {
         if case .unsupported = action { return false }
         return true
+    }
+
+    /// The days a day picker offers; nil for any other suggestion.
+    var pickableDates: [String]? {
+        if case let .pickDays(dates) = action { return dates }
+        return nil
     }
 }
 
@@ -196,6 +214,39 @@ struct ChatTranscript: Equatable {
     /// What goes to the server for a turn: every message except errors.
     var turnMessages: [ChatMessage] {
         messages.filter { !$0.isError && !$0.text.isEmpty }
+    }
+
+    // MARK: Days
+
+    /// What a day picker sends: the days as people say them, then as the
+    /// server reads them, e.g. "Plan these days: Mon 26 Oct, Wed 28 Oct
+    /// (2026-10-26, 2026-10-28)".
+    static func pickedDaysMessage(_ dates: [String]) -> String {
+        let sorted = dates.sorted()
+        return "Plan these days: \(sorted.map(dayLabel).joined(separator: ", ")) (\(sorted.joined(separator: ", ")))"
+    }
+
+    /// "Mon 26 Oct" in the athlete's locale; the date itself if it doesn't parse.
+    static func dayLabel(_ date: String) -> String {
+        guard let day = calendarDay(date) else { return date }
+        return day.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
+    }
+
+    /// "Mon".
+    static func weekdayLabel(_ date: String) -> String {
+        calendarDay(date)?.formatted(.dateTime.weekday(.abbreviated)) ?? ""
+    }
+
+    /// "26".
+    static func dayOfMonth(_ date: String) -> String {
+        calendarDay(date)?.formatted(.dateTime.day()) ?? date
+    }
+
+    /// "YYYY-MM-DD" as midnight in the device's calendar.
+    private static func calendarDay(_ date: String) -> Date? {
+        let parts = date.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        return Calendar.current.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
     }
 
     /// A note from the trainer that isn't a reply to a turn (the app

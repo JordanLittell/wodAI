@@ -48,7 +48,7 @@ struct AssistantChatTests {
         #expect(ChatSuggestion.Action(serverValue: "REPLY") == .reply)
         #expect(ChatSuggestion.Action(serverValue: "OPEN_WHITEBOARD_SCANNER") == .openWhiteboardScanner)
         #expect(ChatSuggestion.Action(serverValue: "OPEN_CREATE_SHEET") == .openCreateSheet)
-        let future = ChatSuggestion(id: "x", label: "Pick days", action: ChatSuggestion.Action(serverValue: "PICK_DAYS"))
+        let future = ChatSuggestion(id: "x", label: "Share", action: ChatSuggestion.Action(serverValue: "SHARE_WORKOUT"))
         let chat = ChatTranscript(greeting: "Hi", suggestions: [future, week])
         #expect(chat.tappableSuggestions == [week])
     }

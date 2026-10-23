@@ -54,12 +54,19 @@ extension AssistantViewModel {
     }
 }
 extension AssistantChatViewModel {
-    /// The bundled greeting, served without the network: the live API
+    /// The bundled greeting and a canned reply, without the network: the live API
     /// rejects the stand-in athlete's token, and that signs the app out.
     static func uiTesting() -> AssistantChatViewModel {
         let bundled = ChatTranscript.bundled(firstName: nil).messages[0]
         return AssistantChatViewModel(
             loadGreeting: { ChatGreeting(text: bundled.text, suggestions: bundled.suggestions) },
+            runTurn: { _ in
+                AsyncThrowingStream { continuation in
+                    continuation.yield(.text("Got it."))
+                    continuation.yield(.complete("Got it."))
+                    continuation.finish()
+                }
+            },
             defaults: UserDefaults(suiteName: "ui-testing") ?? .standard
         )
     }

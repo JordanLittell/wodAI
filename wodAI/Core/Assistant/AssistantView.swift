@@ -231,6 +231,7 @@ struct AssistantView: View {
         viewModel.reveal(nil)
         let chat = makeChat()
         chat.onClientAction = { suggestion in runClientAction(suggestion, from: chat) }
+        chat.onAction = { action in runAction(action, from: chat) }
         withAnimation(.spring(duration: 0.35)) { self.chat = chat }
     }
 
@@ -249,7 +250,45 @@ struct AssistantView: View {
         switch suggestion.action {
         case .openWhiteboardScanner: startAdding(.importWhiteboard)
         case .openCreateSheet: startAdding(.createWithAI)
-        case .reply, .unsupported: break
+        case .reply, .pickDays, .unsupported: break
+        }
+    }
+
+    /// What the coach finished a flow with. Like the whiteboard option, the
+    /// chat closes and the result shows on the Workout page: the new session
+    /// streaming into today, or the planning banner. While something is
+    /// already being added or planned, the coach says so instead, so one
+    /// can't start twice.
+    private func runAction(_ action: AssistantTurnAction, from chat: AssistantChatViewModel) {
+        switch action.kind {
+        case .generateSession:
+            guard let request = action.request, !request.isEmpty else { return }
+            guard !viewModel.isAddingSession else {
+                chat.say("A session is still coming in. Give it a moment, then ask me again.")
+                return
+            }
+            closeChat()
+            viewModel.dismissAddError()
+            withAnimation(.spring(duration: 0.35)) {
+                viewModel.createSessionToday(request: request)
+            }
+        case .planWeek:
+            guard !action.dates.isEmpty else { return }
+            guard viewModel.planningNotice != .planning else {
+                chat.say("I'm still planning your week. Give it a few minutes, then ask me again.")
+                return
+            }
+            closeChat()
+            viewModel.replan(dates: action.dates, request: action.request, replaceWorkoutIds: action.replaceWorkoutIds)
+        case .openWhiteboardScanner:
+            guard !viewModel.isAddingSession else {
+                chat.say("A session is still coming in. Give it a moment, then try again.")
+                return
+            }
+            closeChat()
+            startAdding(.importWhiteboard)
+        case .unsupported:
+            break
         }
     }
 

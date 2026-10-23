@@ -94,9 +94,17 @@ final class AssistantChatViewModel: ObservableObject {
             onClientAction(tapped)
         case .reply:
             startTurn()
-        case .unsupported:
-            break
+        case .pickDays, .unsupported:
+            break // the day picker answers through `pickDays`
         }
+    }
+
+    /// The days picked in a Program My Week day picker, sent as the athlete's
+    /// reply.
+    func pickDays(_ dates: [String]) {
+        guard !dates.isEmpty, transcript.send(ChatTranscript.pickedDaysMessage(dates)) else { return }
+        UISelectionFeedbackGenerator().selectionChanged()
+        startTurn()
     }
 
     func send() {
@@ -225,7 +233,7 @@ final class AssistantChatViewModel: ObservableObject {
         return ChatGreeting(
             text: greeting.text,
             suggestions: greeting.suggestions.map {
-                ChatSuggestion(id: $0.id, label: $0.label, action: .init(serverValue: $0.action.rawValue), payload: $0.payload)
+                ChatSuggestion(id: $0.id, label: $0.label, action: .init(serverValue: $0.action.rawValue, payload: $0.payload), payload: $0.payload)
             }
         )
     }

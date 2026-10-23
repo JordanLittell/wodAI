@@ -75,7 +75,9 @@ struct AssistantTurnAction: Equatable {
     var scheduledDate: String? = nil
     /// "YYYY-MM-DD" days, for a week plan.
     var dates: [String] = []
-    var replaceWorkoutIds: [String] = []
+    /// The sessions a week plan replaces. Nil and empty differ: nil lets the
+    /// server replace the default ones, [] replaces none. Pass it through as is.
+    var replaceWorkoutIds: [String]? = nil
 
     var isSupported: Bool {
         if case .unsupported = kind { return false }
@@ -123,7 +125,7 @@ struct AssistantTurnStream {
         }
         if let suggestions = event.asAssistantSuggestions {
             return .event(.suggestions(suggestions.suggestions.map {
-                ChatSuggestion(id: $0.id, label: $0.label, action: .init(serverValue: $0.action.rawValue), payload: $0.payload)
+                ChatSuggestion(id: $0.id, label: $0.label, action: .init(serverValue: $0.action.rawValue, payload: $0.payload), payload: $0.payload)
             }))
         }
         if let action = event.asAssistantAction {
@@ -132,7 +134,7 @@ struct AssistantTurnStream {
                 request: action.request,
                 scheduledDate: action.scheduledDate,
                 dates: action.dates ?? [],
-                replaceWorkoutIds: action.replaceWorkoutIds ?? []
+                replaceWorkoutIds: action.replaceWorkoutIds
             )))
         }
         if let complete = event.asAssistantTurnComplete {

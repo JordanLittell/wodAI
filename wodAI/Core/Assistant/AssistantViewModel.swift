@@ -278,7 +278,12 @@ final class AssistantViewModel: ObservableObject {
     @Published private(set) var revealedSessionId: String?
     /// Shown while the server is still planning this athlete's week (right
     /// after onboarding), or briefly if that planning failed.
-    @Published private(set) var planningNotice: PlanningNotice?
+    @Published private(set) var planningNotice: PlanningNotice? {
+        didSet { if planningNotice == nil { replanDays = nil } }
+    }
+    /// The days a re-plan from the trainer chat is programming, while it runs.
+    /// Only these can show as being built; nil for a full week's planning.
+    private var replanDays: Set<Date>?
     /// Sections the athlete opened or closed, by session id. Others follow
     /// `isExpanded`'s defaults.
     @Published private var expansion: [String: Bool] = [:]
@@ -298,6 +303,8 @@ final class AssistantViewModel: ObservableObject {
         // Writing to a request can take longer before the first event.
         WorkoutGenerationStream(stallTimeout: 90).events(request: $0, scheduledDate: $1)
     }
+    /// Starts re-planning the picked days on the server (Program My Week).
+    var replanWeek: (_ dates: [String], _ request: String?, _ replaceWorkoutIds: [String]?) async throws -> Void = AssistantViewModel.performReplan
     /// Deletes a session on the server.
     var deleteWorkout: (_ id: String) async throws -> Void = AssistantViewModel.performDelete
     /// The latest background planning run; nil when there's never been one.
@@ -354,6 +361,7 @@ final class AssistantViewModel: ObservableObject {
     /// is only known once it finishes; until then every one may be coming.
     func isGenerating(_ day: Date) -> Bool {
         let day = week.calendar.startOfDay(for: day)
+        if let replanDays, !replanDays.contains(day) { return false }
         return planningNotice == .planning
             && currentWeek.contains(day)
             && day >= currentWeek.today
@@ -723,6 +731,42 @@ final class AssistantViewModel: ObservableObject {
         }
     }
 
+    /// Re-plans the days picked in the trainer chat (Program My Week) in the
+    /// background, then watches the run as after onboarding: the banner,
+    /// "Building this session…" on picked days left empty, and a reload as
+    /// each day lands. The server replaces each day's old sessions once its
+    /// new one is saved. `replaceWorkoutIds` goes through as is (nil: the
+    /// server's default; []: none).
+    func replan(dates: [String], request: String?, replaceWorkoutIds: [String]?) {
+        replanDays = Set(dates.compactMap(localDay))
+        planningNotice = .planning
+        Task { [weak self, replanWeek] in
+            do {
+                try await replanWeek(dates, request, replaceWorkoutIds)
+                self?.watchPlanning()
+            } catch {
+                guard let self else { return }
+                self.planningNotice = .failed("We couldn't start planning those days. Please try again.")
+                try? await Task.sleep(for: .seconds(6))
+                if case .failed = self.planningNotice { self.planningNotice = nil }
+            }
+        }
+    }
+
+    /// Generates a session from what the athlete asked the trainer for, on
+    /// today, whichever day is showing.
+    func createSessionToday(request: String) {
+        showToday()
+        createSession(request: request)
+    }
+
+    /// "YYYY-MM-DD" as that local day.
+    private func localDay(_ date: String) -> Date? {
+        let parts = date.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        return currentWeek.calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
+    }
+
     /// Stops a new session streaming in; its placeholder is removed.
     func cancelNewSession() {
         importTask?.cancel()
@@ -768,6 +812,32 @@ final class AssistantViewModel: ObservableObject {
                 self.sessions[day] = restored
                 self.expansion[id] = wasExpanded
                 self.errorMessage = "Couldn't delete that session. Please try again."
+            }
+        }
+    }
+
+    private static func performReplan(dates: [String], request: String?, replaceWorkoutIds: [String]?) async throws {
+        let mutation = ReplanWeekMutation(
+            timezone: TimeZone.current.identifier,
+            dates: .some(dates),
+            request: request.map { .some($0) } ?? .none,
+            replaceWorkoutIds: replaceWorkoutIds.map { .some($0) } ?? .none
+        )
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            Network.shared.client.perform(mutation: mutation) { result in
+                switch result {
+                case let .success(graphQLResult):
+                    if let errors = graphQLResult.errors, !errors.isEmpty {
+                        let messages = errors.compactMap(\.message).joined(separator: "; ")
+                        TelemetryService.captureGraphQLErrors(messages: messages, operation: "ReplanWeek")
+                        continuation.resume(throwing: WorkoutGenerationError.server(errors.first?.message ?? "Couldn't plan those days."))
+                    } else {
+                        continuation.resume()
+                    }
+                case let .failure(error):
+                    TelemetryService.captureError(error, tags: ["operation": "ReplanWeek"])
+                    continuation.resume(throwing: error)
+                }
             }
         }
     }

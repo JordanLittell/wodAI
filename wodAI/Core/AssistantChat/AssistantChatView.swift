@@ -106,6 +106,7 @@ struct AssistantChatView: View {
                             message: message,
                             tappable: tappable(for: message),
                             onTap: viewModel.tap,
+                            onPickDays: viewModel.pickDays,
                             onRetry: retry(for: message)
                         )
                         .id(message.id)
@@ -139,7 +140,7 @@ struct AssistantChatView: View {
 
     private var inputBar: some View {
         HStack(alignment: .bottom, spacing: 8) {
-            TextField("Message your trainer…", text: $viewModel.draft, axis: .vertical)
+            TextField("Message your coach…", text: $viewModel.draft, axis: .vertical)
                 .lineLimit(1...5)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
@@ -164,6 +165,7 @@ private struct ChatMessageRow: View {
     /// The suggestions that can still be tapped; empty for older turns.
     let tappable: [ChatSuggestion]
     let onTap: (ChatSuggestion) -> Void
+    let onPickDays: ([String]) -> Void
     /// Offered under the latest message when it's an error.
     var onRetry: (() -> Void)? = nil
 
@@ -185,8 +187,12 @@ private struct ChatMessageRow: View {
                         }
                     }
             }
-            if !message.suggestions.isEmpty {
-                SuggestionChips(suggestions: message.suggestions, tappable: tappable, onTap: onTap)
+            let chips = message.suggestions.filter { $0.pickableDates == nil }
+            if !chips.isEmpty {
+                SuggestionChips(suggestions: chips, tappable: tappable, onTap: onTap)
+            }
+            ForEach(message.suggestions.filter { $0.pickableDates != nil }) { picker in
+                DayPicker(dates: picker.pickableDates ?? [], enabled: tappable.contains(picker), onDone: onPickDays)
             }
             if message.isError, let onRetry {
                 Button(action: onRetry) {
@@ -203,7 +209,8 @@ private struct ChatMessageRow: View {
 }
 
 /// Wraps onto as many lines as it needs. Chips of an answered turn stay
-/// visible, dimmed.
+/// visible, in quiet colors (fading them out left them unreadable in dark
+/// mode).
 private struct SuggestionChips: View {
     let suggestions: [ChatSuggestion]
     let tappable: [ChatSuggestion]
@@ -216,17 +223,74 @@ private struct SuggestionChips: View {
                 Button { onTap(suggestion) } label: {
                     Text(suggestion.label)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundColor(Color.brandPrimary)
+                        .foregroundColor(enabled ? Color.brandPrimary : Color("SecondaryText"))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 9)
                         .background(Capsule().fill(Color("Surface")))
-                        .overlay(Capsule().stroke(Color.brandPrimary.opacity(0.6), lineWidth: 1))
+                        .overlay(Capsule().stroke(enabled ? Color.brandPrimary.opacity(0.6) : Color("Border"), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
                 .disabled(!enabled)
-                .opacity(enabled ? 1 : 0.45)
             }
         }
+    }
+}
+
+/// The days the coach can program, to pick any of (Program My Week). Done
+/// sends them as the athlete's reply.
+private struct DayPicker: View {
+    let dates: [String]
+    let enabled: Bool
+    let onDone: ([String]) -> Void
+
+    @State private var picked: Set<String> = []
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            LazyVGrid(columns: columns, spacing: 8) {
+                ForEach(dates, id: \.self) { date in
+                    let isPicked = picked.contains(date)
+                    Button {
+                        if isPicked { picked.remove(date) } else { picked.insert(date) }
+                    } label: {
+                        VStack(spacing: 2) {
+                            Text(ChatTranscript.weekdayLabel(date))
+                                .font(.caption.weight(.semibold))
+                            Text(ChatTranscript.dayOfMonth(date))
+                                .font(.body.weight(.semibold).monospacedDigit())
+                        }
+                        .foregroundColor(isPicked ? .white : Color("PrimaryText"))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(isPicked ? Color.brandPrimary : Color("Surface"))
+                        )
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color("Border"), lineWidth: isPicked ? 0 : 1))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(ChatTranscript.dayLabel(date))
+                    .accessibilityAddTraits(isPicked ? .isSelected : [])
+                }
+            }
+            Button {
+                onDone(dates.filter(picked.contains))
+            } label: {
+                Text(picked.isEmpty ? "Pick days to plan" : "Plan \(picked.count) day\(picked.count == 1 ? "" : "s")")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(picked.isEmpty ? Color("SecondaryText") : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Capsule().fill(picked.isEmpty ? Color("Surface") : Color.brandPrimary))
+                    .overlay(Capsule().stroke(Color("Border"), lineWidth: picked.isEmpty ? 1 : 0))
+            }
+            .buttonStyle(.plain)
+            .disabled(picked.isEmpty)
+        }
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.6)
     }
 }
 
