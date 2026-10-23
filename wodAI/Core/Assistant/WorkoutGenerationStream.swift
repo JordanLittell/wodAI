@@ -78,7 +78,7 @@ struct WorkoutGenerationStream {
         ) { data in
             let event = data.workoutGeneration
             if let failed = event.asGenerationFailed { return .failed(failed.message) }
-            return Self.event(from: event).map(Step.event) ?? .skip
+            return Self.step(Self.event(from: event))
         }
     }
 
@@ -93,71 +93,33 @@ struct WorkoutGenerationStream {
         ) { data in
             let event = data.whiteboardImport
             if let failed = event.asGenerationFailed { return .failed(failed.message) }
-            return Self.event(from: event).map(Step.event) ?? .skip
+            return Self.step(Self.event(from: event))
         }
     }
 
-    /// What one subscription result means for the stream.
-    private enum Step {
-        case event(GenerationEvent)
-        case failed(String)
-        /// An event type this build doesn't know; skipped rather than failing.
-        case skip
+    /// Maps one result: `complete` ends the stream.
+    private static func step(_ event: GenerationEvent?) -> SubscriptionStep<GenerationEvent> {
+        switch event {
+        case let .complete(session)?: return .last(.complete(session))
+        case let event?: return .event(event)
+        case nil: return .skip
+        }
     }
 
-    /// Turns `subscription` into a stream of events that always ends: after
-    /// `complete`, on a failure, or when nothing arrives for `stallTimeout`.
     private func run<Subscription: GraphQLSubscription>(
         _ subscription: Subscription,
         operation: String,
         fallbackMessage: String,
-        step: @escaping (Subscription.Data) -> Step
+        step: @escaping (Subscription.Data) -> SubscriptionStep<GenerationEvent>
     ) -> AsyncThrowingStream<GenerationEvent, Error> {
-        AsyncThrowingStream { continuation in
-            // Results and the stall timer share one serial queue, so a late
-            // result can't race the timer.
-            let queue = DispatchQueue(label: "wodai.workout-generation")
-            let stallTimer = StallTimer(queue: queue, interval: stallTimeout) {
-                continuation.finish(throwing: WorkoutGenerationError.stalled)
-            }
-
-            Network.shared.connectSubscriptions()
-            stallTimer.reset()
-
-            let cancellable = client.subscribe(subscription: subscription, queue: queue) { result in
-                stallTimer.reset()
-                switch result {
-                case let .success(graphQLResult):
-                    if let errors = graphQLResult.errors, !errors.isEmpty {
-                        let messages = errors.compactMap(\.message).joined(separator: "; ")
-                        TelemetryService.captureGraphQLErrors(messages: messages, operation: operation)
-                        continuation.finish(throwing: WorkoutGenerationError.server(
-                            errors.first?.message ?? fallbackMessage
-                        ))
-                        return
-                    }
-                    guard let data = graphQLResult.data else { return }
-                    switch step(data) {
-                    case let .failed(message):
-                        continuation.finish(throwing: WorkoutGenerationError.server(message))
-                    case let .event(event):
-                        continuation.yield(event)
-                        if case .complete = event { continuation.finish() }
-                    case .skip:
-                        break
-                    }
-
-                case let .failure(error):
-                    TelemetryService.captureError(error, tags: ["operation": operation])
-                    continuation.finish(throwing: error)
-                }
-            }
-
-            continuation.onTermination = { _ in
-                cancellable.cancel()
-                stallTimer.cancel()
-            }
-        }
+        subscriptionStream(
+            subscription,
+            client: client,
+            operation: operation,
+            fallbackMessage: fallbackMessage,
+            stallTimeout: stallTimeout,
+            step: step
+        )
     }
 
     // MARK: - Mapping
@@ -257,32 +219,6 @@ extension WorkoutGenerationStream {
             tags: [],
             name: name
         )
-    }
-}
-
-/// Fires `onStall` when `reset()` hasn't been called for `interval`.
-private final class StallTimer {
-    private let queue: DispatchQueue
-    private let interval: TimeInterval
-    private let onStall: () -> Void
-    private var pending: DispatchWorkItem?
-
-    init(queue: DispatchQueue, interval: TimeInterval, onStall: @escaping () -> Void) {
-        self.queue = queue
-        self.interval = interval
-        self.onStall = onStall
-    }
-
-    /// Call on `queue`, or before any result can arrive.
-    func reset() {
-        pending?.cancel()
-        let item = DispatchWorkItem(block: onStall)
-        pending = item
-        queue.asyncAfter(deadline: .now() + interval, execute: item)
-    }
-
-    func cancel() {
-        queue.async { [weak self] in self?.pending?.cancel() }
     }
 }
 
