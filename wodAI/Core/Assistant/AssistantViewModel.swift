@@ -320,6 +320,9 @@ final class AssistantViewModel: ObservableObject {
     private var reloadAfterAdding = false
     /// Only touched on the main actor, except to cancel it in `deinit`.
     nonisolated(unsafe) private var importTask: Task<Void, Never>?
+    /// The id of the session streaming in (the placeholder's, then the saved
+    /// one's), so a week fetch that was already under way keeps it.
+    private var addingSessionId: String?
 
     /// Starts on `week`'s today, which should be in it.
     init(week: AssistantWeek = AssistantWeek(), sessions: [Date: [AssistantSession]] = [:]) {
@@ -497,6 +500,15 @@ final class AssistantViewModel: ObservableObject {
                 guard let date = session.scheduledDate, week.contains(date) else { continue }
                 sessions[week.calendar.startOfDay(for: date), default: []].append(session)
             }
+            // A fetch begun before a new session started streaming in doesn't
+            // have it; keep it, or later events have nothing to replace.
+            if let addingId = self.addingSessionId, !found.contains(where: { $0.id == addingId }) {
+                for (day, list) in self.sessions where week.contains(day) {
+                    if let adding = list.first(where: { $0.id == addingId }) {
+                        sessions[day, default: []].append(adding)
+                    }
+                }
+            }
             self.sessions = sessions
             self.loadedWeeks.insert(week.first)
         }
@@ -621,6 +633,7 @@ final class AssistantViewModel: ObservableObject {
         sessions[day, default: []].append(Self.pendingSession(id: pendingId, kind: kind, day: day))
         expandOnly(pendingId, on: day)
         focusedSessionId = pendingId
+        addingSessionId = pendingId
         let events = start()
 
         importTask = Task { [weak self] in
@@ -638,6 +651,7 @@ final class AssistantViewModel: ObservableObject {
                     }
                     self.replaceSession(currentId, with: session, on: day)
                     currentId = session.id
+                    self.addingSessionId = session.id
                 }
                 guard let self else { return }
                 if !progress.isComplete {
@@ -650,6 +664,7 @@ final class AssistantViewModel: ObservableObject {
                 self.failNewSession(currentId, kind, on: day, message: error is CancellationError ? nil : error.localizedDescription)
             }
             self?.isAddingSession = false
+            self?.addingSessionId = nil
             self?.importTask = nil
             if let self, self.reloadAfterAdding {
                 self.reloadAfterAdding = false
