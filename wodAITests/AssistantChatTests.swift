@@ -161,6 +161,28 @@ struct AssistantChatTests {
         #expect(handed == ["whiteboard"])
     }
 
+    @MainActor @Test func theTrainerCanExplainWhyAnOptionCannotRunYet() async {
+        let viewModel = AssistantChatViewModel(
+            loadGreeting: { ChatGreeting(text: "Hi", suggestions: [whiteboard]) },
+            defaults: defaults()
+        )
+        await viewModel.load()
+        viewModel.onClientAction = { _ in viewModel.say("A session is still coming in.") }
+
+        viewModel.tap(whiteboard)
+
+        #expect(viewModel.transcript.messages.map(\.text) == ["Hi", "A session is still coming in."])
+        #expect(viewModel.transcript.messages.last?.author == .trainer)
+        #expect(!viewModel.transcript.isAwaitingTrainer)
+    }
+
+    @Test func aNoteWaitsForTheTrainersReply() {
+        var chat = greeted()
+        chat.tap("program_week")
+        chat.appendTrainerNote("ignored")
+        #expect(chat.messages.count == 2)
+    }
+
     @Test func aFailedTurnCanBeRetriedWithoutTheErrorOrPartialReply() {
         var chat = greeted()
         chat.tap("write_today")
