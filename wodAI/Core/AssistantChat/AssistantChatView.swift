@@ -65,7 +65,7 @@ struct AssistantChatView: View {
                 .frame(width: 36, height: 5)
                 .padding(.top, 8)
             HStack {
-                Text("Your trainer")
+                Text("Coach")
                     .font(.headline)
                     .foregroundColor(Color("PrimaryText"))
                 Spacer()
@@ -284,7 +284,7 @@ private struct TypingIndicator: View {
                 phase = (phase + 1) % 3
             }
         }
-        .accessibilityLabel("Your trainer is typing")
+        .accessibilityLabel("Your coach is typing")
     }
 }
 

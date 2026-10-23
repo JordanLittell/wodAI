@@ -198,6 +198,13 @@ struct ChatTranscript: Equatable {
         messages.filter { !$0.isError && !$0.text.isEmpty }
     }
 
+    /// A note from the trainer that isn't a reply to a turn (the app
+    /// explaining why an option can't run yet).
+    mutating func appendTrainerNote(_ text: String) {
+        guard !isAwaitingTrainer else { return }
+        messages.append(ChatMessage(author: .trainer, text: text))
+    }
+
     private mutating func markLastAnswered() {
         guard let last = messages.indices.last, messages[last].author == .trainer else { return }
         messages[last].answered = true
