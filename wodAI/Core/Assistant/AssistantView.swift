@@ -32,8 +32,10 @@ struct AssistantView: View {
             WeekStrip(
                 week: viewModel.week,
                 selectedDay: viewModel.selectedDay,
+                slideEdge: slideEdge,
                 hasSession: viewModel.hasSession(on:),
-                onSelect: select
+                onSelect: select,
+                onChangeWeek: changeWeek
             )
             Divider()
 
@@ -124,6 +126,12 @@ struct AssistantView: View {
                     .foregroundColor(Color("PrimaryText"))
                     .lineLimit(1)
             }
+            if viewModel.selectedDay != viewModel.week.today {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Today", action: showToday)
+                        .accessibilityIdentifier("todayButton")
+                }
+            }
         }
         .navigationDestination(for: AssistantBlockRoute.self) { route in
             // Reads the live session, so blocks pick up later changes (ids,
@@ -132,18 +140,25 @@ struct AssistantView: View {
         }
     }
 
-    /// The month of the day being shown, e.g. "October". A week can span two
-    /// months, so it follows the selected day.
+    /// The month of the day being shown, e.g. "October", with the year when
+    /// it isn't this one ("December 2025"). A week can span two months, so it
+    /// follows the selected day.
     private var title: String {
-        viewModel.selectedDay.formatted(.dateTime.month(.wide))
+        let day = viewModel.selectedDay
+        let calendar = viewModel.week.calendar
+        if calendar.isDate(day, equalTo: viewModel.week.today, toGranularity: .year) {
+            return day.formatted(.dateTime.month(.wide))
+        }
+        return day.formatted(.dateTime.month(.wide).year())
     }
 
     @ViewBuilder
     private var dayContent: some View {
         VStack(alignment: .leading, spacing: 24) {
             let isGenerating = viewModel.isGenerating(viewModel.selectedDay)
-            // The generating card says the same for this day.
-            if let notice = viewModel.planningNotice, !(isGenerating && notice == .planning) {
+            // The generating card says the same for this day, and planning
+            // only fills in this week.
+            if let notice = viewModel.planningNotice, viewModel.week.isCurrent, !(isGenerating && notice == .planning) {
                 planningBanner(notice)
             }
 
@@ -183,7 +198,7 @@ struct AssistantView: View {
                     .animation(.easeOut(duration: 0.25), value: session.blocks.map(\.id))
                 }
             } else if viewModel.isLoading || (!viewModel.hasLoaded && viewModel.errorMessage == nil) {
-                placeholder(icon: nil, title: "Loading this week…", detail: nil)
+                placeholder(icon: nil, title: viewModel.week.isCurrent ? "Loading this week…" : "Loading…", detail: nil)
             } else if isGenerating {
                 generatingCard
             } else if viewModel.hasLoaded {
@@ -302,8 +317,9 @@ struct AssistantView: View {
 
     // MARK: - Day navigation
 
-    /// Swipe left for the next day, right for the previous one. A drag only
-    /// counts when it's mostly sideways and long enough to be deliberate.
+    /// Swipe left for the next day, right for the previous one, carrying on
+    /// into the next or previous week. A drag only counts when it's mostly
+    /// sideways and long enough to be deliberate.
     private var daySwipe: some Gesture {
         DragGesture(minimumDistance: 30)
             .onEnded { value in
@@ -322,12 +338,24 @@ struct AssistantView: View {
 
     private func move(forward: Bool) {
         slideEdge = forward ? .trailing : .leading
-        let moved = withAnimation(.easeInOut(duration: 0.25)) {
+        withAnimation(.easeInOut(duration: 0.25)) {
             forward ? viewModel.goForward() : viewModel.goBack()
         }
-        // The week is the limit: a light tap says there's nothing further.
-        if !moved {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    /// Moves a week from a swipe on the strip, keeping the day of the week.
+    private func changeWeek(_ offset: Int) {
+        slideEdge = offset > 0 ? .trailing : .leading
+        withAnimation(.easeInOut(duration: 0.25)) {
+            viewModel.showWeek(offset: offset)
+        }
+    }
+
+    private func showToday() {
+        let today = viewModel.week.today
+        slideEdge = today > viewModel.selectedDay ? .trailing : .leading
+        withAnimation(.easeInOut(duration: 0.25)) {
+            viewModel.showToday()
         }
     }
 

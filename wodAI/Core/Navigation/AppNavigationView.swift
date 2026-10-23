@@ -61,7 +61,15 @@ struct AppNavigationView: View {
         case .workout:
             // The week's sessions. Metcons open only from a session block
             // (or a saved workout), never from the menu.
+            #if DEBUG
+            if UITestMode.isActive {
+                AssistantView(viewModel: .uiTesting())
+            } else {
+                AssistantView()
+            }
+            #else
             AssistantView()
+            #endif
         case .saved:
             SavedWorkoutsView()
         case .activity:

@@ -7,16 +7,41 @@ import SwiftUI
 
 /// The Assistant page's week: one column per day with its weekday initial and
 /// date. The selected day is filled, today is drawn in the brand color, and a
-/// dot marks days that have a session.
+/// dot marks days that have a session. Swiping it sideways moves a week.
 struct WeekStrip: View {
     let week: AssistantWeek
     let selectedDay: Date
+    /// Where a new week slides in from: trailing when moving forward.
+    let slideEdge: Edge
     let hasSession: (Date) -> Bool
     let onSelect: (Date) -> Void
+    /// Called with +1 for the next week, -1 for the previous one.
+    let onChangeWeek: (Int) -> Void
 
     var body: some View {
+        ZStack {
+            days
+                // A new identity per week so changing weeks slides the row.
+                .id(week.first)
+                .transition(.asymmetric(
+                    insertion: .move(edge: slideEdge),
+                    removal: .move(edge: slideEdge == .trailing ? .leading : .trailing)
+                ))
+        }
+        .clipped()
+        .contentShape(Rectangle())
+        // High priority so a sideways drag that starts on a day changes the
+        // week rather than being lost to the day's button; a tap still selects.
+        .highPriorityGesture(weekSwipe)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("weekStrip")
+        .accessibilityAction(named: "Previous week") { onChangeWeek(-1) }
+        .accessibilityAction(named: "Next week") { onChangeWeek(1) }
+    }
+
+    private var days: some View {
         HStack(spacing: 0) {
-            ForEach(week.days, id: \.self) { day in
+            ForEach(Array(week.days.enumerated()), id: \.element) { index, day in
                 Button {
                     onSelect(day)
                 } label: {
@@ -24,10 +49,22 @@ struct WeekStrip: View {
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity)
+                .accessibilityIdentifier("day-\(index)")
             }
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
+    }
+
+    /// Swipe left for the next week, right for the previous one, when the
+    /// drag is mostly sideways and long enough to be deliberate.
+    private var weekSwipe: some Gesture {
+        DragGesture(minimumDistance: 20)
+            .onEnded { value in
+                let dx = value.translation.width
+                guard abs(dx) > abs(value.translation.height), abs(dx) > 40 else { return }
+                onChangeWeek(dx < 0 ? 1 : -1)
+            }
     }
 
     private func column(_ day: Date) -> some View {
