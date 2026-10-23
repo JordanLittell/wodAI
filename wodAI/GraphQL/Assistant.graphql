@@ -43,3 +43,13 @@ subscription AssistantTurn($input: AssistantTurnInput!) {
     }
   }
 }
+
+# Program My Week: re-plans exactly the picked days in the background,
+# replacing the sessions on them (by default the programmed ones; with
+# replaceWorkoutIds, exactly those). Progress comes from WeeklyPlanStatus.
+mutation ReplanWeek($timezone: String!, $dates: [String!], $request: String, $replaceWorkoutIds: [String!]) {
+  startWeeklyPlan(timezone: $timezone, dates: $dates, request: $request, replaceWorkoutIds: $replaceWorkoutIds) {
+    id
+    status
+  }
+}
