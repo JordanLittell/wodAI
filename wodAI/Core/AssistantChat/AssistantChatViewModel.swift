@@ -97,6 +97,9 @@ final class AssistantChatViewModel: ObservableObject {
         case .pickDays, .unsupported:
             break // the day picker answers through `pickDays`
         }
+        case .unsupported:
+            break
+        }
     }
 
     /// The days picked in a Program My Week day picker, sent as the athlete's

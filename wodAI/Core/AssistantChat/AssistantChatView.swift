@@ -202,6 +202,14 @@ private struct ChatMessageRow: View {
                 }
                 .buttonStyle(.plain)
             }
+            if message.isError, let onRetry {
+                Button(action: onRetry) {
+                    Label("Try again", systemImage: "arrow.clockwise")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(Color.brandPrimary)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .frame(maxWidth: .infinity, alignment: message.author == .athlete ? .trailing : .leading)
         .padding(message.author == .athlete ? .leading : .trailing, 40)
