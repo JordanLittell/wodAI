@@ -19,13 +19,18 @@ struct AssistantView: View {
     /// The session waiting on the delete confirmation.
     @State private var pendingDeletion: AssistantSession?
     @State private var swipeGuard = DaySwipeGuard()
+    /// Builds the trainer chat each time it opens; UI tests pass one that
+    /// stays off the network.
+    private let makeChat: @MainActor () -> AssistantChatViewModel
 
     init() {
         self._viewModel = StateObject(wrappedValue: AssistantViewModel())
+        self.makeChat = { AssistantChatViewModel() }
     }
 
-    init(viewModel: AssistantViewModel) {
+    init(viewModel: AssistantViewModel, makeChat: @escaping @MainActor () -> AssistantChatViewModel = { AssistantChatViewModel() }) {
         self._viewModel = StateObject(wrappedValue: viewModel)
+        self.makeChat = makeChat
     }
 
     var body: some View {
@@ -224,7 +229,7 @@ struct AssistantView: View {
     private func openChat() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         viewModel.reveal(nil)
-        let chat = AssistantChatViewModel()
+        let chat = makeChat()
         chat.onClientAction = { suggestion in runClientAction(suggestion, from: chat) }
         withAnimation(.spring(duration: 0.35)) { self.chat = chat }
     }

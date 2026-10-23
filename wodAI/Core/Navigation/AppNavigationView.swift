@@ -63,7 +63,7 @@ struct AppNavigationView: View {
             // (or a saved workout), never from the menu.
             #if DEBUG
             if UITestMode.isActive {
-                AssistantView(viewModel: .uiTesting())
+                AssistantView(viewModel: .uiTesting(), makeChat: AssistantChatViewModel.uiTesting)
             } else {
                 AssistantView()
             }

@@ -28,14 +28,14 @@ final class AssistantChatUITests: XCTestCase {
 
         button.tap()
         // The bundled greeting shows at once, whatever the network does.
-        XCTAssertTrue(app.staticTexts["Your trainer"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Coach"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Import Workout From Whiteboard"].waitForExistence(timeout: 5))
         XCTAssertFalse(button.exists)
         attachScreenshot("A5-chat-open")
 
         app.buttons["Close assistant"].tap()
         XCTAssertTrue(button.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.staticTexts["Your trainer"].exists)
+        XCTAssertFalse(app.staticTexts["Coach"].exists)
     }
 
     private func attachScreenshot(_ name: String) {
