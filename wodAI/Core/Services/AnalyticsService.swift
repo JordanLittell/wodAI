@@ -37,6 +37,11 @@ enum AnalyticsService {
         registerBuildProperties()
     }
 
+    /// Does nothing until `initialize` has run with a key.
+    static func capture(_ event: AnalyticsEvent) {
+        PostHogSDK.shared.capture(event.name, properties: event.properties)
+    }
+
     /// Sent with every event, so Debug builds can be filtered out of the metrics.
     private static func registerBuildProperties() {
         PostHogSDK.shared.register(["is_debug_build": !AppConfig.isProduction])

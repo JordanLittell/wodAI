@@ -232,10 +232,12 @@ struct AssistantView: View {
         let chat = makeChat()
         chat.onClientAction = { suggestion in runClientAction(suggestion, from: chat) }
         chat.onAction = { action in runAction(action, from: chat) }
+        chat.recordOpen()
         withAnimation(.spring(duration: 0.35)) { self.chat = chat }
     }
 
     private func closeChat() {
+        chat?.recordClose()
         withAnimation(.spring(duration: 0.35)) { chat = nil }
     }
 
@@ -246,10 +248,15 @@ struct AssistantView: View {
             chat.say("A session is still coming in. Give it a moment, then try again.")
             return
         }
-        closeChat()
         switch suggestion.action {
-        case .openWhiteboardScanner: startAdding(.importWhiteboard)
-        case .openCreateSheet: startAdding(.createWithAI)
+        case .openWhiteboardScanner:
+            chat.recordHandOff("open_whiteboard_scanner")
+            closeChat()
+            startAdding(.importWhiteboard)
+        case .openCreateSheet:
+            chat.recordHandOff("open_create_sheet")
+            closeChat()
+            startAdding(.createWithAI)
         case .reply, .pickDays, .unsupported: break
         }
     }
@@ -267,6 +274,7 @@ struct AssistantView: View {
                 chat.say("A session is still coming in. Give it a moment, then ask me again.")
                 return
             }
+            chat.recordHandOff("generate_session")
             closeChat()
             viewModel.dismissAddError()
             withAnimation(.spring(duration: 0.35)) {
@@ -278,6 +286,7 @@ struct AssistantView: View {
                 chat.say("I'm still planning your week. Give it a few minutes, then ask me again.")
                 return
             }
+            chat.recordHandOff("plan_week")
             closeChat()
             viewModel.replan(dates: action.dates, request: action.request, replaceWorkoutIds: action.replaceWorkoutIds)
         case .openWhiteboardScanner:
@@ -285,6 +294,7 @@ struct AssistantView: View {
                 chat.say("A session is still coming in. Give it a moment, then try again.")
                 return
             }
+            chat.recordHandOff("open_whiteboard_scanner")
             closeChat()
             startAdding(.importWhiteboard)
         case .unsupported:
