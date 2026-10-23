@@ -125,6 +125,7 @@ class AuthState: ObservableObject {
         currentUserId = userId
         if let userId {
             TelemetryService.identify(userId: String(userId))
+            AnalyticsService.identify(userId: String(userId))
         }
 
         // Check provisioning status after authentication
@@ -140,6 +141,7 @@ class AuthState: ObservableObject {
         isProvisioned = false
         needsProvisioning = false
         TelemetryService.clearIdentity()
+        AnalyticsService.reset()
 
         // Clear UserDefaults
         UserDefaults.standard.removeObject(forKey: tokenKey)
