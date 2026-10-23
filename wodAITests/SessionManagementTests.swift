@@ -82,7 +82,9 @@ struct SessionManagementTests {
         viewModel.reveal("b")
         #expect(viewModel.revealedSessionId == "b")
 
-        viewModel.goForward() || viewModel.goBack()
+        // Today may be the week's last day, so moving on can load next week.
+        viewModel.weekSessions = { _ in [] }
+        viewModel.goForward()
         #expect(viewModel.revealedSessionId == nil)
     }
 

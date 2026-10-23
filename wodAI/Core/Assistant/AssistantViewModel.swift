@@ -2,7 +2,8 @@
 //  AssistantViewModel.swift
 //  wodAI
 //
-//  Assistant: the current week's sessions, one day at a time. A day can hold
+//  Assistant: a week's sessions, one day at a time, starting on this week
+//  and swiping back or forward through any other. A day can hold
 //  several sessions (the programmed one plus any whiteboard imports), each
 //  laid out block by block — "Block A - …", "Block B - …" in session order.
 //  Strength blocks are written like a whiteboard; HIIT blocks reuse the feed's
@@ -241,20 +242,28 @@ enum PlanningNotice: Equatable {
 }
 
 final class AssistantViewModel: ObservableObject {
-    /// This week's sessions, keyed by local start-of-day, in the order the
-    /// server lists them (imports added later go last). Days with nothing
-    /// scheduled have no entry.
+    /// Every loaded week's sessions, keyed by local start-of-day, in the
+    /// order the server lists them (imports added later go last). Days with
+    /// nothing scheduled have no entry. Weeks stay here once loaded, so
+    /// swiping back to one shows it at once.
     @Published private(set) var sessions: [Date: [AssistantSession]]
     /// The day being shown. Always a day of `week`.
     @Published private(set) var selectedDay: Date {
         // Changing days hides any Delete button left showing.
         didSet { revealedSessionId = nil }
     }
-    @Published private(set) var isLoading = false
+    /// The week being shown.
+    @Published private(set) var week: AssistantWeek
+    /// Weeks (by first day) that have come back once, and weeks with a
+    /// spinner-showing fetch under way.
+    @Published private var loadedWeeks: Set<Date> = []
+    @Published private var loadingWeeks: Set<Date> = []
+    /// True while the shown week is first loading.
+    var isLoading: Bool { loadingWeeks.contains(week.first) }
     @Published private(set) var errorMessage: String?
-    /// True once the week has come back, found or not. Lets the view tell
-    /// "still looking" apart from "nothing scheduled".
-    @Published private(set) var hasLoaded = false
+    /// True once the shown week has come back, found or not. Lets the view
+    /// tell "still looking" apart from "nothing scheduled".
+    var hasLoaded: Bool { loadedWeeks.contains(week.first) }
     /// True while a new session (whiteboard import or "Create with AI")
     /// streams in. One at a time.
     @Published private(set) var isAddingSession = false
@@ -274,9 +283,11 @@ final class AssistantViewModel: ObservableObject {
     /// `isExpanded`'s defaults.
     @Published private var expansion: [String: Bool] = [:]
 
-    let week: AssistantWeek
-    private let network = Network.shared
+    /// The week containing today, which planning fills in.
+    let currentWeek: AssistantWeek
     // Server calls, swapped out in tests.
+    /// Every session scheduled in a week.
+    var weekSessions: (AssistantWeek) async throws -> [AssistantSession] = AssistantViewModel.fetchSessions
     /// Starts a whiteboard import on the server.
     var whiteboardEvents: (WhiteboardImportInput) -> AsyncThrowingStream<GenerationEvent, Error> = {
         // Reading the photo comes before the first event, so allow longer.
@@ -309,12 +320,17 @@ final class AssistantViewModel: ObservableObject {
     private var reloadAfterAdding = false
     /// Only touched on the main actor, except to cancel it in `deinit`.
     nonisolated(unsafe) private var importTask: Task<Void, Never>?
+    /// The id of the session streaming in (the placeholder's, then the saved
+    /// one's), so a week fetch that was already under way keeps it.
+    private var addingSessionId: String?
 
+    /// Starts on `week`'s today, which should be in it.
     init(week: AssistantWeek = AssistantWeek(), sessions: [Date: [AssistantSession]] = [:]) {
         self.week = week
+        self.currentWeek = week
         self.sessions = sessions
         self.selectedDay = week.today
-        self.hasLoaded = !sessions.isEmpty
+        if !sessions.isEmpty { loadedWeeks = [week.first] }
     }
 
     /// Leaving the page stops a new session streaming in, which unsubscribes
@@ -339,8 +355,8 @@ final class AssistantViewModel: ObservableObject {
     func isGenerating(_ day: Date) -> Bool {
         let day = week.calendar.startOfDay(for: day)
         return planningNotice == .planning
-            && week.contains(day)
-            && day >= week.today
+            && currentWeek.contains(day)
+            && day >= currentWeek.today
             && (sessions[day] ?? []).isEmpty
     }
 
@@ -383,90 +399,145 @@ final class AssistantViewModel: ObservableObject {
         expansion[id] = true
     }
 
-    // MARK: - Navigation (clamped to this week)
+    // MARK: - Navigation
 
-    var canGoForward: Bool { week.day(after: selectedDay) != nil }
-    var canGoBack: Bool { week.day(before: selectedDay) != nil }
-
-    /// Moves one day later. Returns false at the end of the week.
-    @discardableResult
-    func goForward() -> Bool {
-        guard let next = week.day(after: selectedDay) else { return false }
-        selectedDay = next
-        return true
+    /// Moves one day later, into the next week after the last day.
+    func goForward() {
+        show(week.day(after: selectedDay) ?? week.shifted(by: 1).first)
     }
 
-    /// Moves one day earlier. Returns false at the start of the week.
-    @discardableResult
-    func goBack() -> Bool {
-        guard let previous = week.day(before: selectedDay) else { return false }
-        selectedDay = previous
-        return true
+    /// Moves one day earlier, into the previous week before the first day.
+    func goBack() {
+        show(week.day(before: selectedDay) ?? week.shifted(by: -1).last)
     }
 
+    /// Moves `offset` weeks, to the same day of the week.
+    func showWeek(offset: Int) {
+        let other = week.shifted(by: offset)
+        show(other.days[week.index(of: selectedDay) ?? 0])
+    }
+
+    /// Back to today, in this week.
+    func showToday() {
+        show(currentWeek.today)
+    }
+
+    /// Shows any day, moving to its week if it's in another.
     func select(_ day: Date) {
-        guard week.contains(day) else { return }
-        selectedDay = week.calendar.startOfDay(for: day)
+        show(week.calendar.startOfDay(for: day))
+    }
+
+    private func show(_ day: Date) {
+        let other = week.week(containing: day)
+        if other != week {
+            week = other
+            // An error belongs to the week that failed to load.
+            errorMessage = nil
+            loadIfNeeded(other)
+        }
+        selectedDay = day
     }
 
     // MARK: - Loading
 
-    /// Fetches every session scheduled this week in one query. Only runs
-    /// until it has succeeded once.
+    /// Fetches every session scheduled in the shown week in one query, and
+    /// watches planning. Only fetches until the week has loaded once.
     func loadWeek() {
-        guard !hasLoaded, !isLoading else { return }
-        isLoading = true
-        errorMessage = nil
-        fetchWeek(quietly: false)
+        if !hasLoaded { fetchWeek(week, quietly: false) }
         watchPlanning()
     }
 
-    /// Fetches the week again without a spinner, keeping the selected day.
-    /// Waits while a new session streams in, since the fetch replaces them all.
-    /// `then` runs once the fetch is back (or at once, if it had to wait).
-    func reloadWeek(then: (() -> Void)? = nil) {
+    /// A week's first visit fetches it with a spinner; a later one refreshes
+    /// it quietly, since its sessions may have changed (a result edited in
+    /// Activity, a day planned).
+    private func loadIfNeeded(_ week: AssistantWeek) {
+        guard !loadingWeeks.contains(week.first) else { return }
+        if loadedWeeks.contains(week.first) {
+            reloadWeek(week)
+        } else {
+            fetchWeek(week, quietly: false)
+        }
+    }
+
+    /// Fetches a week (by default this one) again without a spinner,
+    /// keeping the selected day. Waits while a new session streams in, since
+    /// the fetch replaces the week's sessions. `then` runs once the fetch is
+    /// back (or at once, if it had to wait).
+    func reloadWeek(_ week: AssistantWeek? = nil, then: (() -> Void)? = nil) {
         guard importTask == nil else {
             reloadAfterAdding = true
             then?()
             return
         }
-        fetchWeek(quietly: true, then: then)
+        fetchWeek(week ?? currentWeek, quietly: true, then: then)
     }
 
     /// `quietly`: a background refresh, which shows no spinner and no error.
     /// `then` runs on the main actor when the fetch is back, whatever it found.
-    private func fetchWeek(quietly: Bool, then: (() -> Void)? = nil) {
-        let week = week
-        network.client.fetch(
-            query: WeekSessionsQuery(
-                startDate: week.serverArgument(for: week.first),
-                endDate: week.serverArgument(for: week.last)
-            ),
-            cachePolicy: .fetchIgnoringCacheCompletely
-        ) { [weak self] result in
-            Task { @MainActor [weak self] in
-                defer { then?() }
+    /// Replaces only `week`'s days, so a late answer can't touch another week.
+    private func fetchWeek(_ week: AssistantWeek, quietly: Bool, then: (() -> Void)? = nil) {
+        if !quietly {
+            loadingWeeks.insert(week.first)
+            if week == self.week { errorMessage = nil }
+        }
+        Task { @MainActor [weak self, weekSessions] in
+            defer { then?() }
+            let found: [AssistantSession]
+            do {
+                found = try await weekSessions(week)
+            } catch {
                 guard let self else { return }
-                if !quietly { self.isLoading = false }
+                if !quietly {
+                    self.loadingWeeks.remove(week.first)
+                    if week == self.week { self.errorMessage = error.localizedDescription }
+                }
+                return
+            }
+            guard let self else { return }
+            if !quietly { self.loadingWeeks.remove(week.first) }
+            var sessions = self.sessions.filter { !week.contains($0.key) }
+            for session in found {
+                guard let date = session.scheduledDate, week.contains(date) else { continue }
+                sessions[week.calendar.startOfDay(for: date), default: []].append(session)
+            }
+            // A fetch begun before a new session started streaming in doesn't
+            // have it; keep it, or later events have nothing to replace.
+            if let addingId = self.addingSessionId, !found.contains(where: { $0.id == addingId }) {
+                for (day, list) in self.sessions where week.contains(day) {
+                    if let adding = list.first(where: { $0.id == addingId }) {
+                        sessions[day, default: []].append(adding)
+                    }
+                }
+            }
+            self.sessions = sessions
+            self.loadedWeeks.insert(week.first)
+        }
+    }
+
+    private static func fetchSessions(in week: AssistantWeek) async throws -> [AssistantSession] {
+        try await withCheckedThrowingContinuation { continuation in
+            Network.shared.client.fetch(
+                query: WeekSessionsQuery(
+                    startDate: week.serverArgument(for: week.first),
+                    endDate: week.serverArgument(for: week.last)
+                ),
+                cachePolicy: .fetchIgnoringCacheCompletely
+            ) { result in
                 switch result {
-                case .success(let graphQLResult):
+                case let .success(graphQLResult):
                     if let errors = graphQLResult.errors, !errors.isEmpty {
                         let messages = errors.compactMap { $0.message }.joined(separator: "; ")
                         TelemetryService.captureGraphQLErrors(messages: messages, operation: "WeekSessions")
-                        if !quietly { self.errorMessage = errors.first?.message ?? "Unable to load this week's workouts." }
+                        continuation.resume(throwing: WorkoutGenerationError.server(errors.first?.message ?? "Unable to load this week's workouts."))
                         return
                     }
-                    var sessions: [Date: [AssistantSession]] = [:]
-                    for workout in graphQLResult.data?.getWorkoutsByDateRange ?? [] {
-                        let details = workout.fragments.sessionDetails
-                        guard let day = week.localDay(fromServer: details.scheduledDate), week.contains(day) else { continue }
-                        sessions[day, default: []].append(Self.session(from: details))
+                    let sessions = (graphQLResult.data?.getWorkoutsByDateRange ?? []).map {
+                        Self.session(from: $0.fragments.sessionDetails)
                     }
-                    self.sessions = sessions
-                    self.hasLoaded = true
-                case .failure(let networkError):
-                    TelemetryService.captureError(networkError, tags: ["operation": "WeekSessions"])
-                    if !quietly { self.errorMessage = networkError.localizedDescription }
+                    continuation.resume(returning: sessions)
+                case let .failure(error):
+                    TelemetryService.captureError(error, tags: ["operation": "WeekSessions"])
+                    continuation.resume(throwing: error)
                 }
             }
         }
@@ -562,6 +633,7 @@ final class AssistantViewModel: ObservableObject {
         sessions[day, default: []].append(Self.pendingSession(id: pendingId, kind: kind, day: day))
         expandOnly(pendingId, on: day)
         focusedSessionId = pendingId
+        addingSessionId = pendingId
         let events = start()
 
         importTask = Task { [weak self] in
@@ -579,6 +651,7 @@ final class AssistantViewModel: ObservableObject {
                     }
                     self.replaceSession(currentId, with: session, on: day)
                     currentId = session.id
+                    self.addingSessionId = session.id
                 }
                 guard let self else { return }
                 if !progress.isComplete {
@@ -591,10 +664,12 @@ final class AssistantViewModel: ObservableObject {
                 self.failNewSession(currentId, kind, on: day, message: error is CancellationError ? nil : error.localizedDescription)
             }
             self?.isAddingSession = false
+            self?.addingSessionId = nil
             self?.importTask = nil
-            if self?.reloadAfterAdding == true {
-                self?.reloadAfterAdding = false
-                self?.reloadWeek()
+            if let self, self.reloadAfterAdding {
+                self.reloadAfterAdding = false
+                self.reloadWeek()
+                if self.week != self.currentWeek { self.reloadWeek(self.week) }
             }
         }
     }

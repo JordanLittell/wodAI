@@ -1,2 +1,5 @@
 wodAI.xcodeproj
 wodAiAPI/.swiftpm
+
+# Test results from scripts/run-tests.sh
+build/

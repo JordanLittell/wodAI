@@ -546,6 +546,17 @@ struct AssistantGeneratingDayTests {
         #expect(!vm.isGenerating(Self.tomorrow))
     }
 
+    @Test func onlyThisWeekIsGenerating() async throws {
+        let (vm, _) = watching { PlanStatus(state: .running) }
+        vm.weekSessions = { _ in [] }
+        for _ in 0..<100 where vm.planningNotice != .planning { try await Task.sleep(for: .milliseconds(5)) }
+
+        vm.showWeek(offset: 1)
+        #expect(!vm.isGenerating(vm.selectedDay))
+        #expect(!vm.isGenerating(Self.week.shifted(by: 1).last))
+        #expect(vm.isGenerating(Self.lastDay))
+    }
+
     @Test func skippedDaysAreEmptyOnceDone() async throws {
         var status = PlanStatus(state: .running)
         let (vm, refetches) = watching { status }

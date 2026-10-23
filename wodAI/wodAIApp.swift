@@ -14,6 +14,12 @@ struct wodAIApp: App {
     @StateObject private var authManager = AuthManager() // Backwards compatibility
 
     init() {
+        #if DEBUG
+        if UITestMode.isActive {
+            UITestMode.configure()
+            return
+        }
+        #endif
         TelemetryService.initialize()
     }
 

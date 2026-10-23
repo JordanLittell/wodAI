@@ -8,8 +8,8 @@
 import Foundation
 import WodAiAPI
 
-/// The current week as seven local calendar days, plus conversions to and
-/// from the server's date-only `scheduledDate`.
+/// A week as seven local calendar days (the current one by default), plus
+/// conversions to and from the server's date-only `scheduledDate`.
 ///
 /// The server stores a scheduled day as UTC midnight ("2026-10-01T00:00:00Z").
 /// Read as an instant, that's still Sep 30 in the Americas, so days are
@@ -18,19 +18,39 @@ struct AssistantWeek: Equatable {
     let calendar: Calendar
     /// Local start-of-day for each day of the week, in order.
     let days: [Date]
-    /// Local start-of-day for `now`.
+    /// Local start-of-day for today, which may be in another week.
     let today: Date
 
-    init(containing now: Date = Date(), calendar: Calendar = .current) {
+    /// The week containing `day`. `today` defaults to `day`.
+    init(containing day: Date = Date(), calendar: Calendar = .current, today: Date? = nil) {
         self.calendar = calendar
-        let week = ActivityWeek(containing: now, calendar: calendar)
+        let week = ActivityWeek(containing: day, calendar: calendar)
         let start = calendar.startOfDay(for: week.start)
         self.days = (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
-        self.today = calendar.startOfDay(for: now)
+        self.today = calendar.startOfDay(for: today ?? day)
     }
 
     var first: Date { days[0] }
     var last: Date { days[days.count - 1] }
+
+    /// True for the week containing today.
+    var isCurrent: Bool { contains(today) }
+
+    /// The week `weeks` later (earlier when negative), with the same today.
+    func shifted(by weeks: Int) -> AssistantWeek {
+        let anchor = calendar.date(byAdding: .weekOfYear, value: weeks, to: first) ?? first
+        return AssistantWeek(containing: anchor, calendar: calendar, today: today)
+    }
+
+    /// The week containing `day`, with the same today.
+    func week(containing day: Date) -> AssistantWeek {
+        contains(day) ? self : AssistantWeek(containing: day, calendar: calendar, today: today)
+    }
+
+    /// The day's position in its week, 0–6.
+    func index(of day: Date) -> Int? {
+        days.firstIndex(of: calendar.startOfDay(for: day))
+    }
 
     func contains(_ day: Date) -> Bool {
         days.contains(calendar.startOfDay(for: day))
