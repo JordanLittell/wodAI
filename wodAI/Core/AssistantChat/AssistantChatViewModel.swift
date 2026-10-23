@@ -71,6 +71,11 @@ final class AssistantChatViewModel: ObservableObject {
         }
     }
 
+    /// Posts a note from the trainer, e.g. why a tapped option can't run yet.
+    func say(_ text: String) {
+        transcript.appendTrainerNote(text)
+    }
+
     // MARK: Network
 
     nonisolated static func fetchGreeting() async throws -> ChatGreeting {

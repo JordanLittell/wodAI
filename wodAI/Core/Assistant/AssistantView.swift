@@ -10,7 +10,8 @@ struct AssistantView: View {
     @State private var stimulusExpanded = false
     /// Where the incoming day slides in from: trailing when moving forward.
     @State private var slideEdge: Edge = .trailing
-    @State private var isMenuOpen = false
+    /// The open trainer chat; a new one each time it opens.
+    @State private var chat: AssistantChatViewModel?
     @State private var isScanning = false
     @State private var isCreating = false
     /// The "Create with AI" text, kept so a retry starts from it.
@@ -50,7 +51,7 @@ struct AssistantView: View {
                             removal: .move(edge: slideEdge == .trailing ? .leading : .trailing)
                         ))
                 }
-                // Room below the last block so the + button never covers it.
+                // Room below the last block so the assistant button never covers it.
                 .contentMargins(.bottom, 96, for: .scrollContent)
                 // Simultaneous so vertical scrolling is untouched; only a clearly
                 // horizontal drag changes the day.
@@ -72,14 +73,19 @@ struct AssistantView: View {
             }
         }
         .background(Color("Background").ignoresSafeArea())
-        .overlay { FloatingActionScrim(isOpen: $isMenuOpen) }
         .overlay(alignment: .bottomTrailing) {
-            FloatingActionMenu(
-                isOpen: $isMenuOpen,
-                isEnabled: viewModel.hasLoaded && !viewModel.isAddingSession,
-                onSelect: perform
-            )
-            .padding(20)
+            // Hidden while the chat is open: the chat closes from its own ✕,
+            // a swipe down, or a tap on the dimmed page.
+            if chat == nil {
+                AssistantButton(action: openChat)
+                    .padding(20)
+                    .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .overlay {
+            if let chat {
+                AssistantChatView(viewModel: chat, onClose: closeChat)
+            }
         }
         .sheet(isPresented: $isCreating) {
             CreateSessionSheet(request: $createRequest) { request in
@@ -213,12 +219,41 @@ struct AssistantView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - Quick actions
+    // MARK: - Assistant
 
-    private func perform(_ action: QuickAction) {
+    private func openChat() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        viewModel.reveal(nil)
+        let chat = AssistantChatViewModel()
+        chat.onClientAction = { suggestion in runClientAction(suggestion, from: chat) }
+        withAnimation(.spring(duration: 0.35)) { self.chat = chat }
+    }
+
+    private func closeChat() {
+        withAnimation(.spring(duration: 0.35)) { chat = nil }
+    }
+
+    /// An option the chat hands back: closes the chat and opens the scanner or
+    /// the create sheet, unless a session is still streaming in.
+    private func runClientAction(_ suggestion: ChatSuggestion, from chat: AssistantChatViewModel) {
+        guard !viewModel.isAddingSession else {
+            chat.say("A session is still coming in. Give it a moment, then try again.")
+            return
+        }
+        closeChat()
+        switch suggestion.action {
+        case .openWhiteboardScanner: startAdding(.importWhiteboard)
+        case .openCreateSheet: startAdding(.createWithAI)
+        case .reply, .unsupported: break
+        }
+    }
+
+    private enum AddMethod { case createWithAI, importWhiteboard }
+
+    private func startAdding(_ method: AddMethod) {
         viewModel.dismissAddError()
         viewModel.reveal(nil)
-        switch action {
+        switch method {
         case .createWithAI:
             isCreating = true
         case .importWhiteboard:
@@ -232,9 +267,9 @@ struct AssistantView: View {
         switch viewModel.lastFailedAdd {
         case let .created(request):
             createRequest = request
-            perform(.createWithAI)
+            startAdding(.createWithAI)
         case .whiteboard, nil:
-            perform(.importWhiteboard)
+            startAdding(.importWhiteboard)
         }
     }
 
