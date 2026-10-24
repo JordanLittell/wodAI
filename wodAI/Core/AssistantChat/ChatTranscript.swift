@@ -101,7 +101,8 @@ struct ChatTranscript: Equatable {
     static func bundled(firstName: String?) -> ChatTranscript {
         ChatTranscript(greeting: greetingText(firstName: firstName), suggestions: [
             ChatSuggestion(id: "whiteboard", label: "Import Workout From Whiteboard", action: .openWhiteboardScanner),
-            ChatSuggestion(id: "create_with_ai", label: "Create with AI", action: .openCreateSheet),
+            ChatSuggestion(id: "program_week", label: "Program My Week", action: .reply),
+            ChatSuggestion(id: "write_today", label: "Write Workout for Today", action: .reply),
         ])
     }
 

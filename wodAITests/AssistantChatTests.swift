@@ -25,9 +25,10 @@ struct AssistantChatTests {
         }
     }
 
-    @Test func bundledGreetingOffersWhatWorksWithoutTheServer() {
+    @Test func bundledGreetingOffersTheServersDefaultOptions() {
         let chat = ChatTranscript.bundled(firstName: nil)
-        #expect(chat.tappableSuggestions.map(\.action) == [.openWhiteboardScanner, .openCreateSheet])
+        #expect(chat.tappableSuggestions.map(\.id) == ["whiteboard", "program_week", "write_today"])
+        #expect(chat.tappableSuggestions.map(\.action) == [.openWhiteboardScanner, .reply, .reply])
     }
 
     @Test func serverGreetingReplacesTheBundledOneOnlyBeforeTheAthleteStarts() {
@@ -143,7 +144,7 @@ struct AssistantChatTests {
         let viewModel = AssistantChatViewModel(loadGreeting: { throw Offline() }, defaults: defaults())
         await viewModel.load()
         #expect(viewModel.transcript.messages[0].text == "Hey, how can I help you today?")
-        #expect(viewModel.transcript.tappableSuggestions.map(\.id) == ["whiteboard", "create_with_ai"])
+        #expect(viewModel.transcript.tappableSuggestions.map(\.id) == ["whiteboard", "program_week", "write_today"])
     }
 
     @MainActor @Test func handsClientActionsToThePageOnce() async {
