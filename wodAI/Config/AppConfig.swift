@@ -26,6 +26,15 @@ struct AppConfig {
         Bundle.main.object(forInfoDictionaryKey: "SENTRY_DSN") as? String ?? "https://5741d0c7fcb30adbe2e019fb37a1f972@o4511588501749760.ingest.us.sentry.io/4511588506468352"
     }
 
+    // MARK: - PostHog
+    // The project API key (phc_…) only sends events, so it's safe to ship in
+    // the app, like the Sentry DSN above. Empty leaves analytics off.
+    static var posthogAPIKey: String {
+        Bundle.main.object(forInfoDictionaryKey: "POSTHOG_API_KEY") as? String ?? ""
+    }
+
+    static let posthogHost = "https://us.i.posthog.com"
+
     // MARK: - Environment Detection
     static var isProduction: Bool {
         #if DEBUG

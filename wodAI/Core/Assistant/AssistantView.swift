@@ -10,7 +10,8 @@ struct AssistantView: View {
     @State private var stimulusExpanded = false
     /// Where the incoming day slides in from: trailing when moving forward.
     @State private var slideEdge: Edge = .trailing
-    @State private var isMenuOpen = false
+    /// The open trainer chat; a new one each time it opens.
+    @State private var chat: AssistantChatViewModel?
     @State private var isScanning = false
     @State private var isCreating = false
     /// The "Create with AI" text, kept so a retry starts from it.
@@ -18,13 +19,18 @@ struct AssistantView: View {
     /// The session waiting on the delete confirmation.
     @State private var pendingDeletion: AssistantSession?
     @State private var swipeGuard = DaySwipeGuard()
+    /// Builds the trainer chat each time it opens; UI tests pass one that
+    /// stays off the network.
+    private let makeChat: @MainActor () -> AssistantChatViewModel
 
     init() {
         self._viewModel = StateObject(wrappedValue: AssistantViewModel())
+        self.makeChat = { AssistantChatViewModel() }
     }
 
-    init(viewModel: AssistantViewModel) {
+    init(viewModel: AssistantViewModel, makeChat: @escaping @MainActor () -> AssistantChatViewModel = { AssistantChatViewModel() }) {
         self._viewModel = StateObject(wrappedValue: viewModel)
+        self.makeChat = makeChat
     }
 
     var body: some View {
@@ -50,7 +56,7 @@ struct AssistantView: View {
                             removal: .move(edge: slideEdge == .trailing ? .leading : .trailing)
                         ))
                 }
-                // Room below the last block so the + button never covers it.
+                // Room below the last block so the assistant button never covers it.
                 .contentMargins(.bottom, 96, for: .scrollContent)
                 // Simultaneous so vertical scrolling is untouched; only a clearly
                 // horizontal drag changes the day.
@@ -72,14 +78,19 @@ struct AssistantView: View {
             }
         }
         .background(Color("Background").ignoresSafeArea())
-        .overlay { FloatingActionScrim(isOpen: $isMenuOpen) }
         .overlay(alignment: .bottomTrailing) {
-            FloatingActionMenu(
-                isOpen: $isMenuOpen,
-                isEnabled: viewModel.hasLoaded && !viewModel.isAddingSession,
-                onSelect: perform
-            )
-            .padding(20)
+            // Hidden while the chat is open: the chat closes from its own ✕,
+            // a swipe down, or a tap on the dimmed page.
+            if chat == nil {
+                AssistantButton(action: openChat)
+                    .padding(20)
+                    .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .overlay {
+            if let chat {
+                AssistantChatView(viewModel: chat, onClose: closeChat)
+            }
         }
         .sheet(isPresented: $isCreating) {
             CreateSessionSheet(request: $createRequest) { request in
@@ -213,12 +224,90 @@ struct AssistantView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - Quick actions
+    // MARK: - Assistant
 
-    private func perform(_ action: QuickAction) {
+    private func openChat() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        viewModel.reveal(nil)
+        let chat = makeChat()
+        chat.onClientAction = { suggestion in runClientAction(suggestion, from: chat) }
+        chat.onAction = { action in runAction(action, from: chat) }
+        chat.recordOpen()
+        withAnimation(.spring(duration: 0.35)) { self.chat = chat }
+    }
+
+    private func closeChat() {
+        chat?.recordClose()
+        withAnimation(.spring(duration: 0.35)) { chat = nil }
+    }
+
+    /// An option the chat hands back: closes the chat and opens the scanner or
+    /// the create sheet, unless a session is still streaming in.
+    private func runClientAction(_ suggestion: ChatSuggestion, from chat: AssistantChatViewModel) {
+        guard !viewModel.isAddingSession else {
+            chat.say("A session is still coming in. Give it a moment, then try again.")
+            return
+        }
+        switch suggestion.action {
+        case .openWhiteboardScanner:
+            chat.recordHandOff("open_whiteboard_scanner")
+            closeChat()
+            startAdding(.importWhiteboard)
+        case .openCreateSheet:
+            chat.recordHandOff("open_create_sheet")
+            closeChat()
+            startAdding(.createWithAI)
+        case .reply, .pickDays, .unsupported: break
+        }
+    }
+
+    /// What the coach finished a flow with. Like the whiteboard option, the
+    /// chat closes and the result shows on the Workout page: the new session
+    /// streaming into today, or the planning banner. While something is
+    /// already being added or planned, the coach says so instead, so one
+    /// can't start twice.
+    private func runAction(_ action: AssistantTurnAction, from chat: AssistantChatViewModel) {
+        switch action.kind {
+        case .generateSession:
+            guard let request = action.request, !request.isEmpty else { return }
+            guard !viewModel.isAddingSession else {
+                chat.say("A session is still coming in. Give it a moment, then ask me again.")
+                return
+            }
+            chat.recordHandOff("generate_session")
+            closeChat()
+            viewModel.dismissAddError()
+            withAnimation(.spring(duration: 0.35)) {
+                viewModel.createSessionToday(request: request)
+            }
+        case .planWeek:
+            guard !action.dates.isEmpty else { return }
+            guard viewModel.planningNotice != .planning else {
+                chat.say("I'm still planning your week. Give it a few minutes, then ask me again.")
+                return
+            }
+            chat.recordHandOff("plan_week")
+            closeChat()
+            viewModel.replan(dates: action.dates, request: action.request, replaceWorkoutIds: action.replaceWorkoutIds)
+        case .openWhiteboardScanner:
+            guard !viewModel.isAddingSession else {
+                chat.say("A session is still coming in. Give it a moment, then try again.")
+                return
+            }
+            chat.recordHandOff("open_whiteboard_scanner")
+            closeChat()
+            startAdding(.importWhiteboard)
+        case .unsupported:
+            break
+        }
+    }
+
+    private enum AddMethod { case createWithAI, importWhiteboard }
+
+    private func startAdding(_ method: AddMethod) {
         viewModel.dismissAddError()
         viewModel.reveal(nil)
-        switch action {
+        switch method {
         case .createWithAI:
             isCreating = true
         case .importWhiteboard:
@@ -232,9 +321,9 @@ struct AssistantView: View {
         switch viewModel.lastFailedAdd {
         case let .created(request):
             createRequest = request
-            perform(.createWithAI)
+            startAdding(.createWithAI)
         case .whiteboard, nil:
-            perform(.importWhiteboard)
+            startAdding(.importWhiteboard)
         }
     }
 

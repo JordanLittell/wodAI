@@ -39,6 +39,7 @@
 		C1A201CA2E16D9200094E759 /* Base.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C1A201C92E16D9200094E759 /* Base.xcconfig */; };
 		C1A201CC2E16D92E0094E759 /* Debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C1A201CB2E16D92E0094E759 /* Debug.xcconfig */; };
 		C1A201CE2E16D9370094E759 /* Release.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = C1A201CD2E16D9370094E759 /* Release.xcconfig */; };
+		C1B0A0012FF1000000ABC003 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = C1B0A0012FF1000000ABC002 /* PostHog */; };
 		C1C1F7832DB8A3E6006A7BA4 /* Apollo in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F7822DB8A3E6006A7BA4 /* Apollo */; };
 		C1C1F78F2DB8A71A006A7BA4 /* ApolloSQLite in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F78E2DB8A71A006A7BA4 /* ApolloSQLite */; };
 		C1C1F7912DB8A71A006A7BA4 /* ApolloTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = C1C1F7902DB8A71A006A7BA4 /* ApolloTestSupport */; };
@@ -168,6 +169,7 @@
 				C1C1F78F2DB8A71A006A7BA4 /* ApolloSQLite in Frameworks */,
 				C1C1F7912DB8A71A006A7BA4 /* ApolloTestSupport in Frameworks */,
 				C120B49D2FE4983600325F4B /* Sentry in Frameworks */,
+				C1B0A0012FF1000000ABC003 /* PostHog in Frameworks */,
 				C1D1BA3C2DBED84200932818 /* GoogleSignInSwift in Frameworks */,
 				C1D1BA3A2DBED84200932818 /* GoogleSignIn in Frameworks */,
 			);
@@ -278,6 +280,7 @@
 				C120B49C2FE4983600325F4B /* Sentry */,
 				C120B4A02FE4983600325F4B /* SentrySwiftUI */,
 				C120B8E92FEB4B8E00325F4B /* WodAiAPI */,
+				C1B0A0012FF1000000ABC002 /* PostHog */,
 			);
 			productName = wodAI;
 			productReference = C19950512DB0B9F800786544 /* wodAI.app */;
@@ -366,6 +369,7 @@
 				C1D1BA382DBED84200932818 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				C120B49B2FE4983600325F4B /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				C120B8E82FEB4B8E00325F4B /* XCLocalSwiftPackageReference "wodAiAPI" */,
+				C1B0A0012FF1000000ABC001 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C19950522DB0B9F800786544 /* Products */;
@@ -794,6 +798,14 @@
 				minimumVersion = 1.20.0;
 			};
 		};
+		C1B0A0012FF1000000ABC001 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios";
+			requirement = {
+				kind = exactVersion;
+				version = 3.91.0;
+			};
+		};
 		C1D1BA382DBED84200932818 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
@@ -878,6 +890,11 @@
 		C1A12A592DBFD2CB00BB4776 /* WodAiAPI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = WodAiAPI;
+		};
+		C1B0A0012FF1000000ABC002 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C1B0A0012FF1000000ABC001 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
 		};
 		C1C1F7822DB8A3E6006A7BA4 /* Apollo */ = {
 			isa = XCSwiftPackageProductDependency;

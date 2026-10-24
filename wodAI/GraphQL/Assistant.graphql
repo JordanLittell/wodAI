@@ -1,0 +1,55 @@
+# The trainer chat's opening message and the options it offers.
+query AssistantGreeting {
+  assistantGreeting {
+    text
+    suggestions {
+      id
+      label
+      action
+      payload
+    }
+  }
+}
+
+# One trainer turn: the app sends the whole conversation and the trainer's
+# reply streams back as text deltas, then optional suggestions or an action,
+# then AssistantTurnComplete (or GenerationFailed).
+subscription AssistantTurn($input: AssistantTurnInput!) {
+  assistantTurn(input: $input) {
+    __typename
+    ... on AssistantTextDelta {
+      text
+    }
+    ... on AssistantSuggestions {
+      suggestions {
+        id
+        label
+        action
+        payload
+      }
+    }
+    ... on AssistantAction {
+      kind
+      request
+      scheduledDate
+      dates
+      replaceWorkoutIds
+    }
+    ... on AssistantTurnComplete {
+      text
+    }
+    ... on GenerationFailed {
+      message
+    }
+  }
+}
+
+# Program My Week: re-plans exactly the picked days in the background,
+# replacing the sessions on them (by default the programmed ones; with
+# replaceWorkoutIds, exactly those). Progress comes from WeeklyPlanStatus.
+mutation ReplanWeek($timezone: String!, $dates: [String!], $request: String, $replaceWorkoutIds: [String!]) {
+  startWeeklyPlan(timezone: $timezone, dates: $dates, request: $request, replaceWorkoutIds: $replaceWorkoutIds) {
+    id
+    status
+  }
+}

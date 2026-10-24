@@ -21,6 +21,7 @@ struct wodAIApp: App {
         }
         #endif
         TelemetryService.initialize()
+        AnalyticsService.initialize()
     }
 
     var body: some Scene {
