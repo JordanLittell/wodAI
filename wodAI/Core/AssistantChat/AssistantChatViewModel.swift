@@ -35,6 +35,13 @@ final class AssistantChatViewModel: ObservableObject {
     private let loadGreeting: () async throws -> ChatGreeting
     private let runTurn: AssistantTurnRunner
     private let defaults: UserDefaults
+    /// Sends product events (PostHog); swapped out in tests.
+    private let track: (AnalyticsEvent) -> Void
+    /// Turns sent in this chat, for analytics.
+    private var turnCount = 0
+    /// Whether the Workout page ran something this chat ended on.
+    private var handedOff = false
+    private var recordedClose = false
     /// The turn in flight. Nonisolated so `deinit` can cancel it; only
     /// touched on the main actor otherwise.
     nonisolated(unsafe) private var turnTask: Task<Void, Never>?
@@ -52,11 +59,13 @@ final class AssistantChatViewModel: ObservableObject {
     init(
         loadGreeting: @escaping () async throws -> ChatGreeting = AssistantChatViewModel.fetchGreeting,
         runTurn: @escaping AssistantTurnRunner = { AssistantTurnStream().events(for: $0) },
-        defaults: UserDefaults = .standard
+        defaults: UserDefaults = .standard,
+        track: @escaping (AnalyticsEvent) -> Void = AnalyticsService.capture
     ) {
         self.loadGreeting = loadGreeting
         self.runTurn = runTurn
         self.defaults = defaults
+        self.track = track
         var transcript = ChatTranscript.bundled(firstName: nil)
         if let last = defaults.string(forKey: Self.lastGreetingKey) {
             transcript.replaceGreeting(text: last, suggestions: transcript.messages[0].suggestions)
@@ -89,6 +98,7 @@ final class AssistantChatViewModel: ObservableObject {
     func tap(_ suggestion: ChatSuggestion) {
         guard let tapped = transcript.tap(suggestion.id) else { return }
         UISelectionFeedbackGenerator().selectionChanged()
+        track(.assistantOptionTapped(option: tapped.id, flow: transcript.flow))
         switch tapped.action {
         case .openWhiteboardScanner, .openCreateSheet:
             onClientAction(tapped)
@@ -104,6 +114,7 @@ final class AssistantChatViewModel: ObservableObject {
     func pickDays(_ dates: [String]) {
         guard !dates.isEmpty, transcript.send(ChatTranscript.pickedDaysMessage(dates)) else { return }
         UISelectionFeedbackGenerator().selectionChanged()
+        track(.assistantOptionTapped(option: "pick_days", flow: transcript.flow))
         startTurn()
     }
 
@@ -116,7 +127,7 @@ final class AssistantChatViewModel: ObservableObject {
     /// Asks again after a failed turn, with the same transcript.
     func retry() {
         guard transcript.retry() else { return }
-        startTurn()
+        startTurn(isRetry: true)
     }
 
     /// Stops the turn in flight (the chat closed). What streamed so far stays,
@@ -128,12 +139,44 @@ final class AssistantChatViewModel: ObservableObject {
         transcript.failTrainerReply(Self.interruptedReply)
     }
 
+    // MARK: Analytics
+
+    func recordOpen() {
+        track(.assistantOpened)
+    }
+
+    /// The Workout page ran what the chat ended on (`action`: the event's
+    /// action name). Called by the page, so a refused one isn't counted.
+    func recordHandOff(_ action: String) {
+        handedOff = true
+        track(.assistantFlowCompleted(flow: transcript.flow, action: action))
+    }
+
+    /// How far the chat got, once, when it closes.
+    func recordClose() {
+        guard !recordedClose else { return }
+        recordedClose = true
+        let stage: String
+        if handedOff {
+            stage = "handed_off"
+        } else if transcript.messages.last?.isError == true {
+            stage = "error"
+        } else if transcript.messages.count > 1 || transcript.messages.first?.answered == true {
+            stage = "chatting"
+        } else {
+            stage = "greeting"
+        }
+        track(.assistantClosed(flow: transcript.flow, stage: stage, turns: turnCount))
+    }
+
     // MARK: Turns
 
     /// Runs one turn for the transcript as it stands (the athlete's message
     /// is already in it).
-    private func startTurn() {
+    private func startTurn(isRetry: Bool = false) {
         turnTask?.cancel()
+        turnCount += 1
+        track(.assistantTurn(flow: transcript.flow, number: turnCount, isRetry: isRetry))
         let events = runTurn(AssistantTurnRequest(transcript: transcript))
         turnTask = Task { [weak self] in
             // The trainer may end on an action; it's handed over only once
@@ -164,8 +207,18 @@ final class AssistantChatViewModel: ObservableObject {
             } catch {
                 guard let self, !Task.isCancelled else { return }
                 self.turnTask = nil
+                self.track(.assistantFlowFailed(flow: self.transcript.flow, reason: Self.failureReason(error)))
                 self.transcript.failTrainerReply(Self.message(for: error))
             }
+        }
+    }
+
+    /// For analytics: what kind of failure ended a turn.
+    static func failureReason(_ error: Error) -> String {
+        switch error {
+        case WorkoutGenerationError.server: return "server"
+        case WorkoutGenerationError.stalled: return "stalled"
+        default: return "network"
         }
     }
 
