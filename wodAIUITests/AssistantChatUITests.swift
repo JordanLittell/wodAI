@@ -30,16 +30,18 @@ final class AssistantChatUITests: XCTestCase {
 
         button.tap()
         // The bundled greeting shows at once, whatever the network does.
-        XCTAssertTrue(app.staticTexts["Coach"].waitForExistence(timeout: 5))
+        // The button is labeled "Coach" too, so the chat is found by its ✕.
+        let close = app.buttons["Close assistant"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Import Workout From Whiteboard"].waitForExistence(timeout: 5))
         XCTAssertFalse(button.exists)
         // Full screen: the page's navigation bar (menu, week title) is hidden.
         XCTAssertTrue(waitForDisappearance(of: navigationBar))
         attachScreenshot("A5-chat-open")
 
-        app.buttons["Close assistant"].tap()
+        close.tap()
         XCTAssertTrue(button.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.staticTexts["Coach"].exists)
+        XCTAssertFalse(close.exists)
         XCTAssertTrue(navigationBar.waitForExistence(timeout: 5))
     }
 

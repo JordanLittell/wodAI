@@ -2,8 +2,8 @@
 //  AssistantButton.swift
 //  wodAI
 //
-//  The round button that opens the trainer chat, floating over the Workout
-//  page where the + menu used to be. It's never disabled: when something is
+//  The pill that opens the trainer chat, floating over the Workout page
+//  where the + menu used to be. It's never disabled: when something is
 //  still loading or streaming in, the chat says so.
 //
 
@@ -14,15 +14,33 @@ struct AssistantButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: "bubble.left.and.text.bubble.right.fill")
-                .font(.title3.weight(.semibold))
-                .foregroundColor(.white)
-                .frame(width: 56, height: 56)
-                .background(Circle().fill(Color.brandPrimary))
-                .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+            HStack(spacing: 6) {
+                // The same mark as a programmed session's chip.
+                Image(systemName: "sparkles")
+                    .font(.subheadline.weight(.semibold))
+                Text("Coach")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 18)
+            .frame(height: 44)
+            .background(Capsule().fill(Color.brandPrimary))
+            // A hairline keeps the edge crisp against dark pages.
+            .overlay(Capsule().stroke(.white.opacity(0.18), lineWidth: 1))
+            .shadow(color: Color.brandPrimary.opacity(0.3), radius: 10, y: 4)
         }
+        .buttonStyle(PressStyle())
         .accessibilityLabel("Open assistant")
         .accessibilityIdentifier("assistantButton")
+    }
+}
+
+/// Shrinks a little while pressed.
+private struct PressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.spring(duration: 0.2), value: configuration.isPressed)
     }
 }
 
