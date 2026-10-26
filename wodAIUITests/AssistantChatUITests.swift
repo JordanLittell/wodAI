@@ -24,6 +24,8 @@ final class AssistantChatUITests: XCTestCase {
         XCTAssertTrue(button.waitForExistence(timeout: 10))
         // The + menu is gone.
         XCTAssertFalse(app.buttons["Add"].exists)
+        let navigationBar = app.navigationBars.firstMatch
+        XCTAssertTrue(navigationBar.exists)
         attachScreenshot("A5-workout-page")
 
         button.tap()
@@ -31,11 +33,19 @@ final class AssistantChatUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Coach"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Import Workout From Whiteboard"].waitForExistence(timeout: 5))
         XCTAssertFalse(button.exists)
+        // Full screen: the page's navigation bar (menu, week title) is hidden.
+        XCTAssertTrue(waitForDisappearance(of: navigationBar))
         attachScreenshot("A5-chat-open")
 
         app.buttons["Close assistant"].tap()
         XCTAssertTrue(button.waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts["Coach"].exists)
+        XCTAssertTrue(navigationBar.waitForExistence(timeout: 5))
+    }
+
+    private func waitForDisappearance(of element: XCUIElement) -> Bool {
+        let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: element)
+        return XCTWaiter().wait(for: [gone], timeout: 5) == .completed
     }
 
     private func attachScreenshot(_ name: String) {

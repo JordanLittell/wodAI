@@ -79,8 +79,8 @@ struct AssistantView: View {
         }
         .background(Color("Background").ignoresSafeArea())
         .overlay(alignment: .bottomTrailing) {
-            // Hidden while the chat is open: the chat closes from its own ✕,
-            // a swipe down, or a tap on the dimmed page.
+            // Hidden while the chat is open: the chat closes from its own ✕
+            // or a swipe down on its header.
             if chat == nil {
                 AssistantButton(action: openChat)
                     .padding(20)
@@ -92,6 +92,10 @@ struct AssistantView: View {
                 AssistantChatView(viewModel: chat, onClose: closeChat)
             }
         }
+        // The chat is full screen, and an overlay can't cover the bar. It
+        // stays an overlay (not a fullScreenCover) so closing it and opening
+        // the scanner or Create sheet can happen in one step.
+        .toolbar(chat == nil ? .automatic : .hidden, for: .navigationBar)
         .sheet(isPresented: $isCreating) {
             CreateSessionSheet(request: $createRequest) { request in
                 withAnimation(.spring(duration: 0.35)) {

@@ -2,9 +2,8 @@
 //  AssistantChatView.swift
 //  wodAI
 //
-//  The trainer chat, laid over the Workout page: the page stays visible and
-//  dimmed at the top, so the athlete knows they're still in their week.
-//  Swipe the panel down, or tap the dimmed page, to close it.
+//  The trainer chat, full screen over the Workout page (which hides its
+//  navigation bar meanwhile). Close it with ✕ or by swiping the header down.
 //
 
 import SwiftUI
@@ -16,46 +15,19 @@ struct AssistantChatView: View {
     @State private var dragOffset: CGFloat = 0
 
     var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .bottom) {
-                Color.black.opacity(0.25)
-                    .ignoresSafeArea()
-                    .contentShape(Rectangle())
-                    .onTapGesture(perform: onClose)
-                    .accessibilityHidden(true)
-
-                // The top of the page stays in view above the panel.
-                panel
-                    .frame(height: geometry.size.height * 0.88)
-                    .offset(y: dragOffset)
-            }
-        }
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-        .task { await viewModel.load() }
-        // Closing stops the trainer's reply; reopening can retry it.
-        .onDisappear { viewModel.cancelTurn() }
-    }
-
-    private var panel: some View {
         VStack(spacing: 0) {
             header
             Divider()
             messages
             if viewModel.canType { inputBar }
         }
-        .frame(maxWidth: .infinity)
-        .background(
-            UnevenRoundedRectangle(topLeadingRadius: 20, topTrailingRadius: 20)
-                .fill(Color("Background"))
-                .shadow(color: .black.opacity(0.2), radius: 12, y: -2)
-                // In dark mode the shadow and dimming barely show against the
-                // page, so the edge carries the separation.
-                .overlay(
-                    UnevenRoundedRectangle(topLeadingRadius: 20, topTrailingRadius: 20)
-                        .stroke(Color("Border"), lineWidth: 1)
-                )
-                .ignoresSafeArea(edges: .bottom)
-        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color("Background").ignoresSafeArea())
+        .offset(y: dragOffset)
+        .transition(.move(edge: .bottom))
+        .task { await viewModel.load() }
+        // Closing stops the trainer's reply; reopening can retry it.
+        .onDisappear { viewModel.cancelTurn() }
     }
 
     private var header: some View {
@@ -100,7 +72,7 @@ struct AssistantChatView: View {
     private var messages: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 12) {
                     ForEach(viewModel.transcript.messages) { message in
                         ChatMessageRow(
                             message: message,
@@ -113,18 +85,45 @@ struct AssistantChatView: View {
                     }
                     if viewModel.transcript.isAwaitingTrainer, viewModel.transcript.messages.last?.author == .athlete {
                         TypingIndicator()
-                            .id("typing")
                     }
+                    Color.clear
+                        .frame(height: 1)
+                        .id(Self.bottomId)
                 }
                 .padding(16)
             }
+            .defaultScrollAnchor(.bottom)
             .scrollDismissesKeyboard(.interactively)
-            .onChange(of: viewModel.transcript.messages.last?.text) { _, _ in
-                withAnimation(.easeOut(duration: 0.2)) {
-                    proxy.scrollTo(viewModel.transcript.messages.last?.id, anchor: .bottom)
+            // Follows the reply as it streams in, and its options as they
+            // arrive. Only a new message animates, so streaming doesn't stutter.
+            .onChange(of: bottomKey) { old, new in
+                if old.messageCount != new.messageCount {
+                    withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(Self.bottomId, anchor: .bottom) }
+                } else {
+                    proxy.scrollTo(Self.bottomId, anchor: .bottom)
                 }
             }
         }
+    }
+
+    private static let bottomId = "bottom"
+
+    /// Changes whenever the bottom of the transcript moves.
+    private struct BottomKey: Equatable {
+        let messageCount: Int
+        let lastTextLength: Int
+        let lastSuggestionCount: Int
+        let awaitingTrainer: Bool
+    }
+
+    private var bottomKey: BottomKey {
+        let transcript = viewModel.transcript
+        return BottomKey(
+            messageCount: transcript.messages.count,
+            lastTextLength: transcript.messages.last?.text.count ?? 0,
+            lastSuggestionCount: transcript.messages.last?.suggestions.count ?? 0,
+            awaitingTrainer: transcript.isAwaitingTrainer
+        )
     }
 
     /// Only the latest message, when it's an error, offers Try again.
@@ -187,20 +186,12 @@ private struct ChatMessageRow: View {
                         }
                     }
             }
-            let chips = message.suggestions.filter { $0.pickableDates == nil }
-            if !chips.isEmpty {
-                SuggestionChips(suggestions: chips, tappable: tappable, onTap: onTap)
+            let options = message.suggestions.filter { $0.pickableDates == nil }
+            if !options.isEmpty {
+                SuggestionList(suggestions: options, tappable: tappable, onTap: onTap)
             }
             ForEach(message.suggestions.filter { $0.pickableDates != nil }) { picker in
                 DayPicker(dates: picker.pickableDates ?? [], enabled: tappable.contains(picker), onDone: onPickDays)
-            }
-            if message.isError, let onRetry {
-                Button(action: onRetry) {
-                    Label("Try again", systemImage: "arrow.clockwise")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(Color.brandPrimary)
-                }
-                .buttonStyle(.plain)
             }
             if message.isError, let onRetry {
                 Button(action: onRetry) {
@@ -216,31 +207,72 @@ private struct ChatMessageRow: View {
     }
 }
 
-/// Wraps onto as many lines as it needs. Chips of an answered turn stay
-/// visible, in quiet colors (fading them out left them unreadable in dark
-/// mode).
-private struct SuggestionChips: View {
+/// The options, lettered A, B, C… and hanging off a rail like a list.
+/// Options of an answered turn stay visible, in quiet colors (fading them out
+/// left them unreadable in dark mode).
+private struct SuggestionList: View {
     let suggestions: [ChatSuggestion]
     let tappable: [ChatSuggestion]
     let onTap: (ChatSuggestion) -> Void
 
     var body: some View {
-        ChipFlowLayout(spacing: 8) {
-            ForEach(suggestions) { suggestion in
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(suggestions.enumerated()), id: \.element.id) { index, suggestion in
                 let enabled = tappable.contains(suggestion)
-                Button { onTap(suggestion) } label: {
-                    Text(suggestion.label)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(enabled ? Color.brandPrimary : Color("SecondaryText"))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 9)
-                        .background(Capsule().fill(Color("Surface")))
-                        .overlay(Capsule().stroke(enabled ? Color.brandPrimary.opacity(0.6) : Color("Border"), lineWidth: 1))
+                HStack(spacing: 0) {
+                    RailConnector(isLast: index == suggestions.count - 1)
+                        .stroke(Color("Border"), lineWidth: 2)
+                        .frame(width: 18)
+                        .accessibilityHidden(true)
+                    Button { onTap(suggestion) } label: {
+                        row(letter: ChatSuggestion.optionLetter(at: index), label: suggestion.label, enabled: enabled)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!enabled)
+                    .accessibilityLabel(suggestion.label)
+                    .padding(.vertical, 5)
                 }
-                .buttonStyle(.plain)
-                .disabled(!enabled)
             }
         }
+    }
+
+    private func row(letter: String, label: String, enabled: Bool) -> some View {
+        HStack(spacing: 10) {
+            Text(letter)
+                .font(.subheadline.weight(.bold))
+                .foregroundColor(enabled ? .white : Color("SecondaryText"))
+                .frame(width: 26, height: 26)
+                .background(RoundedRectangle(cornerRadius: 7).fill(enabled ? Color.brandPrimary : Color("Background")))
+                .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color("Border"), lineWidth: enabled ? 0 : 1))
+                .accessibilityHidden(true)
+            Text(label)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(enabled ? Color.brandPrimary : Color("SecondaryText"))
+                .multilineTextAlignment(.leading)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color("Surface")))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(enabled ? Color.brandPrimary.opacity(0.6) : Color("Border"), lineWidth: 1))
+        .contentShape(Rectangle())
+    }
+}
+
+/// One option's piece of the rail: the line down the left, and a tick across
+/// to the option. The last option's line stops at its tick.
+private struct RailConnector: Shape {
+    let isLast: Bool
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let x = rect.minX + 4
+        path.move(to: CGPoint(x: x, y: rect.minY))
+        path.addLine(to: CGPoint(x: x, y: isLast ? rect.midY : rect.maxY))
+        path.move(to: CGPoint(x: x, y: rect.midY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        return path
     }
 }
 
@@ -299,39 +331,6 @@ private struct DayPicker: View {
         }
         .disabled(!enabled)
         .opacity(enabled ? 1 : 0.6)
-    }
-}
-
-/// Lays children left to right, wrapping to a new line when one won't fit.
-private struct ChipFlowLayout: Layout {
-    var spacing: CGFloat
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        rows(for: subviews, width: proposal.width ?? .infinity).size
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        for (index, origin) in rows(for: subviews, width: bounds.width).origins.enumerated() {
-            subviews[index].place(at: CGPoint(x: bounds.minX + origin.x, y: bounds.minY + origin.y), proposal: .unspecified)
-        }
-    }
-
-    private func rows(for subviews: Subviews, width: CGFloat) -> (origins: [CGPoint], size: CGSize) {
-        var origins: [CGPoint] = []
-        var x: CGFloat = 0, y: CGFloat = 0, rowHeight: CGFloat = 0, widest: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x > 0, x + size.width > width {
-                x = 0
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            origins.append(CGPoint(x: x, y: y))
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-            widest = max(widest, x - spacing)
-        }
-        return (origins, CGSize(width: widest, height: y + rowHeight))
     }
 }
 

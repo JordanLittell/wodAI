@@ -61,6 +61,12 @@ struct ChatSuggestion: Identifiable, Equatable {
         if case let .pickDays(dates) = action { return dates }
         return nil
     }
+
+    /// The letter an option is listed under: "A" for the first, "B" for the
+    /// second, and so on.
+    static func optionLetter(at index: Int) -> String {
+        String(UnicodeScalar(UInt8(ascii: "A") + UInt8(index)))
+    }
 }
 
 struct ChatMessage: Identifiable, Equatable {

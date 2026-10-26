@@ -31,6 +31,10 @@ struct AssistantChatTests {
         #expect(chat.tappableSuggestions.map(\.action) == [.openWhiteboardScanner, .reply, .reply])
     }
 
+    @Test func optionsAreLetteredInOrder() {
+        #expect((0..<3).map(ChatSuggestion.optionLetter(at:)) == ["A", "B", "C"])
+    }
+
     @Test func serverGreetingReplacesTheBundledOneOnlyBeforeTheAthleteStarts() {
         var chat = ChatTranscript.bundled(firstName: "Jordan")
         chat.replaceGreeting(text: "Hey Jordan!", suggestions: [week])
