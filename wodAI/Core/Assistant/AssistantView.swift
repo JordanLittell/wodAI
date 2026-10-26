@@ -230,8 +230,15 @@ struct AssistantView: View {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         viewModel.reveal(nil)
         let chat = makeChat()
-        chat.onClientAction = { suggestion in runClientAction(suggestion, from: chat) }
-        chat.onAction = { action in runAction(action, from: chat) }
+        // Weak: the chat holds these, so a strong capture would keep every closed chat alive.
+        chat.onClientAction = { [weak chat] suggestion in
+            guard let chat else { return }
+            runClientAction(suggestion, from: chat)
+        }
+        chat.onAction = { [weak chat] action in
+            guard let chat else { return }
+            runAction(action, from: chat)
+        }
         chat.recordOpen()
         withAnimation(.spring(duration: 0.35)) { self.chat = chat }
     }

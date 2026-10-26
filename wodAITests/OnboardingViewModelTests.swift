@@ -484,16 +484,19 @@ struct OnboardingViewModelTests {
 @MainActor
 struct AssistantPlanningNoticeTests {
     @Test func showsWhilePlanningAndClearsWhenDone() async throws {
-        var statuses: [PlanStatus?] = [PlanStatus(state: .running), PlanStatus(state: .done)]
+        // Running until the test says otherwise, so a slow runner can't miss
+        // the planning notice between two polls.
+        var finished = false
         let vm = AssistantViewModel(week: AssistantWeek())
         vm.planPollInterval = .milliseconds(5)
-        vm.planStatus = { statuses.count > 1 ? statuses.removeFirst() : statuses[0] }
+        vm.planStatus = { PlanStatus(state: finished ? .done : .running) }
         vm.refetchWeek = { $0() }
 
         vm.watchPlanning()
-        for _ in 0..<100 where vm.planningNotice != .planning { try await Task.sleep(for: .milliseconds(5)) }
+        for _ in 0..<200 where vm.planningNotice != .planning { try await Task.sleep(for: .milliseconds(5)) }
         #expect(vm.planningNotice == .planning)
-        for _ in 0..<100 where vm.planningNotice != nil { try await Task.sleep(for: .milliseconds(5)) }
+        finished = true
+        for _ in 0..<200 where vm.planningNotice != nil { try await Task.sleep(for: .milliseconds(5)) }
         #expect(vm.planningNotice == nil)
     }
 
