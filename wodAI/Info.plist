@@ -17,6 +17,8 @@
 	</array>
 	<key>GIDClientID</key>
 	<string>323431688528-jaj33ofh3jde4t085mht8ef8fbtgd9gu.apps.googleusercontent.com</string>
+	<key>POSTHOG_API_KEY</key>
+	<string>phc_BmCoLspn8to6bkkCdqwQf6LR4JTJNVmYFtnDNsrU4Ebj</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>bluetooth-central</string>

@@ -21,6 +21,13 @@ struct wodAIApp: App {
         }
         #endif
         TelemetryService.initialize()
+        AnalyticsService.initialize()
+        // A restored sign-in never goes through authenticate(), which is
+        // where athletes are otherwise identified.
+        if AuthState.shared.isAuthenticated, let userId = AuthState.shared.currentUserId {
+            TelemetryService.identify(userId: String(userId))
+            AnalyticsService.identify(userId: String(userId))
+        }
     }
 
     var body: some Scene {

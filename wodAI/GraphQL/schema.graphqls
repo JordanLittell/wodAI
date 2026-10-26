@@ -373,6 +373,7 @@ scalar DateTime
 scalar JSON
 
 type Query {
+  assistantGreeting: AssistantGreeting!
   user: User
   users: [User!]!
   workout(id: String!): Workout
@@ -443,7 +444,7 @@ type Mutation {
   toggleGymProfile(id: Int!): GymProfile!
   provisionUser(input: ProvisionUserInput!): ProvisionUserResponse!
   completeOnboarding(timezone: String!): User!
-  startWeeklyPlan(timezone: String!): WeeklyPlanJob!
+  startWeeklyPlan(timezone: String!, dates: [String!], request: String, replaceWorkoutIds: [String!]): WeeklyPlanJob!
   setStrengthBenchmark(exerciseId: Int!, weight: Float!, reps: Int!): StrengthBenchmark!
   deleteStrengthBenchmark(id: Int!): Boolean!
   importHealthSnapshot(input: HealthSnapshotInput!, applyLevel: Boolean): HealthImportResult!
@@ -480,6 +481,7 @@ type Subscription {
   workoutGeneration(request: String, scheduledDate: String): WorkoutGenerationEvent!
   weeklyPlanGeneration(timezone: String!): WeeklyPlanGenerationEvent!
   whiteboardImport(input: WhiteboardImportInput!): WorkoutGenerationEvent!
+  assistantTurn(input: AssistantTurnInput!): AssistantTurnEvent!
 }
 
 input WhiteboardImportInput {
@@ -1022,6 +1024,68 @@ input MovementIntervalInput {
   avgHeartRate: Float
   peakAcceleration: Float
   confidence: Float
+}
+
+enum AssistantSuggestionAction {
+  REPLY
+  OPEN_WHITEBOARD_SCANNER
+  OPEN_CREATE_SHEET
+}
+
+type AssistantSuggestion {
+  id: String!
+  label: String!
+  action: AssistantSuggestionAction!
+  payload: String
+}
+
+type AssistantGreeting {
+  text: String!
+  suggestions: [AssistantSuggestion!]!
+}
+
+enum AssistantRole {
+  ATHLETE
+  TRAINER
+}
+
+input AssistantMessageInput {
+  role: AssistantRole!
+  text: String!
+}
+
+input AssistantTurnInput {
+  flow: String
+  messages: [AssistantMessageInput!]!
+  timezone: String!
+}
+
+union AssistantTurnEvent = AssistantTextDelta | AssistantSuggestions | AssistantAction | AssistantTurnComplete | GenerationFailed
+
+type AssistantTextDelta {
+  text: String!
+}
+
+type AssistantSuggestions {
+  suggestions: [AssistantSuggestion!]!
+}
+
+enum AssistantActionKind {
+  GENERATE_SESSION
+  PLAN_WEEK
+  OPEN_WHITEBOARD_SCANNER
+}
+
+type AssistantAction {
+  kind: AssistantActionKind!
+  request: String
+  scheduledDate: String
+  dates: [String!]
+  replaceWorkoutIds: [String!]
+}
+
+type AssistantTurnComplete {
+  text: String!
 }
 
 enum StatType {
