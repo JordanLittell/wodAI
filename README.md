@@ -355,6 +355,8 @@ Then `Cmd+B` in Xcode to rebuild.
 
 ### Prerequisites
 
+Here
+
 - Xcode 15+
 - Apollo iOS CLI (bundled as `./apollo-ios-cli`)
 - Backend running locally on `http://localhost:3000` for schema sync
