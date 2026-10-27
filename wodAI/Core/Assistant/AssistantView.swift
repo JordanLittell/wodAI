@@ -249,6 +249,7 @@ struct AssistantView: View {
 
     private func closeChat() {
         chat?.recordClose()
+        chat?.end()
         withAnimation(.spring(duration: 0.35)) { chat = nil }
     }
 

@@ -331,11 +331,6 @@ enum InjurySeverity {
   SEVERE
 }
 
-enum AgentMessageRole {
-  USER
-  ASSISTANT
-}
-
 input BenchmarkInput {
   type: String!
   value: Float!
@@ -398,7 +393,6 @@ type Query {
   equipment: [Equipment!]!
   equipmentById(id: Int!): Equipment
   isUserProvisioned: Boolean!
-  getConversation(wodId: String!): Conversation
   hiitWorkouts(page: Int, limit: Int, tagIds: [Int!]): HIITPaginatedResponse!
   hiitWorkout(id: Int!): HIITWorkout
   similarHiitWorkouts(id: Int!): [HIITSimilarResult!]!
@@ -449,8 +443,6 @@ type Mutation {
   deleteStrengthBenchmark(id: Int!): Boolean!
   importHealthSnapshot(input: HealthSnapshotInput!, applyLevel: Boolean): HealthImportResult!
   disconnectAppleHealth: Boolean!
-  sendAgentMessage(wodId: String!, message: String!): SendAgentMessageResponse!
-  approveWorkoutModification(wodId: String!, conversationId: String!): Workout!
   generateHiitWorkout(tagIds: [Int!], skipWorkoutId: Int, timezone: String): HIITWorkout
   generateHiitWorkouts(tagIds: [Int!], skipWorkoutId: Int, timezone: String): [HIITWorkout!]!
   createHiitWorkout(input: CreateHIITWorkoutInput!): HIITWorkout!
@@ -468,6 +460,7 @@ type Mutation {
   abandonHIITSession(sessionId: ID!): Boolean!
   setMovementExcluded(exerciseId: Int!, excluded: Boolean!): HIITExercise!
   setSkillLevel(ladder: String!, level: String): SkillLadder!
+  endConversation(id: ID!): Boolean!
   createTag(name: String!, description: String!, category: String): Tag!
   setTagDisabled(id: Int!, disabled: Boolean!): Tag!
   setTagCategory(id: Int!, category: String!): Tag!
@@ -477,7 +470,6 @@ type Mutation {
 }
 
 type Subscription {
-  agentResponse(wodId: String!): AgentResponse!
   workoutGeneration(request: String, scheduledDate: String): WorkoutGenerationEvent!
   weeklyPlanGeneration(timezone: String!): WeeklyPlanGenerationEvent!
   whiteboardImport(input: WhiteboardImportInput!): WorkoutGenerationEvent!
@@ -706,33 +698,6 @@ type ProgramSchema {
   examples: JSON!
   apiEndpoints: JSON!
   instructions: String!
-}
-
-type AgentMessage {
-  id: String!
-  role: AgentMessageRole!
-  content: String!
-  createdAt: DateTime!
-}
-
-type Conversation {
-  id: String!
-  resourceType: String!
-  resourceId: String!
-  messages: [AgentMessage!]!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
-
-type AgentResponse {
-  text: String!
-  isComplete: Boolean!
-  conversationId: String!
-}
-
-type SendAgentMessageResponse {
-  conversationId: String!
-  messageId: String!
 }
 
 type HIITExercise {
@@ -1030,6 +995,7 @@ enum AssistantSuggestionAction {
   REPLY
   OPEN_WHITEBOARD_SCANNER
   OPEN_CREATE_SHEET
+  PICK_DAYS
 }
 
 type AssistantSuggestion {
@@ -1058,6 +1024,7 @@ input AssistantTurnInput {
   flow: String
   messages: [AssistantMessageInput!]!
   timezone: String!
+  conversationId: ID
 }
 
 union AssistantTurnEvent = AssistantTextDelta | AssistantSuggestions | AssistantAction | AssistantTurnComplete | GenerationFailed

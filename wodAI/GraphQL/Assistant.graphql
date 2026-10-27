@@ -53,3 +53,9 @@ mutation ReplanWeek($timezone: String!, $dates: [String!], $request: String, $re
     status
   }
 }
+
+# The athlete closed the trainer chat whose turns sent `id` as their
+# conversationId. Answers false when the server stored nothing under it.
+mutation EndConversation($id: ID!) {
+  endConversation(id: $id)
+}

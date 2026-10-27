@@ -17,7 +17,8 @@ import Apollo
 import WodAiAPI
 
 /// What a turn sends: the transcript (errors left out), the option the
-/// athlete started from, and the zone that decides what "today" is.
+/// athlete started from, the zone that decides what "today" is, and the chat
+/// it belongs to (the server stores the chat under that id for coach memory).
 struct AssistantTurnRequest: Equatable {
     struct Message: Equatable {
         enum Role: Equatable { case athlete, trainer }
@@ -28,13 +29,15 @@ struct AssistantTurnRequest: Equatable {
     let flow: String?
     let messages: [Message]
     let timezone: String
+    let conversationId: String?
 
-    init(transcript: ChatTranscript, timezone: String = TimeZone.current.identifier) {
+    init(transcript: ChatTranscript, timezone: String = TimeZone.current.identifier, conversationId: String? = nil) {
         flow = transcript.flow
         messages = transcript.turnMessages.map {
             Message(role: $0.author == .athlete ? .athlete : .trainer, text: $0.text)
         }
         self.timezone = timezone
+        self.conversationId = conversationId
     }
 
     var input: AssistantTurnInput {
@@ -43,7 +46,8 @@ struct AssistantTurnRequest: Equatable {
             messages: messages.map {
                 AssistantMessageInput(role: .case($0.role == .athlete ? .athlete : .trainer), text: $0.text)
             },
-            timezone: timezone
+            timezone: timezone,
+            conversationId: conversationId.map { .some($0) } ?? .none
         )
     }
 }

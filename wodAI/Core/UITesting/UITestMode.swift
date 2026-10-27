@@ -67,6 +67,7 @@ extension AssistantChatViewModel {
                     continuation.finish()
                 }
             },
+            endConversation: { _ in },
             defaults: UserDefaults(suiteName: "ui-testing") ?? .standard
         )
     }

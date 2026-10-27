@@ -107,6 +107,14 @@ struct AssistantTurnMappingTests {
         #expect(input.messages.last?.text == "20 min")
     }
 
+    @Test func theRequestCarriesItsChatsIdWhenItHasOne() {
+        let chat = ChatTranscript(greeting: "Hi", suggestions: [])
+        let withId = AssistantTurnRequest(transcript: chat, timezone: "UTC", conversationId: "0B6F2D1C-5A4E-4C7B-9E3F-2A1D8C6B4E90")
+        #expect(withId.input.conversationId == .some("0B6F2D1C-5A4E-4C7B-9E3F-2A1D8C6B4E90"))
+        let without = AssistantTurnRequest(transcript: chat, timezone: "UTC")
+        #expect(without.input.conversationId == .none)
+    }
+
     @Test func theCompleteTextReplacesWhatStreamed() {
         var chat = ChatTranscript(greeting: "Hi", suggestions: [])
         chat.send("hello")
@@ -146,14 +154,26 @@ private final class FakeTurns: @unchecked Sendable {
     }
 }
 
+/// Records the chats the view model ended.
+private final class EndedChats: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _ids: [String] = []
+    var ids: [String] { lock.withLock { _ids } }
+
+    func record(_ id: String) async {
+        lock.withLock { _ids.append(id) }
+    }
+}
+
 @MainActor
 struct AssistantTurnViewModelTests {
     private let today = ChatSuggestion(id: "write_today", label: "Write Workout for Today", action: .reply)
 
-    private func viewModel(_ turns: FakeTurns) async -> AssistantChatViewModel {
+    private func viewModel(_ turns: FakeTurns, ended: EndedChats = EndedChats()) async -> AssistantChatViewModel {
         let viewModel = AssistantChatViewModel(
             loadGreeting: { [today] in ChatGreeting(text: "Hey Jordan, how can I help you today?", suggestions: [today]) },
             runTurn: turns.run,
+            endConversation: ended.record,
             defaults: UserDefaults(suiteName: "AssistantTurnTests-\(UUID().uuidString)")!
         )
         await viewModel.load()
@@ -198,6 +218,41 @@ struct AssistantTurnViewModelTests {
         #expect(turns.requests.count == 2)
         #expect(turns.requests[1].messages.last == .init(role: .athlete, text: "20 min"))
         #expect(turns.requests[1].flow == "write_today")
+    }
+
+    @Test func everyTurnOfAChatSendsTheSameIdAndANewChatGetsANewOne() async {
+        let turns = FakeTurns()
+        let viewModel = await viewModel(turns)
+        viewModel.tap(today)
+        turns.current?.yield(.complete("How long do you have?"))
+        turns.current?.finish()
+        await waitUntil { !viewModel.transcript.isAwaitingTrainer }
+        viewModel.draft = "20 min"
+        viewModel.send()
+
+        #expect(turns.requests.count == 2)
+        #expect(turns.requests.map(\.conversationId) == [viewModel.conversationId, viewModel.conversationId])
+        #expect(UUID(uuidString: viewModel.conversationId) != nil)
+        let next = await self.viewModel(FakeTurns())
+        #expect(next.conversationId != viewModel.conversationId)
+    }
+
+    @Test func closingEndsTheChatOnceAndOnlyAfterATurn() async {
+        let quiet = EndedChats()
+        let unused = await viewModel(FakeTurns(), ended: quiet)
+        unused.end()
+        try? await Task.sleep(for: .milliseconds(20))
+        #expect(quiet.ids.isEmpty) // nothing was stored without a turn
+
+        let turns = FakeTurns()
+        let ended = EndedChats()
+        let viewModel = await viewModel(turns, ended: ended)
+        viewModel.tap(today)
+        viewModel.end()
+        viewModel.end()
+        await waitUntil { !ended.ids.isEmpty }
+        try? await Task.sleep(for: .milliseconds(20))
+        #expect(ended.ids == [viewModel.conversationId])
     }
 
     @Test func typedTextIsSentAndTheDraftCleared() async {

@@ -7,6 +7,8 @@
 //  (scanner, Create sheet) to the Workout page. A reply chip or typed text
 //  runs a turn (assistantTurn): the reply streams into the transcript, and
 //  an action the trainer ends on goes to the page through `onAction`.
+//  Each chat has its own id, sent with every turn and ended on close
+//  (endConversation), so the server can keep what was said for coach memory.
 //
 
 import UIKit
@@ -32,8 +34,13 @@ final class AssistantChatViewModel: ObservableObject {
     /// page runs it through its existing flows.
     var onAction: (AssistantTurnAction) -> Void = { _ in }
 
+    /// This chat's id: a new one each time the chat opens (a new view model).
+    let conversationId: String
+
     private let loadGreeting: () async throws -> ChatGreeting
     private let runTurn: AssistantTurnRunner
+    /// Tells the server the chat closed; swapped out in tests.
+    private let endConversation: (String) async -> Void
     private let defaults: UserDefaults
     /// Sends product events (PostHog); swapped out in tests.
     private let track: (AnalyticsEvent) -> Void
@@ -42,6 +49,7 @@ final class AssistantChatViewModel: ObservableObject {
     /// Whether the Workout page ran something this chat ended on.
     private var handedOff = false
     private var recordedClose = false
+    private var ended = false
     /// The turn in flight. Nonisolated so `deinit` can cancel it; only
     /// touched on the main actor otherwise.
     nonisolated(unsafe) private var turnTask: Task<Void, Never>?
@@ -59,11 +67,15 @@ final class AssistantChatViewModel: ObservableObject {
     init(
         loadGreeting: @escaping () async throws -> ChatGreeting = AssistantChatViewModel.fetchGreeting,
         runTurn: @escaping AssistantTurnRunner = { AssistantTurnStream().events(for: $0) },
+        endConversation: @escaping (String) async -> Void = AssistantChatViewModel.sendEndConversation,
         defaults: UserDefaults = .standard,
-        track: @escaping (AnalyticsEvent) -> Void = AnalyticsService.capture
+        track: @escaping (AnalyticsEvent) -> Void = AnalyticsService.capture,
+        conversationId: String = UUID().uuidString
     ) {
+        self.conversationId = conversationId
         self.loadGreeting = loadGreeting
         self.runTurn = runTurn
+        self.endConversation = endConversation
         self.defaults = defaults
         self.track = track
         var transcript = ChatTranscript.bundled(firstName: nil)
@@ -169,6 +181,15 @@ final class AssistantChatViewModel: ObservableObject {
         track(.assistantClosed(flow: transcript.flow, stage: stage, turns: turnCount))
     }
 
+    /// Tells the server the chat closed, once, and only if a turn was sent
+    /// (the server stores a chat from its first turn). Never waited on.
+    func end() {
+        guard !ended, turnCount > 0 else { return }
+        ended = true
+        let id = conversationId
+        Task { [endConversation] in await endConversation(id) }
+    }
+
     // MARK: Turns
 
     /// Runs one turn for the transcript as it stands (the athlete's message
@@ -177,7 +198,7 @@ final class AssistantChatViewModel: ObservableObject {
         turnTask?.cancel()
         turnCount += 1
         track(.assistantTurn(flow: transcript.flow, number: turnCount, isRetry: isRetry))
-        let events = runTurn(AssistantTurnRequest(transcript: transcript))
+        let events = runTurn(AssistantTurnRequest(transcript: transcript, conversationId: conversationId))
         turnTask = Task { [weak self] in
             // The trainer may end on an action; it's handed over only once
             // the turn completes, so a failed turn never runs one.
@@ -289,6 +310,24 @@ final class AssistantChatViewModel: ObservableObject {
                 ChatSuggestion(id: $0.id, label: $0.label, action: .init(serverValue: $0.action.rawValue, payload: $0.payload), payload: $0.payload)
             }
         )
+    }
+
+    /// Reports the close; a failure is only logged, since the server also
+    /// treats a chat as over once it goes quiet.
+    nonisolated static func sendEndConversation(_ id: String) async {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            Network.shared.client.perform(mutation: EndConversationMutation(id: id)) { result in
+                switch result {
+                case let .success(graphQLResult):
+                    if let errors = graphQLResult.errors, !errors.isEmpty {
+                        TelemetryService.captureGraphQLErrors(messages: errors.compactMap(\.message).joined(separator: "; "), operation: "EndConversation")
+                    }
+                case let .failure(error):
+                    TelemetryService.captureError(error, tags: ["operation": "EndConversation"])
+                }
+                continuation.resume()
+            }
+        }
     }
 
     enum GreetingError: Error {

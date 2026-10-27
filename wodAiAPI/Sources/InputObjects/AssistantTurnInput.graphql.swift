@@ -13,12 +13,14 @@ public struct AssistantTurnInput: InputObject {
   public init(
     flow: GraphQLNullable<String> = nil,
     messages: [WodAiAPI.AssistantMessageInput],
-    timezone: String
+    timezone: String,
+    conversationId: GraphQLNullable<WodAiAPI.ID> = nil
   ) {
     __data = InputDict([
       "flow": flow,
       "messages": messages,
-      "timezone": timezone
+      "timezone": timezone,
+      "conversationId": conversationId
     ])
   }
 
@@ -35,5 +37,10 @@ public struct AssistantTurnInput: InputObject {
   public var timezone: String {
     get { __data["timezone"] }
     set { __data["timezone"] = newValue }
+  }
+
+  public var conversationId: GraphQLNullable<WodAiAPI.ID> {
+    get { __data["conversationId"] }
+    set { __data["conversationId"] = newValue }
   }
 }
