@@ -20,6 +20,11 @@ struct wodAIApp: App {
             return
         }
         #endif
+        // Unit tests run inside the app: keep their deliberate failures and
+        // fixtures out of Sentry and PostHog.
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+            return
+        }
         TelemetryService.initialize()
         AnalyticsService.initialize()
         // A restored sign-in never goes through authenticate(), which is
