@@ -368,5 +368,4 @@ Here
 3. **Add a feature** — create or update a ViewModel in `wodAI/ViewModels/`, wire it to a SwiftUI view. Views observe `@Published` properties; mutations go through the view model
 4. **Test** — `Cmd+U` in Xcode
 
-
 END
