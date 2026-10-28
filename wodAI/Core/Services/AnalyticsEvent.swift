@@ -26,6 +26,11 @@ enum AnalyticsEvent: Equatable {
     /// The chat closed. `stage` is how far it got: "greeting" (nothing tapped
     /// or sent), "chatting", "error" (it ended on an error) or "handed_off".
     case assistantClosed(flow: String?, stage: String, turns: Int)
+    /// The athlete corrected an item on Your training ("focus", "habit",
+    /// "avoid"); `changedLength` when they changed a focus block's length.
+    case memoryEdited(kind: String, changedLength: Bool)
+    /// The athlete took an item off Your training (a focus ends).
+    case memoryRemoved(kind: String)
 
     var name: String {
         switch self {
@@ -35,6 +40,8 @@ enum AnalyticsEvent: Equatable {
         case .assistantFlowCompleted: return "assistant_flow_completed"
         case .assistantFlowFailed: return "assistant_flow_failed"
         case .assistantClosed: return "assistant_closed"
+        case .memoryEdited: return "memory_edited"
+        case .memoryRemoved: return "memory_removed"
         }
     }
 
@@ -60,6 +67,10 @@ enum AnalyticsEvent: Equatable {
         case let .assistantClosed(f, stage, turns):
             properties = ["stage": stage, "turns": turns]
             flow = f
+        case let .memoryEdited(kind, changedLength):
+            return ["kind": kind, "changed_length": changedLength]
+        case let .memoryRemoved(kind):
+            return ["kind": kind]
         }
         if let flow { properties["flow"] = flow }
         return properties

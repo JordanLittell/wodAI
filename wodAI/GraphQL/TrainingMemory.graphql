@@ -1,0 +1,36 @@
+# The "Your training" screen: what the coach keeps to (a focus block, habits,
+# things to avoid), and the athlete's corrections to it.
+
+fragment MemoryItemFields on MemoryItem {
+  id
+  kind
+  text
+  startsOn
+  endsOn
+}
+
+query TrainingMemory {
+  trainingMemory {
+    focus {
+      ...MemoryItemFields
+    }
+    habits {
+      ...MemoryItemFields
+    }
+    avoid {
+      ...MemoryItemFields
+    }
+  }
+}
+
+# Rewords an item; weeks sets a focus block's length from its first day.
+mutation UpdateMemoryItem($id: ID!, $text: String, $weeks: Int) {
+  updateMemoryItem(id: $id, text: $text, weeks: $weeks) {
+    ...MemoryItemFields
+  }
+}
+
+# A focus ends; a habit or avoid is removed, lifting any exclusion it made.
+mutation RemoveMemoryItem($id: ID!) {
+  removeMemoryItem(id: $id)
+}

@@ -10,6 +10,7 @@ public extension Unions {
       Objects.AssistantTextDelta.self,
       Objects.AssistantSuggestions.self,
       Objects.AssistantAction.self,
+      Objects.AssistantMemoryChanged.self,
       Objects.AssistantTurnComplete.self,
       Objects.GenerationFailed.self
     ]

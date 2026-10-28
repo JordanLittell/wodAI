@@ -22,6 +22,7 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     switch typename {
     case "AssistantAction": return WodAiAPI.Objects.AssistantAction
     case "AssistantGreeting": return WodAiAPI.Objects.AssistantGreeting
+    case "AssistantMemoryChanged": return WodAiAPI.Objects.AssistantMemoryChanged
     case "AssistantSuggestion": return WodAiAPI.Objects.AssistantSuggestion
     case "AssistantSuggestions": return WodAiAPI.Objects.AssistantSuggestions
     case "AssistantTextDelta": return WodAiAPI.Objects.AssistantTextDelta
@@ -51,6 +52,7 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "HealthImportResult": return WodAiAPI.Objects.HealthImportResult
     case "HeartRateSample": return WodAiAPI.Objects.HeartRateSample
     case "HeartRateSummary": return WodAiAPI.Objects.HeartRateSummary
+    case "MemoryItem": return WodAiAPI.Objects.MemoryItem
     case "Mutation": return WodAiAPI.Objects.Mutation
     case "Query": return WodAiAPI.Objects.Query
     case "RecoveryStatus": return WodAiAPI.Objects.RecoveryStatus
@@ -69,6 +71,7 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "TagFacet": return WodAiAPI.Objects.TagFacet
     case "TimerPhase": return WodAiAPI.Objects.TimerPhase
     case "TimerSegment": return WodAiAPI.Objects.TimerSegment
+    case "TrainingMemory": return WodAiAPI.Objects.TrainingMemory
     case "User": return WodAiAPI.Objects.User
     case "WeeklyPlanJob": return WodAiAPI.Objects.WeeklyPlanJob
     case "WodTimerConfig": return WodAiAPI.Objects.WodTimerConfig

@@ -6,7 +6,7 @@
 import SwiftUI
 
 enum AppDestination {
-    case workout, saved, activity, equipment, skills, devices, connect
+    case workout, training, saved, activity, equipment, skills, devices, connect
 }
 
 struct AppNavigationView: View {
@@ -70,6 +70,18 @@ struct AppNavigationView: View {
             #else
             AssistantView()
             #endif
+        case .training:
+            // Your training: what the coach keeps to. Its own page, so the
+            // Workout page stays about the week.
+            #if DEBUG
+            if UITestMode.isActive {
+                TrainingMemoryView(viewModel: TrainingMemoryViewModel(api: .preview(.sample), track: { _ in }))
+            } else {
+                TrainingMemoryView()
+            }
+            #else
+            TrainingMemoryView()
+            #endif
         case .saved:
             SavedWorkoutsView()
         case .activity:
@@ -114,6 +126,14 @@ struct SideMenuView: View {
                     isSelected: destination == .workout
                 ) {
                     navigate(to: .workout)
+                }
+
+                MenuRow(
+                    icon: "target",
+                    label: "Training",
+                    isSelected: destination == .training
+                ) {
+                    navigate(to: .training)
                 }
 
                 MenuRow(

@@ -369,6 +369,7 @@ scalar JSON
 
 type Query {
   assistantGreeting: AssistantGreeting!
+  trainingMemory: TrainingMemory!
   user: User
   users: [User!]!
   workout(id: String!): Workout
@@ -461,6 +462,8 @@ type Mutation {
   setMovementExcluded(exerciseId: Int!, excluded: Boolean!): HIITExercise!
   setSkillLevel(ladder: String!, level: String): SkillLadder!
   endConversation(id: ID!): Boolean!
+  updateMemoryItem(id: ID!, text: String, weeks: Int): MemoryItem!
+  removeMemoryItem(id: ID!): Boolean!
   createTag(name: String!, description: String!, category: String): Tag!
   setTagDisabled(id: Int!, disabled: Boolean!): Tag!
   setTagCategory(id: Int!, category: String!): Tag!
@@ -1027,7 +1030,7 @@ input AssistantTurnInput {
   conversationId: ID
 }
 
-union AssistantTurnEvent = AssistantTextDelta | AssistantSuggestions | AssistantAction | AssistantTurnComplete | GenerationFailed
+union AssistantTurnEvent = AssistantTextDelta | AssistantSuggestions | AssistantAction | AssistantMemoryChanged | AssistantTurnComplete | GenerationFailed
 
 type AssistantTextDelta {
   text: String!
@@ -1049,6 +1052,30 @@ type AssistantAction {
   scheduledDate: String
   dates: [String!]
   replaceWorkoutIds: [String!]
+}
+
+enum MemoryItemKind {
+  HABIT
+  AVOID
+  FOCUS
+}
+
+type MemoryItem {
+  id: ID!
+  kind: MemoryItemKind!
+  text: String!
+  startsOn: String
+  endsOn: String
+}
+
+type TrainingMemory {
+  focus: MemoryItem
+  habits: [MemoryItem!]!
+  avoid: [MemoryItem!]!
+}
+
+type AssistantMemoryChanged {
+  item: MemoryItem!
 }
 
 type AssistantTurnComplete {
