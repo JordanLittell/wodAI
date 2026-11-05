@@ -45,8 +45,12 @@ public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
     case "GymPreset": return WodAiAPI.Objects.GymPreset
     case "GymProfile": return WodAiAPI.Objects.GymProfile
     case "HIITExercise": return WodAiAPI.Objects.HIITExercise
+    case "HIITLineSwapOptions": return WodAiAPI.Objects.HIITLineSwapOptions
     case "HIITPaginatedResponse": return WodAiAPI.Objects.HIITPaginatedResponse
+    case "HIITPart": return WodAiAPI.Objects.HIITPart
+    case "HIITPrescription": return WodAiAPI.Objects.HIITPrescription
     case "HIITSession": return WodAiAPI.Objects.HIITSession
+    case "HIITSwapOption": return WodAiAPI.Objects.HIITSwapOption
     case "HIITWorkout": return WodAiAPI.Objects.HIITWorkout
     case "HealthConnection": return WodAiAPI.Objects.HealthConnection
     case "HealthImportResult": return WodAiAPI.Objects.HealthImportResult

@@ -7,10 +7,10 @@ import WodAiAPI
 public class WhiteboardImportSubscription: GraphQLSubscription {
   public static let operationName: String = "WhiteboardImport"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "0dc204ea6decb203eb38616f6046fdeb618ac66b3d9d214872119311461056e5",
+    operationIdentifier: "6ec672902a459312d56e7a0bcef137f4dab1f6090332182781e6f7719efc78db",
     definition: .init(
       #"subscription WhiteboardImport($input: WhiteboardImportInput!) { whiteboardImport(input: $input) { __typename ... on GenerationSession { name description stimulus } ... on GenerationStrengthBlock { order name instructions } ... on GenerationStrengthSet { order setOrder reps weight rpe exercise { __typename name muscleGroups videoUrl } } ... on GenerationDraftHiitBlock { order name format displayText stimulus } ... on GenerationComplete { workout { __typename ...SessionDetails } } ... on GenerationFailed { message } } }"#,
-      fragments: [SessionDetails.self]
+      fragments: [HiitLineFields.self, SessionDetails.self]
     ))
 
   public var input: WodAiAPI.WhiteboardImportInput
@@ -201,6 +201,7 @@ public class WhiteboardImportSubscription: GraphQLSubscription {
           public var stimulus: String? { __data["stimulus"] }
           public var coaching: String? { __data["coaching"] }
           public var scheduledDate: WodAiAPI.DateTime { __data["scheduledDate"] }
+          public var createdAt: WodAiAPI.DateTime { __data["createdAt"] }
           public var source: GraphQLEnum<WodAiAPI.WorkoutSource> { __data["source"] }
           public var optional: Bool { __data["optional"] }
           public var blocks: [Block] { __data["blocks"] }

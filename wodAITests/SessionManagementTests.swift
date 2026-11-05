@@ -119,7 +119,8 @@ struct SessionManagementTests {
         viewModel.createSession(request: "  bodyweight in my room  ")
         #expect(sent?.request == "bodyweight in my room")
         #expect(sent?.date == viewModel.week.calendarDate(for: viewModel.selectedDay))
-        let pending = viewModel.daySessions[1]
+        // It streams in at the top of the day, above the programmed session.
+        let pending = viewModel.daySessions[0]
         #expect(pending.name == "Creating your session…")
         #expect(pending.source == .created)
         #expect(pending.isPending)
@@ -131,8 +132,39 @@ struct SessionManagementTests {
         continuation.finish()
         await waitUntil { !viewModel.isAddingSession }
 
-        #expect(viewModel.daySessions.map(\.id) == ["programmed", "saved"])
-        #expect(viewModel.daySessions[1].source == .created)
+        #expect(viewModel.daySessions.map(\.id) == ["saved", "programmed"])
+        #expect(viewModel.daySessions[0].source == .created)
+    }
+
+    @Test func aDaysSessionsAreListedNewestFirst() {
+        func made(_ id: String, _ seconds: TimeInterval?, pending: Bool = false) -> AssistantSession {
+            var s = session(id)
+            s.createdAt = seconds.map { Date(timeIntervalSince1970: $0) }
+            s.isPending = pending
+            return s
+        }
+        let sorted = AssistantSession.newestFirst([
+            made("old", 100), made("new", 300), made("streaming", nil, pending: true), made("mid", 200),
+        ])
+        #expect(sorted.map(\.id) == ["streaming", "new", "mid", "old"])
+        #expect(AssistantSession.serverInstant("2026-11-05T18:04:36.123Z") != nil)
+        #expect(AssistantSession.serverInstant("2026-11-05T18:04:36Z") != nil)
+    }
+
+    @Test func aFetchedWeekListsEachDayNewestFirst() async {
+        let week = AssistantWeek()
+        func made(_ id: String, _ seconds: TimeInterval) -> AssistantSession {
+            AssistantSession(
+                id: id, name: id, description: "", stimulus: nil, coaching: nil,
+                scheduledDate: week.today, blocks: [], createdAt: Date(timeIntervalSince1970: seconds)
+            )
+        }
+        let viewModel = AssistantViewModel(week: week, sessions: [:])
+        viewModel.weekSessions = { _ in [made("programmed", 100), made("created", 300), made("imported", 200)] }
+        var done = false
+        viewModel.reloadWeek { done = true }
+        await waitUntil { done }
+        #expect(viewModel.daySessions.map(\.id) == ["created", "imported", "programmed"])
     }
 
     @Test func aFailedCreateKeepsTheRequestForTryAgain() async {

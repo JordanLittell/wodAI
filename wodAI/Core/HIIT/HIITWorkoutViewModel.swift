@@ -15,7 +15,7 @@ struct HIITWorkoutTag: Identifiable, Hashable {
 struct HIITWorkoutItem: Identifiable, Hashable {
     let id: Int
     let format: String?
-    let displayText: String
+    var displayText: String
     let stimulus: String
     let constraintType: String
     let constraintMagnitude: Int
@@ -28,6 +28,11 @@ struct HIITWorkoutItem: Identifiable, Hashable {
     /// and how to pace it. Only set for a piece opened from a generated session;
     /// `stimulus` is the workout's generic description.
     var pieceStimulus: String? = nil
+    /// The movement lines as prescribed, in order. Empty when the workout
+    /// has none (older rows), and the card falls back to `displayText`.
+    var lines: [HIITLine] = []
+    /// The blocks of a compound piece, in order; empty for a single block.
+    var parts: [HIITPartHeader] = []
 
     /// What to call it on screen: its name when it has one, otherwise
     /// "Metcon". A named workout implies it's a metcon, so the name wins.
@@ -124,6 +129,16 @@ class HIITWorkoutViewModel: ObservableObject {
     /// Called once a result is saved on the server (Done or Skip, not
     /// Discard), so an owner such as the block pager can move on.
     private let onCompleted: (() -> Void)?
+    /// Called after a swap is saved, with the updated workout, so an owner
+    /// such as the block pager shows it when the block is reopened.
+    private let onWorkoutChanged: ((HIITWorkoutItem) -> Void)?
+
+    /// Set while a movement swap is being saved, and when one failed.
+    @Published var isSwapping = false
+    @Published var swapError: String?
+    /// What each line can be swapped for, keyed by `HIITLine.id`; empty until
+    /// `loadSwapOptions()` returns.
+    @Published var swapOptions: [String: [SwapOption]] = [:]
 
     private var timerCancellable: AnyCancellable?
     /// Records heart rate for the current run; nil without a device.
@@ -145,6 +160,7 @@ class HIITWorkoutViewModel: ObservableObject {
     init() {
         self.advancesAfterCompletion = true
         self.onCompleted = nil
+        self.onWorkoutChanged = nil
         self.scheduledPiece = nil
         setupFilterSubscription()
     }
@@ -155,11 +171,13 @@ class HIITWorkoutViewModel: ObservableObject {
         preloaded: HIITWorkoutItem,
         pieceId: Int? = nil,
         advancesAfterCompletion: Bool = true,
-        onCompleted: (() -> Void)? = nil
+        onCompleted: (() -> Void)? = nil,
+        onWorkoutChanged: ((HIITWorkoutItem) -> Void)? = nil
     ) {
         self.currentWorkout = preloaded
         self.advancesAfterCompletion = advancesAfterCompletion
         self.onCompleted = onCompleted
+        self.onWorkoutChanged = onWorkoutChanged
         self.scheduledPiece = pieceId.map { (pieceId: $0, workoutId: preloaded.id) }
         self.editableTimeCap = preloaded.timeCap
         self.isFavorited = true
@@ -693,6 +711,88 @@ class HIITWorkoutViewModel: ObservableObject {
         clearCompletionHeartRate()
         onCompleted?()
         if advancesAfterCompletion { nextWorkout() }
+    }
+
+    // MARK: - Movement swap
+
+    /// Swaps are saved on the session piece's own copy, so only a metcon
+    /// opened from a session, with structured lines, can be changed.
+    var canSwap: Bool {
+        scheduledPiece != nil && !(currentWorkout?.lines.isEmpty ?? true)
+    }
+
+    /// Loads what each line can be swapped for (`swapOptions`), keyed by
+    /// `HIITLine.id`. Each option already reads as the line will after the
+    /// swap, so a pick shows at once. Failing leaves the menus with search only.
+    @MainActor
+    func loadSwapOptions() async {
+        guard canSwap, let pieceId = scheduledPiece?.pieceId else { return }
+        do {
+            let result = try await withCheckedThrowingContinuation { continuation in
+                Network.shared.client.fetch(
+                    query: HiitSwapOptionsQuery(pieceId: pieceId),
+                    cachePolicy: .fetchIgnoringCacheCompletely
+                ) { continuation.resume(with: $0) }
+            }
+            guard let data = result.data, let lines = currentWorkout?.lines else { return }
+            var byLine: [String: [SwapOption]] = [:]
+            for entry in data.hiitSwapOptions {
+                guard let line = lines.first(where: { $0.line == entry.line && $0.partId == entry.partId }) else { continue }
+                byLine[line.id] = entry.options.map { SwapOption(option: $0, for: line) }
+            }
+            swapOptions = byLine
+        } catch {
+            TelemetryService.captureError(error, tags: ["operation": "HiitSwapOptions"])
+        }
+    }
+
+    /// Replaces `line`'s movement with `exerciseId` on the server. With a
+    /// `preview` (a suggestion), the card shows it right away and goes back if
+    /// the save fails. The server converts the line for the new movement, so
+    /// the saved lines and text replace whatever was shown.
+    @MainActor
+    func swapMovement(_ line: HIITLine, to exerciseId: Int, preview: HIITLine? = nil) async {
+        guard let pieceId = scheduledPiece?.pieceId, !isSwapping, let before = currentWorkout else { return }
+        isSwapping = true
+        swapError = nil
+        defer { isSwapping = false }
+        if let preview, let index = before.lines.firstIndex(where: { $0.id == line.id }) {
+            var shown = before
+            shown.lines[index] = preview
+            currentWorkout = shown
+        }
+        do {
+            let result = try await withCheckedThrowingContinuation { continuation in
+                Network.shared.client.perform(
+                    mutation: SwapHiitMovementMutation(
+                        pieceId: pieceId,
+                        line: line.line,
+                        partId: line.partId.map { .some($0) } ?? .none,
+                        exerciseId: exerciseId
+                    )
+                ) { continuation.resume(with: $0) }
+            }
+            if let errors = result.errors, !errors.isEmpty {
+                let messages = errors.compactMap { $0.message }.joined(separator: "; ")
+                TelemetryService.captureGraphQLErrors(messages: messages, operation: "SwapHiitMovement")
+                currentWorkout = before
+                swapError = "We couldn't swap that movement. Please try again."
+                return
+            }
+            guard let saved = result.data?.swapHiitMovement else { currentWorkout = before; return }
+            var workout = before
+            workout.lines = saved.prescriptions.map { HIITLine(fragment: $0.fragments.hiitLineFields) }
+            workout.displayText = saved.displayText
+            currentWorkout = workout
+            onWorkoutChanged?(workout)
+        } catch {
+            TelemetryService.captureError(error, tags: ["operation": "SwapHiitMovement"])
+            currentWorkout = before
+            swapError = "We couldn't swap that movement. Check your connection and try again."
+            return
+        }
+        // What's offered depends on the block's movements, which just changed.
+        await loadSwapOptions()
     }
 
     /// Abandon an unsaved completion result after a failure. Used by the "Discard"

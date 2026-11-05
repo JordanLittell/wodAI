@@ -7,6 +7,7 @@ fragment SessionDetails on Workout {
   stimulus
   coaching
   scheduledDate
+  createdAt
   source
   optional
   blocks {
@@ -53,6 +54,16 @@ fragment SessionDetails on Workout {
         constraintType
         constraintMagnitude
         timeCap
+        # Every movement line, in order; on a compound piece each carries its partId.
+        prescriptions {
+          ...HiitLineFields
+        }
+        parts {
+          id
+          order
+          format
+          restAfterSeconds
+        }
         timingScheme {
           version
           segments {

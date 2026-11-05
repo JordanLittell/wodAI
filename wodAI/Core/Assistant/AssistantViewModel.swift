@@ -69,6 +69,30 @@ struct AssistantSession: Identifiable {
     /// True while the session streams in. Its blocks aren't saved yet, so
     /// they can't be opened.
     var isPending = false
+    /// When the server created the session; nil while it streams in. A day's
+    /// sessions are listed newest first (`newestFirst`).
+    var createdAt: Date? = nil
+
+    /// A day's sessions, newest first: one still streaming in on top, then by
+    /// `createdAt`, latest first. Ties keep their order.
+    static func newestFirst(_ sessions: [AssistantSession]) -> [AssistantSession] {
+        sessions.enumerated().sorted { a, b in
+            if a.element.isPending != b.element.isPending { return a.element.isPending }
+            let aDate = a.element.createdAt ?? .distantPast
+            let bDate = b.element.createdAt ?? .distantPast
+            if aDate != bDate { return aDate > bDate }
+            return a.offset < b.offset
+        }.map(\.element)
+    }
+
+    /// Parses the server's ISO 8601 `createdAt`, with or without fractional seconds.
+    nonisolated static func serverInstant(_ value: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: value) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: value)
+    }
 
     /// True once every block that can be opened is done.
     var isCompleted: Bool {
@@ -517,7 +541,7 @@ final class AssistantViewModel: ObservableObject {
                     }
                 }
             }
-            self.sessions = sessions
+            self.sessions = sessions.mapValues(AssistantSession.newestFirst)
             self.loadedWeeks.insert(week.first)
         }
     }
@@ -573,6 +597,17 @@ final class AssistantViewModel: ObservableObject {
                   case .hiit = session.blocks[index].kind
             else { return }
             session.blocks[index].hiitCompleted = true
+        }
+    }
+
+    /// Takes a HIIT block's workout after a movement swap in MetconView, so
+    /// reopening the block shows the new movement.
+    func updateHiit(_ workout: HIITWorkoutItem, sessionId: String, blockId: Int) {
+        updateSession(sessionId) { session in
+            guard let index = session.blocks.firstIndex(where: { $0.id == blockId }),
+                  case .hiit = session.blocks[index].kind
+            else { return }
+            session.blocks[index].kind = .hiit(workout)
         }
     }
 
@@ -638,7 +673,8 @@ final class AssistantViewModel: ObservableObject {
         lastFailedAdd = nil
         isAddingSession = true
         revealedSessionId = nil
-        sessions[day, default: []].append(Self.pendingSession(id: pendingId, kind: kind, day: day))
+        // Newest first, so it streams in at the top of the day.
+        sessions[day, default: []].insert(Self.pendingSession(id: pendingId, kind: kind, day: day), at: 0)
         expandOnly(pendingId, on: day)
         focusedSessionId = pendingId
         addingSessionId = pendingId
@@ -947,7 +983,11 @@ final class AssistantViewModel: ObservableObject {
                         timingScheme: hiit.timingScheme.flatMap { WodTimerConfig(fragment: $0) },
                         tags: [],
                         name: hiit.name,
-                        pieceStimulus: piece.pieceStimulus
+                        pieceStimulus: piece.pieceStimulus,
+                        lines: hiit.prescriptions.map { HIITLine(fragment: $0.fragments.hiitLineFields) },
+                        parts: hiit.parts.map {
+                            HIITPartHeader(id: $0.id, order: $0.order, format: $0.format, restAfterSeconds: $0.restAfterSeconds)
+                        }
                     )
                     return AssistantBlock(
                         id: block.order,
@@ -975,7 +1015,8 @@ final class AssistantViewModel: ObservableObject {
             scheduledDate: AssistantWeek().localDay(fromServer: workout.scheduledDate),
             blocks: blocks,
             source: SessionSource(workout.source),
-            isOptional: workout.optional
+            isOptional: workout.optional,
+            createdAt: AssistantSession.serverInstant(workout.createdAt)
         )
     }
 

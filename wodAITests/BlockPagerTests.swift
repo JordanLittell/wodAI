@@ -138,12 +138,13 @@ struct BlockPagerTests {
                     "__typename": "HIITWorkout", "id": 1, "name": "Fran", "format": "For Time",
                     "stimulus": "", "displayText": "21-15-9", "constraintType": "time",
                     "constraintMagnitude": 1, "timeCap": NSNull(), "timingScheme": NSNull(),
+                    "prescriptions": [] as [Any], "parts": [] as [Any],
                 ] as [String: Any],
             ]
         }
         return try SessionDetails(data: [
             "__typename": "Workout", "id": "w1", "name": "Day", "description": "",
-            "stimulus": NSNull(), "coaching": NSNull(), "scheduledDate": "2026-10-05",
+            "stimulus": NSNull(), "coaching": NSNull(), "scheduledDate": "2026-10-05", "createdAt": "2026-10-05T12:00:00.000Z",
             "source": "GENERATED", "optional": false, "blocks": blocks,
         ])
     }

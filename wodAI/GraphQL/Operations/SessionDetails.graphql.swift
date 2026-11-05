@@ -6,7 +6,7 @@ import WodAiAPI
 
 public struct SessionDetails: WodAiAPI.SelectionSet, Fragment {
   public static var fragmentDefinition: StaticString {
-    #"fragment SessionDetails on Workout { __typename id name description stimulus coaching scheduledDate source optional blocks { __typename order ... on StrengthWorkout { id name stimulus instructions components { __typename id order reps weight rpe completedAt completedReps completedWeight completedRpe exercise { __typename name muscleGroups videoUrl } } } ... on WorkoutHiitPiece { id pieceStimulus completion { __typename id completedAt } hiitWorkout { __typename id name format stimulus displayText constraintType constraintMagnitude timeCap timingScheme { __typename version segments { __typename rounds phases { __typename durationSeconds direction label } } phases { __typename durationSeconds direction label } } } } } }"#
+    #"fragment SessionDetails on Workout { __typename id name description stimulus coaching scheduledDate createdAt source optional blocks { __typename order ... on StrengthWorkout { id name stimulus instructions components { __typename id order reps weight rpe completedAt completedReps completedWeight completedRpe exercise { __typename name muscleGroups videoUrl } } } ... on WorkoutHiitPiece { id pieceStimulus completion { __typename id completedAt } hiitWorkout { __typename id name format stimulus displayText constraintType constraintMagnitude timeCap prescriptions { __typename ...HiitLineFields } parts { __typename id order format restAfterSeconds } timingScheme { __typename version segments { __typename rounds phases { __typename durationSeconds direction label } } phases { __typename durationSeconds direction label } } } } } }"#
   }
 
   public let __data: DataDict
@@ -21,6 +21,7 @@ public struct SessionDetails: WodAiAPI.SelectionSet, Fragment {
     .field("stimulus", String?.self),
     .field("coaching", String?.self),
     .field("scheduledDate", WodAiAPI.DateTime.self),
+    .field("createdAt", WodAiAPI.DateTime.self),
     .field("source", GraphQLEnum<WodAiAPI.WorkoutSource>.self),
     .field("optional", Bool.self),
     .field("blocks", [Block].self),
@@ -32,6 +33,7 @@ public struct SessionDetails: WodAiAPI.SelectionSet, Fragment {
   public var stimulus: String? { __data["stimulus"] }
   public var coaching: String? { __data["coaching"] }
   public var scheduledDate: WodAiAPI.DateTime { __data["scheduledDate"] }
+  public var createdAt: WodAiAPI.DateTime { __data["createdAt"] }
   public var source: GraphQLEnum<WodAiAPI.WorkoutSource> { __data["source"] }
   public var optional: Bool { __data["optional"] }
   public var blocks: [Block] { __data["blocks"] }
@@ -193,6 +195,8 @@ public struct SessionDetails: WodAiAPI.SelectionSet, Fragment {
           .field("constraintType", String.self),
           .field("constraintMagnitude", Int.self),
           .field("timeCap", Int?.self),
+          .field("prescriptions", [Prescription].self),
+          .field("parts", [Part].self),
           .field("timingScheme", TimingScheme?.self),
         ] }
 
@@ -204,7 +208,63 @@ public struct SessionDetails: WodAiAPI.SelectionSet, Fragment {
         public var constraintType: String { __data["constraintType"] }
         public var constraintMagnitude: Int { __data["constraintMagnitude"] }
         public var timeCap: Int? { __data["timeCap"] }
+        public var prescriptions: [Prescription] { __data["prescriptions"] }
+        public var parts: [Part] { __data["parts"] }
         public var timingScheme: TimingScheme? { __data["timingScheme"] }
+
+        /// Block.AsWorkoutHiitPiece.HiitWorkout.Prescription
+        ///
+        /// Parent Type: `HIITPrescription`
+        public struct Prescription: WodAiAPI.SelectionSet {
+          public let __data: DataDict
+          public init(_dataDict: DataDict) { __data = _dataDict }
+
+          public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.HIITPrescription }
+          public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .fragment(HiitLineFields.self),
+          ] }
+
+          public var line: Int { __data["line"] }
+          public var partId: Int? { __data["partId"] }
+          public var amount: Double? { __data["amount"] }
+          public var amountUnit: GraphQLEnum<WodAiAPI.AmountUnit> { __data["amountUnit"] }
+          public var max: Bool { __data["max"] }
+          public var load: Double? { __data["load"] }
+          public var loadUnit: GraphQLEnum<WodAiAPI.LoadUnit>? { __data["loadUnit"] }
+          public var exercise: Exercise { __data["exercise"] }
+
+          public struct Fragments: FragmentContainer {
+            public let __data: DataDict
+            public init(_dataDict: DataDict) { __data = _dataDict }
+
+            public var hiitLineFields: HiitLineFields { _toFragment() }
+          }
+
+          public typealias Exercise = HiitLineFields.Exercise
+        }
+
+        /// Block.AsWorkoutHiitPiece.HiitWorkout.Part
+        ///
+        /// Parent Type: `HIITPart`
+        public struct Part: WodAiAPI.SelectionSet {
+          public let __data: DataDict
+          public init(_dataDict: DataDict) { __data = _dataDict }
+
+          public static var __parentType: any ApolloAPI.ParentType { WodAiAPI.Objects.HIITPart }
+          public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("id", Int.self),
+            .field("order", Int.self),
+            .field("format", String?.self),
+            .field("restAfterSeconds", Int?.self),
+          ] }
+
+          public var id: Int { __data["id"] }
+          public var order: Int { __data["order"] }
+          public var format: String? { __data["format"] }
+          public var restAfterSeconds: Int? { __data["restAfterSeconds"] }
+        }
 
         /// Block.AsWorkoutHiitPiece.HiitWorkout.TimingScheme
         ///

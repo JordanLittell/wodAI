@@ -13,16 +13,25 @@ import UIKit
 struct MetconView: View {
     @StateObject private var viewModel: HIITWorkoutViewModel
     @State private var aboutExpanded = false
+    /// The line whose movement is being searched for; presents the search sheet.
+    @State private var searching: HIITLine?
 
     /// Opens a fixed metcon (a session block or a saved workout).
     /// `pieceId` is the session piece it was opened from, if any, so the
-    /// result is logged against it. `onCompleted` runs once the result is saved.
-    init(preloaded: HIITWorkoutItem, pieceId: Int? = nil, onCompleted: (() -> Void)? = nil) {
+    /// result is logged against it. `onCompleted` runs once the result is saved;
+    /// `onWorkoutChanged` after a movement swap is saved.
+    init(
+        preloaded: HIITWorkoutItem,
+        pieceId: Int? = nil,
+        onCompleted: (() -> Void)? = nil,
+        onWorkoutChanged: ((HIITWorkoutItem) -> Void)? = nil
+    ) {
         self._viewModel = StateObject(wrappedValue: HIITWorkoutViewModel(
             preloaded: preloaded,
             pieceId: pieceId,
             advancesAfterCompletion: false,
-            onCompleted: onCompleted
+            onCompleted: onCompleted,
+            onWorkoutChanged: onWorkoutChanged
         ))
     }
 
@@ -110,16 +119,67 @@ struct MetconView: View {
     // MARK: - Workout card
 
     private var workoutCard: some View {
-        HIITWorkoutCard(
-            format: viewModel.currentWorkout?.format,
-            displayText: viewModel.currentWorkout?.displayText ?? "",
-            borderColor: cardBorderColor(for: viewModel.executionState),
-            borderWidth: (viewModel.isExecuting || viewModel.isPaused) ? 1.5 : 1
-        ) {
-            bookmarkButton
+        Group {
+            if let workout = viewModel.currentWorkout, !workout.lines.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    HIITPrescriptionCard(
+                        format: workout.format,
+                        lines: workout.lines,
+                        parts: workout.parts,
+                        borderColor: cardBorderColor(for: viewModel.executionState),
+                        borderWidth: (viewModel.isExecuting || viewModel.isPaused) ? 1.5 : 1,
+                        swapping: viewModel.canSwap && !viewModel.isSwapping ? lineSwapping : nil
+                    ) {
+                        bookmarkButton
+                    }
+                    if let error = viewModel.swapError {
+                        Text(error)
+                            .font(.footnote)
+                            .foregroundColor(.red)
+                    }
+                }
+            } else {
+                HIITWorkoutCard(
+                    format: viewModel.currentWorkout?.format,
+                    displayText: viewModel.currentWorkout?.displayText ?? "",
+                    borderColor: cardBorderColor(for: viewModel.executionState),
+                    borderWidth: (viewModel.isExecuting || viewModel.isPaused) ? 1.5 : 1
+                ) {
+                    bookmarkButton
+                }
+            }
         }
         .animation(.easeInOut(duration: 0.4), value: viewModel.isExecuting)
         .animation(.easeInOut(duration: 0.4), value: viewModel.isPaused)
+        .sheet(item: $searching) { line in
+            MovementSwapSheet(
+                line: line,
+                suggestions: viewModel.swapOptions[line.id] ?? [],
+                repScheme: isRepScheme(header(for: line)),
+                onPickSuggestion: { option in
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    Task { await viewModel.swapMovement(line, to: option.preview.exerciseId, preview: option.preview) }
+                },
+                onPick: { candidate in
+                    Task { await viewModel.swapMovement(line, to: candidate.id) }
+                }
+            )
+        }
+        // Suggestions are fetched up front so the swap list shows them at once.
+        .task(id: viewModel.canSwap) { await viewModel.loadSwapOptions() }
+    }
+
+    /// Tap a movement's name: opens the searchable swap list for that line.
+    private var lineSwapping: HIITLineSwapping {
+        HIITLineSwapping(open: { searching = $0 })
+    }
+
+    /// The header a line sits under: its part's format, else the workout's.
+    private func header(for line: HIITLine) -> String? {
+        if let partId = line.partId, let part = viewModel.currentWorkout?.parts.first(where: { $0.id == partId }) {
+            return part.format
+        }
+        return viewModel.currentWorkout?.format
     }
 
     // MARK: - Stimulus

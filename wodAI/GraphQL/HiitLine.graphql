@@ -1,0 +1,51 @@
+# One movement line of a metcon as prescribed for the athlete: what MetconView
+# lists and what a swap replaces. A session piece's copy carries only the
+# athlete's own numbers (no female column).
+fragment HiitLineFields on HIITPrescription {
+  line
+  partId
+  amount
+  amountUnit
+  max
+  load
+  loadUnit
+  exercise {
+    id
+    name
+    patterns
+  }
+}
+
+# Swaps the movement on one line of a session piece. The server converts the
+# line for the new movement (unit, load), so read the lines back from the result.
+mutation SwapHiitMovement($pieceId: Int!, $line: Int!, $partId: Int, $exerciseId: Int!) {
+  swapHiitMovement(pieceId: $pieceId, line: $line, partId: $partId, exerciseId: $exerciseId) {
+    id
+    displayText
+    prescriptions {
+      ...HiitLineFields
+    }
+  }
+}
+
+# What each line of a session piece can be swapped for, best first. Each option
+# is the line as it would read after that swap (converted for the movement), so
+# the app can show it, and apply it, before the swap is saved.
+query HiitSwapOptions($pieceId: Int!) {
+  hiitSwapOptions(pieceId: $pieceId) {
+    line
+    partId
+    options {
+      exercise {
+        id
+        name
+        patterns
+      }
+      amount
+      amountUnit
+      max
+      load
+      loadUnit
+    }
+  }
+}

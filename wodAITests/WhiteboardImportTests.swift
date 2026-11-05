@@ -150,7 +150,7 @@ struct WhiteboardImportViewModelTests {
 
     // MARK: - Import
 
-    @Test func anImportStreamsInBesideTheDaysSessionAndBecomesTheSavedOne() async {
+    @Test func anImportStreamsInAboveTheDaysSessionAndBecomesTheSavedOne() async {
         let (viewModel, continuation, sent) = viewModel(sessions: [session("programmed", name: "Programmed")])
 
         viewModel.importWhiteboard(capture)
@@ -158,18 +158,18 @@ struct WhiteboardImportViewModelTests {
         #expect(sent()?.recognizedText == .some("AMRAP 12"))
         #expect(sent()?.scheduledDate == viewModel.week.calendarDate(for: viewModel.selectedDay))
 
-        // A placeholder appears at once, open, with the other session closed.
-        let pending = viewModel.daySessions[1]
+        // A placeholder appears at once on top, open, with the other session closed.
+        let pending = viewModel.daySessions[0]
         #expect(pending.isPending)
         #expect(pending.source == .whiteboard)
         #expect(viewModel.focusedSessionId == pending.id)
-        #expect(viewModel.daySessions.map { viewModel.isExpanded($0) } == [false, true])
+        #expect(viewModel.daySessions.map { viewModel.isExpanded($0) } == [true, false])
 
         continuation.yield(.session(name: "Tuesday", description: "", stimulus: ""))
         continuation.yield(.hiitBlock(order: 0, name: "Fran", workout: hiit))
-        await waitUntil { viewModel.daySessions.last?.blocks.count == 1 }
-        #expect(viewModel.daySessions.last?.name == "Tuesday")
-        #expect(viewModel.daySessions.last?.isPending == true)
+        await waitUntil { viewModel.daySessions.first?.blocks.count == 1 }
+        #expect(viewModel.daySessions.first?.name == "Tuesday")
+        #expect(viewModel.daySessions.first?.isPending == true)
         // Still streaming, so nothing can be opened yet.
         #expect(viewModel.openableBlocks(in: pending.id).isEmpty)
 
@@ -177,8 +177,8 @@ struct WhiteboardImportViewModelTests {
         continuation.finish()
         await waitUntil { !viewModel.isAddingSession }
 
-        #expect(viewModel.daySessions.map(\.id) == ["programmed", "saved"])
-        let saved = viewModel.daySessions[1]
+        #expect(viewModel.daySessions.map(\.id) == ["saved", "programmed"])
+        let saved = viewModel.daySessions[0]
         #expect(!saved.isPending)
         #expect(saved.source == .whiteboard)
         #expect(viewModel.isExpanded(saved))

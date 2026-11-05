@@ -396,6 +396,7 @@ type Query {
   isUserProvisioned: Boolean!
   hiitWorkouts(page: Int, limit: Int, tagIds: [Int!]): HIITPaginatedResponse!
   hiitWorkout(id: Int!): HIITWorkout
+  hiitSwapOptions(pieceId: Int!): [HIITLineSwapOptions!]!
   similarHiitWorkouts(id: Int!): [HIITSimilarResult!]!
   completedHiitWorkouts(startDate: DateTime, endDate: DateTime): [CompletedHIITWorkout!]!
   completedStrengthWorkouts(startDate: DateTime!, endDate: DateTime!): [CompletedStrengthWorkout!]!
@@ -455,6 +456,7 @@ type Mutation {
   saveHiitWorkout(id: Int!): Boolean!
   unsaveHiitWorkout(id: Int!): Boolean!
   likeHiitWorkout(workoutId: Int!, score: Int!): Boolean!
+  swapHiitMovement(pieceId: Int!, line: Int!, partId: Int, exerciseId: Int!): HIITWorkout!
   createHIITSession(wodId: ID!, startedAt: DateTime!, source: SensorSourceInput): HIITSession!
   appendSensorFrames(sessionId: ID!, frames: [SensorFrameInput!]!): Boolean!
   completeHIITSession(sessionId: ID!, endedAt: DateTime!, movementIntervals: [MovementIntervalInput!]!): HIITSession!
@@ -735,6 +737,96 @@ type HIITPart {
   timeCap: Int
   restAfterSeconds: Int
   components: [HIITComponent!]!
+  constraint: HIITConstraint
+  prescriptions: [HIITPrescription!]!
+}
+
+enum ConstraintKind {
+  TIME
+  INTERVALS
+  ROUNDS
+}
+
+enum AmountUnit {
+  reps
+  cal
+  m
+  km
+  mi
+  ft
+  s
+  min
+}
+
+enum LoadUnit {
+  lb
+  kg
+  pood
+  in
+}
+
+type HIITConstraint {
+  kind: ConstraintKind!
+  durationSeconds: Int
+  intervalSeconds: Int
+  intervalCount: Int
+  workSeconds: Int
+  restSeconds: Int
+  rounds: Int
+  timeCapSeconds: Int
+}
+
+type HIITLineSwapOptions {
+  line: Int!
+  partId: Int
+  options: [HIITSwapOption!]!
+}
+
+type HIITSwapOption {
+  exercise: HIITExercise!
+  amount: Float
+  amountUnit: AmountUnit!
+  max: Boolean!
+  load: Float
+  loadUnit: LoadUnit
+}
+
+type HIITPrescription {
+  id: Int!
+  line: Int!
+  exerciseId: Int!
+  exercise: HIITExercise!
+  amount: Float
+  amountFemale: Float
+  amountUnit: AmountUnit!
+  max: Boolean!
+  load: Float
+  loadFemale: Float
+  loadUnit: LoadUnit
+  partId: Int
+}
+
+input HIITConstraintInput {
+  kind: ConstraintKind!
+  durationSeconds: Int
+  intervalSeconds: Int
+  intervalCount: Int
+  workSeconds: Int
+  restSeconds: Int
+  rounds: Int
+  timeCapSeconds: Int
+}
+
+input HIITPrescriptionInput {
+  line: Int!
+  exerciseId: Int!
+  amount: Float
+  amountFemale: Float
+  amountUnit: AmountUnit!
+  max: Boolean
+  load: Float
+  loadFemale: Float
+  loadUnit: LoadUnit
 }
 
 type HIITWorkout {
@@ -753,6 +845,8 @@ type HIITWorkout {
   equipment: [Equipment]
   tags: [Tag!]
   timingScheme: WodTimerConfig
+  constraint: HIITConstraint
+  prescriptions: [HIITPrescription!]!
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -894,6 +988,8 @@ input CreateHIITPartInput {
   timeCap: Int
   restAfterSeconds: Int
   components: [CreateHIITComponentInput!]!
+  constraint: HIITConstraintInput!
+  prescriptions: [HIITPrescriptionInput!]!
 }
 
 input CreateHIITWorkoutInput {
@@ -904,6 +1000,8 @@ input CreateHIITWorkoutInput {
   timeCap: Int
   components: [CreateHIITComponentInput!]!
   parts: [CreateHIITPartInput!]
+  constraint: HIITConstraintInput
+  prescriptions: [HIITPrescriptionInput!]
   rawText: String!
   displayText: String!
   stimulus: String!

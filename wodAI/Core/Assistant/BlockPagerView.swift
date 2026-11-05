@@ -129,7 +129,8 @@ struct BlockPagerView: View {
                 onCompleted: {
                     viewModel.markHiitCompleted(sessionId: sessionId, blockId: block.id)
                     advance(after: block.id)
-                }
+                },
+                onWorkoutChanged: { viewModel.updateHiit($0, sessionId: sessionId, blockId: block.id) }
             )
         case .other:
             EmptyView()

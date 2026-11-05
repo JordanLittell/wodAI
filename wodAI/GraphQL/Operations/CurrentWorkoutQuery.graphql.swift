@@ -7,10 +7,10 @@ import WodAiAPI
 public class CurrentWorkoutQuery: GraphQLQuery {
   public static let operationName: String = "CurrentWorkout"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "634eba56196b817e87a6bc3dd04169e9bef93a9d53d59a8848b22f967356ad51",
+    operationIdentifier: "21e62f68b57664fc68dee73f9aab5b28e4544d26ff4f215dd851fad82c7df9cf",
     definition: .init(
       #"query CurrentWorkout { currentWorkout { __typename ...SessionDetails } }"#,
-      fragments: [SessionDetails.self]
+      fragments: [HiitLineFields.self, SessionDetails.self]
     ))
 
   public init() {}
@@ -45,6 +45,7 @@ public class CurrentWorkoutQuery: GraphQLQuery {
       public var stimulus: String? { __data["stimulus"] }
       public var coaching: String? { __data["coaching"] }
       public var scheduledDate: WodAiAPI.DateTime { __data["scheduledDate"] }
+      public var createdAt: WodAiAPI.DateTime { __data["createdAt"] }
       public var source: GraphQLEnum<WodAiAPI.WorkoutSource> { __data["source"] }
       public var optional: Bool { __data["optional"] }
       public var blocks: [Block] { __data["blocks"] }
