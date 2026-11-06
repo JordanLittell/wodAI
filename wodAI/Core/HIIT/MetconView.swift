@@ -241,7 +241,6 @@ struct MetconView: View {
 
     private var bottomBar: some View {
         VStack(spacing: 10) {
-            HeartRateChip()
             startButton
         }
         .padding(.horizontal)

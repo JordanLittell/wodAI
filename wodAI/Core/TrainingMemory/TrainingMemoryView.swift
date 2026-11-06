@@ -252,18 +252,6 @@ private func trailing(isBusy: Bool) -> some View {
     }
 }
 
-#Preview("With items") {
-    NavigationStack {
-        TrainingMemoryView(viewModel: TrainingMemoryViewModel(api: .preview(.sample)))
-    }
-}
-
-#Preview("Empty") {
-    NavigationStack {
-        TrainingMemoryView(viewModel: TrainingMemoryViewModel(api: .preview(.empty)))
-    }
-}
-
 #if DEBUG
 extension TrainingMemory {
     static let sample = TrainingMemory(
@@ -286,6 +274,18 @@ extension TrainingMemoryAPI {
             },
             remove: { _ in true }
         )
+    }
+}
+
+#Preview("With items") {
+    NavigationStack {
+        TrainingMemoryView(viewModel: TrainingMemoryViewModel(api: .preview(.sample)))
+    }
+}
+
+#Preview("Empty") {
+    NavigationStack {
+        TrainingMemoryView(viewModel: TrainingMemoryViewModel(api: .preview(.empty)))
     }
 }
 #endif

@@ -2,9 +2,10 @@
 //  HeartRateViews.swift
 //  wodAI
 //
-//  Small heart-rate pieces shared across screens: the pre-start chip on a
-//  metcon, the live readout on the timer, zone colors, and the heart-rate
-//  curve drawn on the completion screen and the Stats feed.
+//  Small heart-rate pieces shared across screens: the live readout on the
+//  timer, zone colors, and the heart-rate curve drawn on the completion screen
+//  and the Stats feed. Devices are connected from the menu's heart-rate page
+//  (HeartRateDevicesView); starting a metcon reconnects the remembered one.
 //
 
 import SwiftUI
@@ -224,69 +225,6 @@ enum HeartRateZoneStyle {
         case 4: return "Threshold"
         case 5: return "Max"
         default: return "Rest"
-        }
-    }
-}
-
-// MARK: - Pre-start chip
-
-/// Sits above Start on a metcon: offers to connect a device, or shows the
-/// remembered one's status and live bpm. Tapping it opens the connect sheet.
-struct HeartRateChip: View {
-    @ObservedObject var sensors: SensorManager = .shared
-    @State private var showingConnect = false
-
-    var body: some View {
-        Button { showingConnect = true } label: {
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                HStack(spacing: 8) {
-                    Image(systemName: sensors.isTrackingConfigured ? "heart.fill" : "heart")
-                        .foregroundColor(iconColor(at: context.date))
-                        .symbolEffect(.pulse, isActive: sensors.currentBpm(at: context.date) != nil)
-                    Text(label(at: context.date))
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(Color("PrimaryText"))
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundColor(Color("SecondaryText"))
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(Color("Background"))
-                .cornerRadius(12)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color("Border"), lineWidth: 1))
-            }
-        }
-        .buttonStyle(.plain)
-        .sheet(isPresented: $showingConnect) {
-            DeviceConnectSheet()
-        }
-        .onAppear { sensors.prepareForWorkout() }
-    }
-
-    private func iconColor(at date: Date) -> Color {
-        sensors.currentBpm(at: date) != nil ? .red : Color("SecondaryText")
-    }
-
-    private func label(at date: Date) -> String {
-        guard let device = sensors.rememberedDevice, sensors.isHeartRateTrackingEnabled else {
-            return "Track heart rate"
-        }
-        if let bpm = sensors.currentBpm(at: date) {
-            return "\(device.name) · \(bpm) bpm"
-        }
-        switch sensors.connectionState {
-        case .unavailable(.bluetoothOff): return "Bluetooth is off"
-        case .unavailable(.unauthorized): return "Allow Bluetooth to track heart rate"
-        case .unavailable(.unsupported): return "Heart rate isn't available on this device"
-        case .connected: return "\(device.name) · waiting for heart rate"
-        case .idle, .connecting:
-            return device.brand == .garmin
-                ? "\(device.name) not found · turn on Broadcast"
-                : "Looking for \(device.name)…"
         }
     }
 }

@@ -175,7 +175,7 @@ struct SessionSectionView<Blocks: View>: View {
                     .accessibilityHidden(true)
             }
             if canDelete {
-                trashButton
+                optionsMenu
             }
         }
         .contentShape(Rectangle())
@@ -188,18 +188,23 @@ struct SessionSectionView<Blocks: View>: View {
         .simultaneousGesture(revealDrag)
     }
 
-    /// Asks to delete the session; the owner confirms first.
-    private var trashButton: some View {
-        Button(action: onDelete) {
-            Image(systemName: "trash")
+    /// The session's options, behind a three-dot menu. For now only Delete,
+    /// which asks the owner to confirm first.
+    private var optionsMenu: some View {
+        Menu {
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash")
+            }
+            .accessibilityIdentifier("deleteSessionButton")
+        } label: {
+            Image(systemName: "ellipsis")
                 .font(.body.weight(.semibold))
-                .foregroundColor(Color("Error"))
+                .foregroundColor(Color("SecondaryText"))
                 .frame(width: 32, height: 32)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Delete session")
-        .accessibilityIdentifier("deleteSessionButton")
+        .accessibilityLabel("Session options")
+        .accessibilityIdentifier("sessionOptionsMenu")
     }
 
     private var sourceChip: some View {
