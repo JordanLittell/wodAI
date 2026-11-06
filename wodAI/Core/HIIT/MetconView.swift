@@ -15,11 +15,13 @@ struct MetconView: View {
     @State private var aboutExpanded = false
     /// The line whose movement is being searched for; presents the search sheet.
     @State private var searching: HIITLine?
+    /// The line number being adjusted; presents LineAdjustSheet.
+    @State private var adjusting: LineAdjustTarget?
 
     /// Opens a fixed metcon (a session block or a saved workout).
     /// `pieceId` is the session piece it was opened from, if any, so the
     /// result is logged against it. `onCompleted` runs once the result is saved;
-    /// `onWorkoutChanged` after a movement swap is saved.
+    /// `onWorkoutChanged` after a movement swap or line adjustment is saved.
     init(
         preloaded: HIITWorkoutItem,
         pieceId: Int? = nil,
@@ -128,11 +130,11 @@ struct MetconView: View {
                         parts: workout.parts,
                         borderColor: cardBorderColor(for: viewModel.executionState),
                         borderWidth: (viewModel.isExecuting || viewModel.isPaused) ? 1.5 : 1,
-                        swapping: viewModel.canSwap && !viewModel.isSwapping ? lineSwapping : nil
+                        swapping: viewModel.canSwap && !viewModel.isEditingPiece ? lineSwapping : nil
                     ) {
-                        bookmarkButton
+                        cornerButton
                     }
-                    if let error = viewModel.swapError {
+                    if let error = viewModel.swapError ?? viewModel.adjustError {
                         Text(error)
                             .font(.footnote)
                             .foregroundColor(.red)
@@ -155,7 +157,6 @@ struct MetconView: View {
             MovementSwapSheet(
                 line: line,
                 suggestions: viewModel.swapOptions[line.id] ?? [],
-                repScheme: isRepScheme(header(for: line)),
                 onPickSuggestion: { option in
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     Task { await viewModel.swapMovement(line, to: option.preview.exerciseId, preview: option.preview) }
@@ -165,21 +166,29 @@ struct MetconView: View {
                 }
             )
         }
+        .sheet(item: $adjusting) { target in
+            LineAdjustSheet(line: target.line, field: target.field) { value in
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                Task {
+                    switch target.field {
+                    case .amount: await viewModel.adjustLine(target.line, amount: value)
+                    case .load: await viewModel.adjustLine(target.line, load: value, clearLoad: value == nil)
+                    }
+                }
+            }
+            .presentationDetents([.height(280)])
+        }
         // Suggestions are fetched up front so the swap list shows them at once.
         .task(id: viewModel.canSwap) { await viewModel.loadSwapOptions() }
     }
 
     /// Tap a movement's name: opens the searchable swap list for that line.
+    /// Tap its count or load: opens the adjustment sheet.
     private var lineSwapping: HIITLineSwapping {
-        HIITLineSwapping(open: { searching = $0 })
-    }
-
-    /// The header a line sits under: its part's format, else the workout's.
-    private func header(for line: HIITLine) -> String? {
-        if let partId = line.partId, let part = viewModel.currentWorkout?.parts.first(where: { $0.id == partId }) {
-            return part.format
-        }
-        return viewModel.currentWorkout?.format
+        HIITLineSwapping(
+            open: { searching = $0 },
+            adjust: { adjusting = LineAdjustTarget(line: $0, field: $1) }
+        )
     }
 
     // MARK: - Stimulus
@@ -267,6 +276,37 @@ struct MetconView: View {
     }
 
     // MARK: - Bookmark button
+
+    /// Top right of the card. A session piece is the athlete's own copy, so
+    /// it has no bookmark: once they've changed it, Reset puts it back as
+    /// prescribed. Anything else (a saved workout) keeps the bookmark.
+    @ViewBuilder
+    private var cornerButton: some View {
+        if viewModel.canSwap {
+            if viewModel.currentWorkout?.modified == true {
+                resetButton
+            }
+        } else {
+            bookmarkButton
+        }
+    }
+
+    private var resetButton: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            Task { await viewModel.resetPiece() }
+        } label: {
+            if viewModel.isResetting {
+                ProgressView()
+            } else {
+                Label("Reset", systemImage: "arrow.counterclockwise")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(Color("BrandPrimary"))
+            }
+        }
+        .disabled(viewModel.isEditingPiece || viewModel.isExecuting || viewModel.isPaused)
+        .accessibilityHint("Puts this workout back as it was prescribed")
+    }
 
     private var bookmarkButton: some View {
         Button(action: {

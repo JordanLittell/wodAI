@@ -137,7 +137,7 @@ struct BlockPagerTests {
                 "hiitWorkout": [
                     "__typename": "HIITWorkout", "id": 1, "name": "Fran", "format": "For Time",
                     "stimulus": "", "displayText": "21-15-9", "constraintType": "time",
-                    "constraintMagnitude": 1, "timeCap": NSNull(), "timingScheme": NSNull(),
+                    "constraintMagnitude": 1, "timeCap": NSNull(), "timingScheme": NSNull(), "modified": false,
                     "prescriptions": [] as [Any], "parts": [] as [Any],
                 ] as [String: Any],
             ]

@@ -33,6 +33,9 @@ struct HIITWorkoutItem: Identifiable, Hashable {
     var lines: [HIITLine] = []
     /// The blocks of a compound piece, in order; empty for a single block.
     var parts: [HIITPartHeader] = []
+    /// Whether the athlete changed their copy (swapped a movement, adjusted a
+    /// line); MetconView then offers Reset where the bookmark would be.
+    var modified: Bool = false
 
     /// What to call it on screen: its name when it has one, otherwise
     /// "Metcon". A named workout implies it's a metcon, so the name wins.
@@ -129,13 +132,21 @@ class HIITWorkoutViewModel: ObservableObject {
     /// Called once a result is saved on the server (Done or Skip, not
     /// Discard), so an owner such as the block pager can move on.
     private let onCompleted: (() -> Void)?
-    /// Called after a swap is saved, with the updated workout, so an owner
+    /// Called after a swap or adjustment is saved, with the updated workout, so an owner
     /// such as the block pager shows it when the block is reopened.
     private let onWorkoutChanged: ((HIITWorkoutItem) -> Void)?
 
     /// Set while a movement swap is being saved, and when one failed.
     @Published var isSwapping = false
     @Published var swapError: String?
+    /// Set while a line's numbers are being saved, and when that failed.
+    @Published var isAdjusting = false
+    @Published var adjustError: String?
+    /// Set while a reset to the prescribed version is being saved.
+    @Published var isResetting = false
+
+    /// Whether a swap, adjustment or reset is being saved; lines aren't editable meanwhile.
+    var isEditingPiece: Bool { isSwapping || isAdjusting || isResetting }
     /// What each line can be swapped for, keyed by `HIITLine.id`; empty until
     /// `loadSwapOptions()` returns.
     @Published var swapOptions: [String: [SwapOption]] = [:]
@@ -752,13 +763,14 @@ class HIITWorkoutViewModel: ObservableObject {
     /// the saved lines and text replace whatever was shown.
     @MainActor
     func swapMovement(_ line: HIITLine, to exerciseId: Int, preview: HIITLine? = nil) async {
-        guard let pieceId = scheduledPiece?.pieceId, !isSwapping, let before = currentWorkout else { return }
+        guard let pieceId = scheduledPiece?.pieceId, !isEditingPiece, let before = currentWorkout else { return }
         isSwapping = true
         swapError = nil
         defer { isSwapping = false }
         if let preview, let index = before.lines.firstIndex(where: { $0.id == line.id }) {
             var shown = before
             shown.lines[index] = preview
+            shown.modified = true
             currentWorkout = shown
         }
         do {
@@ -783,6 +795,7 @@ class HIITWorkoutViewModel: ObservableObject {
             var workout = before
             workout.lines = saved.prescriptions.map { HIITLine(fragment: $0.fragments.hiitLineFields) }
             workout.displayText = saved.displayText
+            workout.modified = saved.modified
             currentWorkout = workout
             onWorkoutChanged?(workout)
         } catch {
@@ -792,6 +805,99 @@ class HIITWorkoutViewModel: ObservableObject {
             return
         }
         // What's offered depends on the block's movements, which just changed.
+        await loadSwapOptions()
+    }
+
+    // MARK: - Line adjustment
+
+    /// Changes a line's numbers on the session piece's own copy, in the units
+    /// written: `amount`, and/or `load` (`clearLoad` removes it). The card shows
+    /// the change right away and goes back if the save fails; the saved lines
+    /// and text then replace it.
+    @MainActor
+    func adjustLine(_ line: HIITLine, amount: Double? = nil, load: Double? = nil, clearLoad: Bool = false) async {
+        guard let pieceId = scheduledPiece?.pieceId, !isEditingPiece, let before = currentWorkout else { return }
+        guard amount != nil || load != nil || clearLoad else { return }
+        isAdjusting = true
+        adjustError = nil
+        defer { isAdjusting = false }
+        if let index = before.lines.firstIndex(where: { $0.id == line.id }) {
+            var shown = before
+            shown.lines[index] = line.adjusted(amount: amount, load: load, clearLoad: clearLoad)
+            shown.modified = true
+            currentWorkout = shown
+        }
+        do {
+            let result = try await withCheckedThrowingContinuation { continuation in
+                Network.shared.client.perform(
+                    mutation: AdjustHiitLineMutation(
+                        pieceId: pieceId,
+                        line: line.line,
+                        partId: line.partId.map { .some($0) } ?? .none,
+                        amount: amount.map { .some($0) } ?? .none,
+                        load: load.map { .some($0) } ?? .none,
+                        clearLoad: clearLoad ? .some(true) : .none
+                    )
+                ) { continuation.resume(with: $0) }
+            }
+            if let errors = result.errors, !errors.isEmpty {
+                let messages = errors.compactMap { $0.message }.joined(separator: "; ")
+                TelemetryService.captureGraphQLErrors(messages: messages, operation: "AdjustHiitLine")
+                currentWorkout = before
+                adjustError = "We couldn't save that change. Please try again."
+                return
+            }
+            guard let saved = result.data?.adjustHiitLine else { currentWorkout = before; return }
+            var workout = before
+            workout.lines = saved.prescriptions.map { HIITLine(fragment: $0.fragments.hiitLineFields) }
+            workout.displayText = saved.displayText
+            workout.modified = saved.modified
+            currentWorkout = workout
+            onWorkoutChanged?(workout)
+        } catch {
+            TelemetryService.captureError(error, tags: ["operation": "AdjustHiitLine"])
+            currentWorkout = before
+            adjustError = "We couldn't save that change. Check your connection and try again."
+            return
+        }
+        // Suggestions read as the line will after a swap, so they follow its numbers.
+        await loadSwapOptions()
+    }
+
+    // MARK: - Reset
+
+    /// Puts the session piece back as it was prescribed, undoing every swap
+    /// and adjustment. The server's lines and text replace what's shown; on
+    /// failure nothing changes and the error shows under the card.
+    @MainActor
+    func resetPiece() async {
+        guard let pieceId = scheduledPiece?.pieceId, !isEditingPiece, let before = currentWorkout, before.modified else { return }
+        isResetting = true
+        adjustError = nil
+        swapError = nil
+        defer { isResetting = false }
+        do {
+            let result = try await withCheckedThrowingContinuation { continuation in
+                Network.shared.client.perform(mutation: ResetHiitPieceMutation(pieceId: pieceId)) { continuation.resume(with: $0) }
+            }
+            if let errors = result.errors, !errors.isEmpty {
+                let messages = errors.compactMap { $0.message }.joined(separator: "; ")
+                TelemetryService.captureGraphQLErrors(messages: messages, operation: "ResetHiitPiece")
+                adjustError = "We couldn't reset this workout. Please try again."
+                return
+            }
+            guard let saved = result.data?.resetHiitPiece else { return }
+            var workout = before
+            workout.lines = saved.prescriptions.map { HIITLine(fragment: $0.fragments.hiitLineFields) }
+            workout.displayText = saved.displayText
+            workout.modified = saved.modified
+            currentWorkout = workout
+            onWorkoutChanged?(workout)
+        } catch {
+            TelemetryService.captureError(error, tags: ["operation": "ResetHiitPiece"])
+            adjustError = "We couldn't reset this workout. Check your connection and try again."
+            return
+        }
         await loadSwapOptions()
     }
 

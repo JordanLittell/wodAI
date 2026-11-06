@@ -7,9 +7,9 @@ import WodAiAPI
 public class SwapHiitMovementMutation: GraphQLMutation {
   public static let operationName: String = "SwapHiitMovement"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
-    operationIdentifier: "84879942f0a5fe694ef0063ca69a6b2940b062f42fed9b7a632782b2b317c16a",
+    operationIdentifier: "f45e25d94401b9c02c3fe1874c8b41e5f93e3ed9a4f7417b8a5b9f1e4fc06f05",
     definition: .init(
-      #"mutation SwapHiitMovement($pieceId: Int!, $line: Int!, $partId: Int, $exerciseId: Int!) { swapHiitMovement( pieceId: $pieceId line: $line partId: $partId exerciseId: $exerciseId ) { __typename id displayText prescriptions { __typename ...HiitLineFields } } }"#,
+      #"mutation SwapHiitMovement($pieceId: Int!, $line: Int!, $partId: Int, $exerciseId: Int!) { swapHiitMovement( pieceId: $pieceId line: $line partId: $partId exerciseId: $exerciseId ) { __typename id displayText modified prescriptions { __typename ...HiitLineFields } } }"#,
       fragments: [HiitLineFields.self]
     ))
 
@@ -65,11 +65,13 @@ public class SwapHiitMovementMutation: GraphQLMutation {
         .field("__typename", String.self),
         .field("id", Int.self),
         .field("displayText", String.self),
+        .field("modified", Bool.self),
         .field("prescriptions", [Prescription].self),
       ] }
 
       public var id: Int { __data["id"] }
       public var displayText: String { __data["displayText"] }
+      public var modified: Bool { __data["modified"] }
       public var prescriptions: [Prescription] { __data["prescriptions"] }
 
       /// SwapHiitMovement.Prescription

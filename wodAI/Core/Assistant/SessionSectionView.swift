@@ -2,21 +2,18 @@
 //  SessionSectionView.swift
 //  wodAI
 //
-//  One session on the Assistant page as a section that opens and closes.
-//  The header names the session, says where it came from, and counts done
-//  blocks; closed, a single line lists the blocks so a day with several
-//  sessions stays short. A colored rail down the side tells sessions apart.
+//  One session on the Assistant page, always showing its blocks. The header
+//  names the session and says where it came from; a red trash button in the
+//  top right deletes it. A colored rail down the side tells sessions apart.
 //
-//  Swiping the header left reveals a Delete button; deleting still needs a
-//  confirmation, so a stray swipe can't remove anything.
+//  Swiping the header left also reveals a Delete button. Either way deleting
+//  needs a confirmation, so a stray tap or swipe can't remove anything.
 //
 
 import SwiftUI
 
 struct SessionSectionView<Blocks: View>: View {
     let session: AssistantSession
-    let isExpanded: Bool
-    let onToggle: () -> Void
     /// Whether the Delete button is showing.
     var isRevealed = false
     /// Shows (true) or hides (false) the Delete button.
@@ -56,14 +53,10 @@ struct SessionSectionView<Blocks: View>: View {
         VStack(alignment: .leading, spacing: 12) {
             header
 
-            if isExpanded {
-                if session.isPending && session.blocks.isEmpty {
-                    placeholderBlocks
-                } else {
-                    blocks()
-                }
-            } else if !session.blocks.isEmpty {
-                summary
+            if session.isPending && session.blocks.isEmpty {
+                placeholderBlocks
+            } else {
+                blocks()
             }
         }
         .padding(.vertical, 14)
@@ -148,26 +141,13 @@ struct SessionSectionView<Blocks: View>: View {
     // MARK: - Header
 
     private var header: some View {
-        Button {
-            // With Delete showing, a tap puts the section back first.
-            if isRevealed {
-                withAnimation(.spring(duration: 0.3)) { onReveal(false) }
-            } else {
-                onToggle()
-            }
-        } label: {
+        HStack(alignment: .top, spacing: 8) {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
                     sourceChip
                     if session.isOptional {
                         optionalChip
                     }
-                    Spacer(minLength: 8)
-                    progress
-                    Image(systemName: "chevron.down")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(Color("SecondaryText"))
-                        .rotationEffect(.degrees(isExpanded ? 0 : -90))
                 }
 
                 HStack(spacing: 8) {
@@ -181,20 +161,45 @@ struct SessionSectionView<Blocks: View>: View {
                         .multilineTextAlignment(.leading)
                 }
             }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityHint(isExpanded ? "Collapses the session" : "Expands the session")
-        .accessibilityAddTraits(.isHeader)
-        // VoiceOver can't swipe to reveal, so it gets the action directly.
-        .accessibilityActions {
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(accessibilityLabel)
+            .accessibilityAddTraits(.isHeader)
+
+            Spacer(minLength: 8)
+
+            if session.isCompleted {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(Color("Success"))
+                    .frame(height: 32)
+                    .transition(.scale.combined(with: .opacity))
+                    .accessibilityHidden(true)
+            }
             if canDelete {
-                Button("Delete session", action: onDelete)
+                trashButton
+            }
+        }
+        .contentShape(Rectangle())
+        // With Delete showing, a tap puts the section back.
+        .onTapGesture {
+            if isRevealed {
+                withAnimation(.spring(duration: 0.3)) { onReveal(false) }
             }
         }
         .simultaneousGesture(revealDrag)
+    }
+
+    /// Asks to delete the session; the owner confirms first.
+    private var trashButton: some View {
+        Button(action: onDelete) {
+            Image(systemName: "trash")
+                .font(.body.weight(.semibold))
+                .foregroundColor(Color("Error"))
+                .frame(width: 32, height: 32)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Delete session")
+        .accessibilityIdentifier("deleteSessionButton")
     }
 
     private var sourceChip: some View {
@@ -216,30 +221,7 @@ struct SessionSectionView<Blocks: View>: View {
             .background(Capsule().fill(Color("SecondaryText").opacity(0.12)))
     }
 
-    @ViewBuilder
-    private var progress: some View {
-        let openable = session.blocks.filter(\.isOpenable)
-        if session.isCompleted {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(Color("Success"))
-                .transition(.scale.combined(with: .opacity))
-        } else if !session.isPending, !openable.isEmpty {
-            Text("\(openable.filter(\.isCompleted).count)/\(openable.count)")
-                .font(.subheadline.monospacedDigit())
-                .foregroundColor(Color("SecondaryText"))
-        }
-    }
-
     // MARK: - Body
-
-    /// The closed section's one line: "A Back Squat · B Metcon".
-    private var summary: some View {
-        Text(session.blocks.map { "\($0.letter) \($0.label)" }.joined(separator: " · "))
-            .font(.subheadline)
-            .foregroundColor(Color("SecondaryText"))
-            .lineLimit(1)
-            .truncationMode(.tail)
-    }
 
     /// Stands in for blocks until the first one streams in.
     private var placeholderBlocks: some View {
@@ -255,13 +237,10 @@ struct SessionSectionView<Blocks: View>: View {
     private var accessibilityLabel: String {
         var parts = [session.name, session.source.label]
         if session.isOptional { parts.append("Optional") }
-        let openable = session.blocks.filter(\.isOpenable)
         if session.isPending {
             parts.append("Loading")
         } else if session.isCompleted {
             parts.append("Completed")
-        } else if !openable.isEmpty {
-            parts.append("\(openable.filter(\.isCompleted).count) of \(openable.count) blocks done")
         }
         return parts.joined(separator: ", ")
     }

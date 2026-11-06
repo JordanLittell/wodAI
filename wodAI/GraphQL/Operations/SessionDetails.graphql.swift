@@ -6,7 +6,7 @@ import WodAiAPI
 
 public struct SessionDetails: WodAiAPI.SelectionSet, Fragment {
   public static var fragmentDefinition: StaticString {
-    #"fragment SessionDetails on Workout { __typename id name description stimulus coaching scheduledDate createdAt source optional blocks { __typename order ... on StrengthWorkout { id name stimulus instructions components { __typename id order reps weight rpe completedAt completedReps completedWeight completedRpe exercise { __typename name muscleGroups videoUrl } } } ... on WorkoutHiitPiece { id pieceStimulus completion { __typename id completedAt } hiitWorkout { __typename id name format stimulus displayText constraintType constraintMagnitude timeCap prescriptions { __typename ...HiitLineFields } parts { __typename id order format restAfterSeconds } timingScheme { __typename version segments { __typename rounds phases { __typename durationSeconds direction label } } phases { __typename durationSeconds direction label } } } } } }"#
+    #"fragment SessionDetails on Workout { __typename id name description stimulus coaching scheduledDate createdAt source optional blocks { __typename order ... on StrengthWorkout { id name stimulus instructions components { __typename id order reps weight rpe completedAt completedReps completedWeight completedRpe exercise { __typename name muscleGroups videoUrl } } } ... on WorkoutHiitPiece { id pieceStimulus completion { __typename id completedAt } hiitWorkout { __typename id name format stimulus displayText constraintType constraintMagnitude timeCap modified prescriptions { __typename ...HiitLineFields } parts { __typename id order format restAfterSeconds } timingScheme { __typename version segments { __typename rounds phases { __typename durationSeconds direction label } } phases { __typename durationSeconds direction label } } } } } }"#
   }
 
   public let __data: DataDict
@@ -195,6 +195,7 @@ public struct SessionDetails: WodAiAPI.SelectionSet, Fragment {
           .field("constraintType", String.self),
           .field("constraintMagnitude", Int.self),
           .field("timeCap", Int?.self),
+          .field("modified", Bool.self),
           .field("prescriptions", [Prescription].self),
           .field("parts", [Part].self),
           .field("timingScheme", TimingScheme?.self),
@@ -208,6 +209,7 @@ public struct SessionDetails: WodAiAPI.SelectionSet, Fragment {
         public var constraintType: String { __data["constraintType"] }
         public var constraintMagnitude: Int { __data["constraintMagnitude"] }
         public var timeCap: Int? { __data["timeCap"] }
+        public var modified: Bool { __data["modified"] }
         public var prescriptions: [Prescription] { __data["prescriptions"] }
         public var parts: [Part] { __data["parts"] }
         public var timingScheme: TimingScheme? { __data["timingScheme"] }

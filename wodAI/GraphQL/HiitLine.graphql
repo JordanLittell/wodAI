@@ -13,6 +13,7 @@ fragment HiitLineFields on HIITPrescription {
     id
     name
     patterns
+    loads
   }
 }
 
@@ -22,6 +23,33 @@ mutation SwapHiitMovement($pieceId: Int!, $line: Int!, $partId: Int, $exerciseId
   swapHiitMovement(pieceId: $pieceId, line: $line, partId: $partId, exerciseId: $exerciseId) {
     id
     displayText
+    modified
+    prescriptions {
+      ...HiitLineFields
+    }
+  }
+}
+
+# Changes the numbers on one line of a session piece, in the units written:
+# amount and/or load (clearLoad removes it). Read the lines back from the result.
+mutation AdjustHiitLine($pieceId: Int!, $line: Int!, $partId: Int, $amount: Float, $load: Float, $clearLoad: Boolean) {
+  adjustHiitLine(pieceId: $pieceId, line: $line, partId: $partId, amount: $amount, load: $load, clearLoad: $clearLoad) {
+    id
+    displayText
+    modified
+    prescriptions {
+      ...HiitLineFields
+    }
+  }
+}
+
+# Puts a session piece back as it was prescribed, undoing every swap and
+# adjustment. Read the lines back from the result.
+mutation ResetHiitPiece($pieceId: Int!) {
+  resetHiitPiece(pieceId: $pieceId) {
+    id
+    displayText
+    modified
     prescriptions {
       ...HiitLineFields
     }

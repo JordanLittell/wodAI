@@ -987,7 +987,8 @@ final class AssistantViewModel: ObservableObject {
                         lines: hiit.prescriptions.map { HIITLine(fragment: $0.fragments.hiitLineFields) },
                         parts: hiit.parts.map {
                             HIITPartHeader(id: $0.id, order: $0.order, format: $0.format, restAfterSeconds: $0.restAfterSeconds)
-                        }
+                        },
+                        modified: hiit.modified
                     )
                     return AssistantBlock(
                         id: block.order,

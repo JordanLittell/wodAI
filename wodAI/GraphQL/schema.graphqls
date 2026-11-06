@@ -457,6 +457,8 @@ type Mutation {
   unsaveHiitWorkout(id: Int!): Boolean!
   likeHiitWorkout(workoutId: Int!, score: Int!): Boolean!
   swapHiitMovement(pieceId: Int!, line: Int!, partId: Int, exerciseId: Int!): HIITWorkout!
+  adjustHiitLine(pieceId: Int!, line: Int!, partId: Int, amount: Float, load: Float, clearLoad: Boolean): HIITWorkout!
+  resetHiitPiece(pieceId: Int!): HIITWorkout!
   createHIITSession(wodId: ID!, startedAt: DateTime!, source: SensorSourceInput): HIITSession!
   appendSensorFrames(sessionId: ID!, frames: [SensorFrameInput!]!): Boolean!
   completeHIITSession(sessionId: ID!, endedAt: DateTime!, movementIntervals: [MovementIntervalInput!]!): HIITSession!
@@ -714,8 +716,14 @@ type HIITExercise {
   muscleGroups: String!
   skillScore: Int
   excluded: Boolean!
-  userOwned: Boolean!
+  userOwned: Boolean! @deprecated(reason: "User-owned movements are deprecated; every movement returned is from the platform catalog.")
   videoUrl: String
+  loads: [LoadKind!]!
+}
+
+enum LoadKind {
+  weight
+  height
 }
 
 type HIITComponent {
@@ -840,6 +848,7 @@ type HIITWorkout {
   rawText: String!
   displayText: String!
   stimulus: String!
+  modified: Boolean!
   components: [HIITComponent!]!
   parts: [HIITPart!]!
   equipment: [Equipment]

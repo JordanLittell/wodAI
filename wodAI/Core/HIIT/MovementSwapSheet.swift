@@ -23,8 +23,6 @@ struct MovementSwapSheet: View {
     let line: HIITLine
     /// The server's suggestions for this line, best first; may be empty.
     var suggestions: [SwapOption] = []
-    /// Whether the line sits under a 21-15-9 style header (reps left off).
-    var repScheme: Bool = false
     let onPickSuggestion: (SwapOption) -> Void
     let onPick: (SwapCandidate) -> Void
 
@@ -95,7 +93,7 @@ struct MovementSwapSheet: View {
             onPickSuggestion(option)
             dismiss()
         } label: {
-            Text(option.label(repScheme: repScheme))
+            Text(option.label)
                 .foregroundColor(Color("PrimaryText"))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())

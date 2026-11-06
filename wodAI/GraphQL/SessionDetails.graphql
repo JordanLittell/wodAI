@@ -54,6 +54,8 @@ fragment SessionDetails on Workout {
         constraintType
         constraintMagnitude
         timeCap
+        # Whether the athlete changed their copy (swap, adjustment); offers Reset.
+        modified
         # Every movement line, in order; on a compound piece each carries its partId.
         prescriptions {
           ...HiitLineFields

@@ -191,12 +191,6 @@ struct AssistantView: View {
                 ForEach(sessions) { session in
                     SessionSectionView(
                         session: session,
-                        isExpanded: viewModel.isExpanded(session),
-                        onToggle: {
-                            withAnimation(.spring(duration: 0.35)) {
-                                viewModel.toggleExpanded(session)
-                            }
-                        },
                         isRevealed: viewModel.revealedSessionId == session.id,
                         onReveal: { viewModel.reveal($0 ? session.id : nil) },
                         onDelete: { pendingDeletion = session },

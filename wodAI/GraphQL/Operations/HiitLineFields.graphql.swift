@@ -6,7 +6,7 @@ import WodAiAPI
 
 public struct HiitLineFields: WodAiAPI.SelectionSet, Fragment {
   public static var fragmentDefinition: StaticString {
-    #"fragment HiitLineFields on HIITPrescription { __typename line partId amount amountUnit max load loadUnit exercise { __typename id name patterns } }"#
+    #"fragment HiitLineFields on HIITPrescription { __typename line partId amount amountUnit max load loadUnit exercise { __typename id name patterns loads } }"#
   }
 
   public let __data: DataDict
@@ -47,10 +47,12 @@ public struct HiitLineFields: WodAiAPI.SelectionSet, Fragment {
       .field("id", Int.self),
       .field("name", String.self),
       .field("patterns", String.self),
+      .field("loads", [GraphQLEnum<WodAiAPI.LoadKind>].self),
     ] }
 
     public var id: Int { __data["id"] }
     public var name: String { __data["name"] }
     public var patterns: String { __data["patterns"] }
+    public var loads: [GraphQLEnum<WodAiAPI.LoadKind>] { __data["loads"] }
   }
 }
