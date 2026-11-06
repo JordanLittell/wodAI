@@ -272,10 +272,7 @@ final class AssistantViewModel: ObservableObject {
     /// swiping back to one shows it at once.
     @Published private(set) var sessions: [Date: [AssistantSession]]
     /// The day being shown. Always a day of `week`.
-    @Published private(set) var selectedDay: Date {
-        // Changing days hides any Delete button left showing.
-        didSet { revealedSessionId = nil }
-    }
+    @Published private(set) var selectedDay: Date
     /// The week being shown.
     @Published private(set) var week: AssistantWeek
     /// Weeks (by first day) that have come back once, and weeks with a
@@ -298,8 +295,6 @@ final class AssistantViewModel: ObservableObject {
     @Published private(set) var lastFailedAdd: NewSession?
     /// A session the page should scroll to (a new one streaming in).
     @Published private(set) var focusedSessionId: String?
-    /// The session whose Delete button is showing; at most one at a time.
-    @Published private(set) var revealedSessionId: String?
     /// Shown while the server is still planning this athlete's week (right
     /// after onboarding), or briefly if that planning failed.
     @Published private(set) var planningNotice: PlanningNotice? {
@@ -672,7 +667,6 @@ final class AssistantViewModel: ObservableObject {
         addError = nil
         lastFailedAdd = nil
         isAddingSession = true
-        revealedSessionId = nil
         // Newest first, so it streams in at the top of the day.
         sessions[day, default: []].insert(Self.pendingSession(id: pendingId, kind: kind, day: day), at: 0)
         expandOnly(pendingId, on: day)
@@ -815,13 +809,6 @@ final class AssistantViewModel: ObservableObject {
 
     // MARK: - Deleting a session
 
-    /// Shows one session's Delete button (hiding any other), or hides it
-    /// with nil. A session still streaming in has none.
-    func reveal(_ id: String?) {
-        if let id, session(id: id)?.isPending ?? true { return }
-        revealedSessionId = id
-    }
-
     /// Deletes a session from the selected day. It goes at once; if the
     /// server refuses, it comes back where it was and `errorMessage` says so.
     func deleteSession(id: String) {
@@ -834,7 +821,6 @@ final class AssistantViewModel: ObservableObject {
         let removed = list.remove(at: index)
         sessions[day] = list.isEmpty ? nil : list
         let wasExpanded = expansion.removeValue(forKey: id)
-        if revealedSessionId == id { revealedSessionId = nil }
         errorMessage = nil
 
         Task { [weak self, deleteWorkout] in

@@ -18,7 +18,6 @@ struct AssistantView: View {
     @State private var createRequest = ""
     /// The session waiting on the delete confirmation.
     @State private var pendingDeletion: AssistantSession?
-    @State private var swipeGuard = DaySwipeGuard()
     /// Builds the trainer chat each time it opens; UI tests pass one that
     /// stays off the network.
     private let makeChat: @MainActor () -> AssistantChatViewModel
@@ -61,12 +60,6 @@ struct AssistantView: View {
                 // Simultaneous so vertical scrolling is untouched; only a clearly
                 // horizontal drag changes the day.
                 .simultaneousGesture(daySwipe)
-                // Scrolling puts back a section left showing Delete.
-                .onScrollPhaseChange { _, phase in
-                    if phase == .interacting, viewModel.revealedSessionId != nil {
-                        withAnimation(.spring(duration: 0.3)) { viewModel.reveal(nil) }
-                    }
-                }
                 .clipped()
                 // A new import scrolls into view as it starts.
                 .onChange(of: viewModel.focusedSessionId) { _, id in
@@ -191,10 +184,7 @@ struct AssistantView: View {
                 ForEach(sessions) { session in
                     SessionSectionView(
                         session: session,
-                        isRevealed: viewModel.revealedSessionId == session.id,
-                        onReveal: { viewModel.reveal($0 ? session.id : nil) },
-                        onDelete: { pendingDeletion = session },
-                        onSwipe: { swipeGuard.lastSectionSwipeAt = Date() }
+                        onDelete: { pendingDeletion = session }
                     ) {
                         VStack(alignment: .leading, spacing: 20) {
                             ForEach(session.blocks) { block in
@@ -226,7 +216,6 @@ struct AssistantView: View {
 
     private func openChat() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        viewModel.reveal(nil)
         let chat = makeChat()
         // Weak: the chat holds these, so a strong capture would keep every closed chat alive.
         chat.onClientAction = { [weak chat] suggestion in
@@ -312,7 +301,6 @@ struct AssistantView: View {
 
     private func startAdding(_ method: AddMethod) {
         viewModel.dismissAddError()
-        viewModel.reveal(nil)
         switch method {
         case .createWithAI:
             isCreating = true
@@ -421,8 +409,6 @@ struct AssistantView: View {
                 let dx = value.translation.width
                 let dy = value.translation.height
                 guard abs(dx) > abs(dy), abs(dx) > 60 else { return }
-                // A swipe on a session header is that section's.
-                guard swipeGuard.allowsDaySwipe(at: Date()) else { return }
                 if dx < 0 {
                     move(forward: true)
                 } else {

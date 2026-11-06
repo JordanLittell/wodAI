@@ -95,8 +95,7 @@ final class WeekNavigationUITests: XCTestCase {
         drag(strip, direction, atHeight: 0.5)
     }
 
-    /// Swipes the day below its session header, which has its own swipe
-    /// (to reveal Delete).
+    /// Swipes the day's content, below the week strip.
     private func swipeContent(_ direction: Direction) {
         drag(app.scrollViews.firstMatch, direction, atHeight: 0.7)
     }

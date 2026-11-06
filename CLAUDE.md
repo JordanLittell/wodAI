@@ -64,7 +64,7 @@ Movement swaps (a metcon opened from a session, with structured lines): `HIITPre
 
 A day can hold several sessions (`AssistantViewModel.sessions: [Date: [AssistantSession]]`): the programmed one plus any imports. On a rest day the planner writes an optional light activity (`Workout.optional` → `AssistantSession.isOptional`): it shows an "Optional" chip and starts collapsed. Each renders as a collapsible `SessionSectionView` (source chip, done count, colored rail). Anything block-addressed is scoped by session id (`AssistantBlockRoute(sessionId:blockId:)`, `openableBlocks(in:)`, `markHiitCompleted(sessionId:blockId:)`, `updateStrength(_:sessionId:)`), and the pager only pages within one session.
 
-**Deleting a session:** swipe its header left to reveal Delete, or pick Delete from the three-dot options menu at its top right (`SessionSectionView.optionsMenu`), then confirm. Deletion is optimistic (`AssistantViewModel.deleteSession`, `DeleteWorkoutMutation`) and restores the session if the server refuses. `DaySwipeGuard` stops the page's day swipe from also firing during a header swipe. Sessions still streaming in can't be deleted.
+**Deleting a session:** pick Delete from the three-dot options menu at its top right (`SessionSectionView.optionsMenu`), then confirm (there's no swipe to delete). Deletion is optimistic (`AssistantViewModel.deleteSession`, `DeleteWorkoutMutation`) and restores the session if the server refuses. Sessions still streaming in can't be deleted.
 
 **Create with AI:** the trainer chat's "Create with AI" option (the stopgap before Write Workout for Today ran in the chat; no longer offered unless the server's `ASSISTANT_FLOWS` lists `create_with_ai`) opens `CreateSessionSheet`. `AssistantViewModel.createSession(request:)` streams `workoutGeneration(request:scheduledDate:)` into the selected day through the same pending → streamed → saved flow as the whiteboard import (`streamNewSession`).
 
@@ -88,6 +88,7 @@ Note: the feed UI (filters, Generate, the `.shared` instance) no longer has an e
 - `WodTimerConfig.readout(atElapsed:)` is the single function that maps elapsed seconds → `TimerReadout` (round number, display seconds, phase label, completion). This one model expresses For Time, AMRAP, EMOM/E2MOM, and Tabata.
 - Backend timing schemes arrive as generated Apollo selection-set types; `TimingPhaseFragment`/`TimingSegmentFragment`/`TimingSchemeFragment` are structural protocols that let `WodTimerConfig.init(fragment:)` build from *any* operation's generated types without per-operation glue code.
 - `HIITWorkoutViewModel.activeConfig` picks: the editable-cap config for For-Time workouts (`editableTimeCap` is user-adjustable pre-start), otherwise the workout's own `timingScheme`, otherwise `.fallback(timeCap:)`.
+- `WodTimerView` (the running timer, in `MetconView`'s full-screen cover) has two modes, pure view state: the big clock, and "Workout", which shows the metcon read-only (no swaps) under a compact clock bar; a Timer button above the controls (or tapping the bar) goes back. Pause/exit/finish controls stay in both.
 - When editing this file, run/extend `wodAITests/WodTimerEngineTests.swift` rather than testing manually — the round/phase math has edge cases (exact-boundary completion, open-ended phases).
 
 ### Authentication

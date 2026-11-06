@@ -2,7 +2,7 @@
 //  SessionManagementTests.swift
 //  wodAITests
 //
-//  Coverage for deleting a session (swipe, confirm, optimistic removal) and
+//  Coverage for deleting a session (confirm, optimistic removal) and
 //  for "Create with AI" streaming a session onto the selected day.
 //
 
@@ -76,33 +76,11 @@ struct SessionManagementTests {
         #expect(viewModel.errorMessage == "Couldn't delete that session. Please try again.")
     }
 
-    @Test func onlyOneSessionShowsDeleteAndChangingDaysHidesIt() {
-        let viewModel = viewModel([session("a"), session("b")])
-        viewModel.reveal("a")
-        viewModel.reveal("b")
-        #expect(viewModel.revealedSessionId == "b")
-
-        // Today may be the week's last day, so moving on can load next week.
-        viewModel.weekSessions = { _ in [] }
-        viewModel.goForward()
-        #expect(viewModel.revealedSessionId == nil)
-    }
-
     @Test func theConfirmationWarnsOnlyWhenWorkIsLogged() {
         let warning = "Sets you logged in it will be deleted too. Results you saved for its metcons stay in your history."
         #expect(SessionDeletion.message(for: session("a")) == "This can't be undone.")
         #expect(SessionDeletion.message(for: session("a", loggedSet: true)) == warning)
         #expect(SessionDeletion.message(for: session("a", completedHiit: true)) == warning)
-    }
-
-    @Test func theDaySwipeWaitsOutASectionSwipe() {
-        let now = Date(timeIntervalSince1970: 1_000)
-        var guardState = DaySwipeGuard()
-        #expect(guardState.allowsDaySwipe(at: now))
-
-        guardState.lastSectionSwipeAt = now
-        #expect(!guardState.allowsDaySwipe(at: now.addingTimeInterval(0.1)))
-        #expect(guardState.allowsDaySwipe(at: now.addingTimeInterval(DaySwipeGuard.quietPeriod + 0.01)))
     }
 
     // MARK: - Create with AI
@@ -124,9 +102,6 @@ struct SessionManagementTests {
         #expect(pending.name == "Creating your session…")
         #expect(pending.source == .created)
         #expect(pending.isPending)
-        // A session still streaming in can't show Delete.
-        viewModel.reveal(pending.id)
-        #expect(viewModel.revealedSessionId == nil)
 
         continuation.yield(.complete(session("saved")))
         continuation.finish()
